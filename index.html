@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Island Survival: Escape</title>
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI Overlay: Loading Screen -->
+    <div id="loading-screen" class="overlay">
+        <div class="loader-content">
+            <div class="loader-logo">ISLAND SURVIVAL</div>
+            <div class="loader-subtitle">ESCAPE – WEBGL 2 FOUNDATION</div>
+            <div class="loader-bar-container">
+                <div id="loader-bar" class="loader-bar"></div>
+            </div>
+            <div id="loader-text" class="loader-text">Đang tải tài nguyên (0%)...</div>
+        </div>
+    </div>
+
+    <!-- UI Overlay: Premium Debug Panel -->
+    <div id="debug-panel" class="debug-panel hidden">
+        <div class="debug-header">
+            <div class="debug-title">
+                <span class="pulse-dot"></span>
+                DEBUG PANEL
+            </div>
+            <div id="debug-fps" class="debug-fps">FPS: --</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="section-title">THÔNG TIN HỆ THỐNG</div>
+            <div class="debug-row"><span class="label">Renderer:</span><span class="value">WebGL 2.0 Pure</span></div>
+            <div class="debug-row"><span class="label">Active Scene:</span><span id="debug-scene" class="value">--</span></div>
+        </div>
+
+        <div class="debug-section">
+            <div class="section-title">PLAYER TRANSFORMS</div>
+            <div class="debug-row"><span class="label">Position:</span><span id="debug-pos" class="value">X: 0.00, Y: 0.00, Z: 0.00</span></div>
+            <div class="debug-row"><span class="label">Speed:</span><span id="debug-speed" class="value">0.0 m/s</span></div>
+        </div>
+
+        <div class="debug-section">
+            <div class="section-title">CAMERA</div>
+            <div class="debug-row"><span class="label">Yaw / Pitch:</span><span id="debug-cam-rot" class="value">Y: 0.0°, P: 0.0°</span></div>
+            <div class="debug-row"><span class="label">Distance:</span><span id="debug-cam-dist" class="value">8.00m</span></div>
+        </div>
+
+        <div class="debug-section">
+            <div class="section-title">ÁNH SÁNG & ĐỒ HỌA</div>
+            <div class="debug-row">
+                <span class="label">Directional Light:</span>
+                <span id="debug-light-dir" class="value">X: 0.50, Y: 1.00, Z: 0.30</span>
+            </div>
+            <div class="debug-row">
+                <span class="label">Wireframe:</span>
+                <span class="value">
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-wireframe">
+                        <span class="slider"></span>
+                    </label>
+                </span>
+            </div>
+            <div class="debug-row">
+                <span class="label">Rotate Light:</span>
+                <span class="value">
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-light-rot" checked>
+                        <span class="slider"></span>
+                    </label>
+                </span>
+            </div>
+            <div class="debug-row">
+                <span class="label">Wave Animation:</span>
+                <span class="value">
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-water" checked>
+                        <span class="slider"></span>
+                    </label>
+                </span>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <div class="section-title">BÀN PHÍM / ĐIỀU KHIỂN</div>
+            <div class="keyboard-grid">
+                <div id="key-w" class="key-box">W</div>
+                <div id="key-a" class="key-box">A</div>
+                <div id="key-s" class="key-box">S</div>
+                <div id="key-d" class="key-box">D</div>
+                <div id="key-space" class="key-box long">SPACE</div>
+            </div>
+            <div class="mouse-tip">Giữ Chuột Trái & kéo để xoay Camera. Cuộn chuột để Zoom.</div>
+            <div class="mouse-tip highlighted">Bấm phím 'L' để khóa/mở khóa con trỏ chuột.</div>
+        </div>
+    </div>
+
+    <!-- Main Module Loading -->
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
