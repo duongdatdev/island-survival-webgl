@@ -96,12 +96,47 @@
                 <div id="key-a" class="key-box">A</div>
                 <div id="key-s" class="key-box">S</div>
                 <div id="key-d" class="key-box">D</div>
+                <div id="key-e" class="key-box accent">E</div>
                 <div id="key-space" class="key-box long">SPACE</div>
             </div>
             <div class="mouse-tip">Giữ Chuột Trái & kéo để xoay Camera. Cuộn chuột để Zoom.</div>
             <div class="mouse-tip highlighted">Bấm phím 'L' để khóa/mở khóa con trỏ chuột.</div>
+            <div class="mouse-tip highlighted">Bấm phím 'E' để nhặt tài nguyên gần đó.</div>
         </div>
     </div>
+
+    <!-- Resource HUD - Bottom Left -->
+    <div id="resource-hud" class="resource-hud">
+        <div class="resource-hud-title">TÀI NGUYÊN</div>
+        <div class="resource-slots">
+            <div class="resource-slot" id="slot-wood">
+                <span class="resource-icon">🪵</span>
+                <span class="resource-name">Gỗ</span>
+                <span class="resource-count" id="count-wood">0</span>
+            </div>
+            <div class="resource-slot" id="slot-stone">
+                <span class="resource-icon">🪨</span>
+                <span class="resource-name">Đá</span>
+                <span class="resource-count" id="count-stone">0</span>
+            </div>
+            <div class="resource-slot" id="slot-rope">
+                <span class="resource-icon">🪢</span>
+                <span class="resource-name">Dây Thừng</span>
+                <span class="resource-count" id="count-rope">0</span>
+            </div>
+            <div class="resource-slot" id="slot-barrel">
+                <span class="resource-icon">🛢️</span>
+                <span class="resource-name">Thùng Gỗ</span>
+                <span class="resource-count" id="count-barrel">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pickup Hint - Bottom Center -->
+    <div id="pickup-hint" class="pickup-hint hidden"></div>
+
+    <!-- Pickup Notification - Top Center -->
+    <div id="pickup-notification" class="pickup-notification hidden"></div>
 
     <!-- Main Module Loading -->
     <script type="module" src="src/main.js"></script>

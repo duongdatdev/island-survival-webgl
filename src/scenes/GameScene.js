@@ -10,6 +10,8 @@ import { Terrain } from '../entities/Terrain.js';
 import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
+import { ResourceManager } from '../systems/ResourceManager.js';
+import { Inventory } from '../systems/Inventory.js';
 
 /**
  * Main active gameplay scene
@@ -46,7 +48,19 @@ export class GameScene extends Scene {
         const blackVisorData = this._createCubeData(0.1, 0.12, 0.18); // Dark visor
         this.visorMesh = new Mesh(gl, blackVisorData);
 
-        // 6. Running properties
+        // 6. Resource System Initialization
+        this.inventory = new Inventory();
+        this.resourceManager = new ResourceManager();
+
+        // Spawn resources scattered across the island
+        this.resourceManager.spawnRandomResources(gl, this.terrain, 30);
+
+        // Bind inventory changes to UI updates
+        this.inventory.onChange = (resourceId, newCount, delta) => {
+            this._updateResourceHUD(resourceId, newCount);
+        };
+
+        // 7. Running properties
         this.time = 0.0;
         this.tempMatrix = Mat4.create();
 
@@ -65,6 +79,9 @@ export class GameScene extends Scene {
 
         // Snap camera tracking around player
         this.camera.update(this.engine.input, this.player.position);
+
+        // Update resource system (animations, pickup detection)
+        this.resourceManager.update(deltaTime, this.player.position, this.inventory, this.engine.input);
 
         // Manage light rotation from Debug UI checkbox
         const rotLightEl = document.getElementById('toggle-light-rot');
@@ -98,7 +115,7 @@ export class GameScene extends Scene {
         // Clear Color and Depth Buffers
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        // --- DRAW TERRAIN & PLAYER (Solid Geometry, BasicShader) ---
+        // --- DRAW TERRAIN & PLAYER & RESOURCES (Solid Geometry, BasicShader) ---
         this.basicShader.use();
         
         // Load Camera matrices
@@ -141,6 +158,9 @@ export class GameScene extends Scene {
         this.basicShader.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         this.visorMesh.draw(drawMode);
 
+        // 5. Draw World Resources
+        this.resourceManager.drawAll(this.basicShader, drawMode);
+
         // --- DRAW WATER (Translucent Geometry, WaterShader) ---
         // Enable blending for transparency
         gl.enable(gl.BLEND);
@@ -175,6 +195,23 @@ export class GameScene extends Scene {
         gl.disable(gl.BLEND);
     }
 
+    /**
+     * Update the Resource HUD UI when inventory changes
+     * @param {string} resourceId
+     * @param {number} newCount
+     */
+    _updateResourceHUD(resourceId, newCount) {
+        const countEl = document.getElementById(`count-${resourceId}`);
+        if (countEl) {
+            countEl.textContent = newCount;
+
+            // Trigger pulse animation
+            countEl.classList.remove('pulse');
+            void countEl.offsetWidth; // Force reflow
+            countEl.classList.add('pulse');
+        }
+    }
+
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
         
@@ -187,6 +224,10 @@ export class GameScene extends Scene {
         if (this.bodyMesh) this.bodyMesh.delete();
         if (this.headMesh) this.headMesh.delete();
         if (this.visorMesh) this.visorMesh.delete();
+
+        // Cleanup resource system
+        if (this.resourceManager) this.resourceManager.delete();
+        if (this.inventory) this.inventory.clear();
     }
 
     /**

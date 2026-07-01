@@ -5,6 +5,7 @@ export class InputManager {
     constructor(canvas) {
         this.canvas = canvas;
         this.keys = {};
+        this._prevKeys = {}; // Previous frame key states for one-shot detection
         this.mouse = {
             x: 0,
             y: 0,
@@ -29,10 +30,22 @@ export class InputManager {
         return !!this.keys[key];
     }
 
+    /**
+     * Returns true only on the first frame a key is pressed (one-shot detection)
+     * @param {string} key - Key code e.g. 'KeyE'
+     * @returns {boolean}
+     */
+    isKeyPressed(key) {
+        return !!this.keys[key] && !this._prevKeys[key];
+    }
+
     resetDeltas() {
         this.mouse.deltaX = 0;
         this.mouse.deltaY = 0;
         this.mouse.wheelDelta = 0;
+
+        // Snapshot current key states for next frame's one-shot detection
+        this._prevKeys = { ...this.keys };
     }
 
     _setupListeners() {
@@ -114,6 +127,7 @@ export class InputManager {
             case 'KeyA': elId = 'key-a'; break;
             case 'KeyS': elId = 'key-s'; break;
             case 'KeyD': elId = 'key-d'; break;
+            case 'KeyE': elId = 'key-e'; break;
             case 'Space': elId = 'key-space'; break;
         }
 
