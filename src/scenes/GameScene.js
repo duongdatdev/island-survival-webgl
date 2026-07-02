@@ -11,6 +11,7 @@ import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
 import { ResourceManager } from '../systems/ResourceManager.js';
+import { DebrisManager } from '../systems/DebrisManager.js';
 import { Inventory } from '../systems/Inventory.js';
 
 /**
@@ -51,6 +52,7 @@ export class GameScene extends Scene {
         // 6. Resource System Initialization
         this.inventory = new Inventory();
         this.resourceManager = new ResourceManager();
+        this.debrisManager = new DebrisManager();
 
         // Spawn resources scattered across the island
         this.resourceManager.spawnRandomResources(gl, this.terrain, 30);
@@ -82,6 +84,9 @@ export class GameScene extends Scene {
 
         // Update resource system (animations, pickup detection)
         this.resourceManager.update(deltaTime, this.player.position, this.inventory, this.engine.input);
+
+        // Update drifting debris system (skip pickup if resource pickup is available)
+        this.debrisManager.update(deltaTime, this.player.position, this.inventory, this.engine.input, this.terrain, this.gl, this.resourceManager.nearestPickable);
 
         // Manage light rotation from Debug UI checkbox
         const rotLightEl = document.getElementById('toggle-light-rot');
@@ -161,6 +166,9 @@ export class GameScene extends Scene {
         // 5. Draw World Resources
         this.resourceManager.drawAll(this.basicShader, drawMode);
 
+        // 6. Draw Drifting Debris (on water surface, before water pass)
+        this.debrisManager.drawAll(this.basicShader, drawMode);
+
         // --- DRAW WATER (Translucent Geometry, WaterShader) ---
         // Enable blending for transparency
         gl.enable(gl.BLEND);
@@ -227,6 +235,7 @@ export class GameScene extends Scene {
 
         // Cleanup resource system
         if (this.resourceManager) this.resourceManager.delete();
+        if (this.debrisManager) this.debrisManager.delete();
         if (this.inventory) this.inventory.clear();
     }
 
