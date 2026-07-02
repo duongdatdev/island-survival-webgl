@@ -130,13 +130,94 @@
                 <span class="resource-count" id="count-barrel">0</span>
             </div>
         </div>
+
+        <div class="resource-hud-title" style="margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 10px;">TRANG BỊ / CHẾ TẠO</div>
+        <div class="resource-slots">
+            <div class="resource-slot" id="slot-stone_axe">
+                <span class="resource-icon">🪓</span>
+                <span class="resource-name">Rìu Đá</span>
+                <span class="resource-count" id="count-stone_axe">0</span>
+            </div>
+            <div class="resource-slot" id="slot-raft_frame">
+                <span class="resource-icon">🧱</span>
+                <span class="resource-name">Khung Bè</span>
+                <span class="resource-count" id="count-raft_frame">0</span>
+            </div>
+            <div class="resource-slot" id="slot-paddle">
+                <span class="resource-icon">🛶</span>
+                <span class="resource-name">Mái Chèo</span>
+                <span class="resource-count" id="count-paddle">0</span>
+            </div>
+            <div class="resource-slot" id="slot-barrel_floats">
+                <span class="resource-icon">🛢️</span>
+                <span class="resource-name">Phao Thùng</span>
+                <span class="resource-count" id="count-barrel_floats">0</span>
+            </div>
+        </div>
+
+        <button id="craft-toggle-btn" class="craft-toggle-btn">
+            <span class="btn-icon">🔨</span>
+            <span class="btn-text">CHẾ TẠO (C)</span>
+        </button>
+    </div>
+
+    <!-- Crafting Panel Overlay -->
+    <div id="crafting-panel" class="crafting-panel hidden">
+        <div class="crafting-content">
+            <div class="crafting-header">
+                <div class="crafting-title">
+                    <span class="title-icon">🔨</span> CHẾ TẠO
+                </div>
+                <button id="crafting-close" class="crafting-close">&times;</button>
+            </div>
+            <div id="crafting-recipes" class="crafting-recipes">
+                <!-- Injected dynamically via JS -->
+            </div>
+        </div>
     </div>
 
     <!-- Pickup Hint - Bottom Center -->
     <div id="pickup-hint" class="pickup-hint hidden"></div>
 
-    <!-- Pickup Notification - Top Center -->
-    <div id="pickup-notification" class="pickup-notification hidden"></div>
+    <!-- Escape HUD - Bottom Center (shown when raft is built) -->
+    <div id="escape-hud" class="escape-hud hidden">
+        <div class="escape-prompt">⛵ Chiếc bè cứu sinh đã hoàn thành!</div>
+        <button id="escape-btn" class="escape-btn">
+            THOÁT KHỎI ĐẢO
+        </button>
+    </div>
+
+    <!-- Victory Screen Overlay (End Game) -->
+    <div id="victory-screen" class="victory-screen overlay hidden">
+        <div class="victory-content">
+            <div class="victory-badge">🎉 CHIẾN THẮNG</div>
+            <div class="victory-title">ĐÃ THOÁT KHỎI ĐẢO!</div>
+            <div class="victory-subtitle">Bạn đã đóng bè thành công và vượt sóng khơi trở về đất liền.</div>
+            
+            <div class="stats-panel">
+                <div class="stat-row">
+                    <span class="stat-label">Thời gian sinh tồn:</span>
+                    <span id="stat-time" class="stat-value">00:00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Khung Bè:</span>
+                    <span class="stat-value">Đã lắp (1/1)</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Phao Thùng:</span>
+                    <span class="stat-value">Đã lắp (1/1)</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Mái Chèo:</span>
+                    <span class="stat-value">Đã lắp (1/1)</span>
+                </div>
+            </div>
+
+            <button id="restart-btn" class="restart-btn">
+                CHƠI LẠI
+            </button>
+        </div>
+    </div>
 
     <!-- Main Module Loading -->
     <script type="module" src="src/main.js"></script>

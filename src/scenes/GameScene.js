@@ -13,6 +13,11 @@ import { Vec3 } from '../math/Vec3.js';
 import { ResourceManager } from '../systems/ResourceManager.js';
 import { DebrisManager } from '../systems/DebrisManager.js';
 import { Inventory } from '../systems/Inventory.js';
+import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js';
+import { getResourceDef } from '../systems/ResourceDatabase.js';
+import { CraftingSystem } from '../systems/CraftingSystem.js';
+import { RaftAssembly } from '../entities/RaftAssembly.js';
+
 
 /**
  * Main active gameplay scene
@@ -60,7 +65,46 @@ export class GameScene extends Scene {
         // Bind inventory changes to UI updates
         this.inventory.onChange = (resourceId, newCount, delta) => {
             this._updateResourceHUD(resourceId, newCount);
+            this._renderCraftingPanel();
         };
+
+        // 8. Crafting UI Bindings
+        this.craftingPanel = document.getElementById('crafting-panel');
+        this.craftingRecipesContainer = document.getElementById('crafting-recipes');
+        this.craftToggleBtn = document.getElementById('craft-toggle-btn');
+        this.craftingCloseBtn = document.getElementById('crafting-close');
+        this._notificationTimeoutId = null;
+
+        if (this.craftToggleBtn) {
+            this.craftToggleBtn.addEventListener('click', () => this._toggleCraftingPanel());
+        }
+        if (this.craftingCloseBtn) {
+            this.craftingCloseBtn.addEventListener('click', () => this._closeCraftingPanel());
+        }
+
+        // Initialize panel render
+        this._renderCraftingPanel();
+
+        // Raft Assembly & Escape HUD Initializations
+        this.raftAssembly = new RaftAssembly(gl, [0.0, 0.0, 20.0]);
+        this.escapeHud = document.getElementById('escape-hud');
+        this.escapeBtn = document.getElementById('escape-btn');
+        this.victoryScreen = document.getElementById('victory-screen');
+        this.restartBtn = document.getElementById('restart-btn');
+        this.statTimeEl = document.getElementById('stat-time');
+
+        if (this.escapeBtn) {
+            this.escapeBtn.addEventListener('click', () => this._startEscapeCutscene());
+        }
+        if (this.restartBtn) {
+            this.restartBtn.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
+
+        this.isEscaping = false;
+        this.escapeTime = 0.0;
+        this.survivalSeconds = 0.0;
 
         // 7. Running properties
         this.time = 0.0;
@@ -73,20 +117,167 @@ export class GameScene extends Scene {
     update(deltaTime) {
         this.time += deltaTime;
 
+        // Escape cutscene update loop
+        if (this.isEscaping) {
+            this.escapeTime += deltaTime;
+
+            // Sail the raft forward
+            const sailSpeed = 1.0 + this.escapeTime * 0.8;
+            this.raftAssembly.position[2] += sailSpeed * deltaTime;
+            this.raftAssembly.position[1] = Math.sin(this.time * 2.5) * 0.08;
+            this.raftAssembly.updateModelMatrix();
+
+            // Pin player character to raft frame
+            this.player.position[0] = this.raftAssembly.position[0];
+            this.player.position[1] = this.raftAssembly.position[1] + 0.45;
+            this.player.position[2] = this.raftAssembly.position[2];
+            this.player.rotation[1] = 0.0;
+            this.player.updateModelMatrix();
+
+            // Cinematic camera track
+            this.camera.target[0] = this.raftAssembly.position[0];
+            this.camera.target[1] = this.raftAssembly.position[1] + 0.8;
+            this.camera.target[2] = this.raftAssembly.position[2];
+
+            // 3/4 high side view camera panning
+            this.camera.position[0] = -7.0 - this.escapeTime * 0.3;
+            this.camera.position[1] = 4.0 + this.escapeTime * 0.15;
+            this.camera.position[2] = this.raftAssembly.position[2] - 8.0 - this.escapeTime * 0.2;
+
+            const up = [0, 1.0, 0];
+            Mat4.lookAt(this.camera.viewMatrix, this.camera.position, this.camera.target, up);
+
+            // Handle victory overlay trigger
+            if (this.escapeTime >= 6.0) {
+                if (this.victoryScreen && this.victoryScreen.classList.contains('hidden')) {
+                    this.victoryScreen.classList.remove('hidden');
+                    
+                    const mins = Math.floor(this.survivalSeconds / 60).toString().padStart(2, '0');
+                    const secs = Math.floor(this.survivalSeconds % 60).toString().padStart(2, '0');
+                    if (this.statTimeEl) {
+                        this.statTimeEl.textContent = `${mins}:${secs}`;
+                    }
+
+                    if (document.pointerLockElement) {
+                        document.exitPointerLock();
+                    }
+                }
+            }
+            return;
+        }
+
+        // Increment survived time
+        this.survivalSeconds += deltaTime;
+
         // Rescale aspect ratio if canvas resized
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
 
         // Update player movements using keyboards and camera reference
         this.player.update(deltaTime, this.engine.input, this.camera, this.terrain);
 
+        // Toggle Crafting Panel via 'C' key
+        if (this.engine.input.isKeyPressed('KeyC')) {
+            this._toggleCraftingPanel();
+        }
+
+        // Developer Debug Cheat: Press 'K' to teleport to beach & get all raft modules
+        if (this.engine.input.isKeyPressed('KeyK')) {
+            // Teleport close to raft building site
+            this.player.position[0] = 0.0;
+            this.player.position[1] = 0.9;
+            this.player.position[2] = 16.5;
+            this.player.updateModelMatrix();
+
+            // Add required items
+            this.inventory.addItem('raft_frame', 1);
+            this.inventory.addItem('barrel_floats', 1);
+            this.inventory.addItem('paddle', 1);
+
+            this._showNotification('🛠️ CHEAT: Teleported to beach & raft modules added!');
+        }
+
+
         // Snap camera tracking around player
         this.camera.update(this.engine.input, this.player.position);
+
+        // Proximity detection for raft assembly
+        let showRaftPrompt = false;
+        let raftPromptText = '';
+        let hasModule = false;
+        let targetModule = '';
+
+        const distToRaft = this.raftAssembly.distanceTo(this.player.position);
+        if (distToRaft < 3.0 && !this.raftAssembly.isComplete()) {
+            if (!this.raftAssembly.framePlaced) {
+                targetModule = 'raft_frame';
+                hasModule = this.inventory.hasItem('raft_frame');
+                raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Khung Bè 🧱' : 'Cần chế tạo Khung Bè 🧱 để lắp ráp';
+            } else if (!this.raftAssembly.floatsPlaced) {
+                targetModule = 'barrel_floats';
+                hasModule = this.inventory.hasItem('barrel_floats');
+                raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Phao Thùng 🛢️' : 'Cần chế tạo Phao Thùng 🛢️ để lắp ráp';
+            } else if (!this.raftAssembly.paddlePlaced) {
+                targetModule = 'paddle';
+                hasModule = this.inventory.hasItem('paddle');
+                raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Mái Chèo 🛶' : 'Cần chế tạo Mái Chèo 🛶 để lắp ráp';
+            }
+            showRaftPrompt = true;
+        }
+
+        // Intercept KeyE to place modules on the raft assembly
+        if (showRaftPrompt && hasModule && this.engine.input.isKeyPressed('KeyE')) {
+            this.engine.input.keys['KeyE'] = false; // consume key
+            
+            if (targetModule === 'raft_frame') {
+                this.inventory.removeItem('raft_frame', 1);
+                this.raftAssembly.framePlaced = true;
+                this._showNotification('🧱 Lắp Khung Bè thành công!');
+            } else if (targetModule === 'barrel_floats') {
+                this.inventory.removeItem('barrel_floats', 1);
+                this.raftAssembly.floatsPlaced = true;
+                this._showNotification('🛢️ Lắp Phao Thùng thành công!');
+            } else if (targetModule === 'paddle') {
+                this.inventory.removeItem('paddle', 1);
+                this.raftAssembly.paddlePlaced = true;
+                this._showNotification('🛶 Lắp Mái Chèo thành công!');
+            }
+        }
 
         // Update resource system (animations, pickup detection)
         this.resourceManager.update(deltaTime, this.player.position, this.inventory, this.engine.input);
 
         // Update drifting debris system (skip pickup if resource pickup is available)
         this.debrisManager.update(deltaTime, this.player.position, this.inventory, this.engine.input, this.terrain, this.gl, this.resourceManager.nearestPickable);
+
+        // Override pickup hint text if player is at raft build site
+        if (showRaftPrompt) {
+            const hintEl = document.getElementById('pickup-hint');
+            if (hintEl) {
+                hintEl.innerHTML = raftPromptText;
+                hintEl.classList.remove('hidden');
+            }
+        }
+
+        // Display Escape HUD if raft is completed
+        if (this.raftAssembly.isComplete() && !this.isEscaping) {
+            if (distToRaft < 4.0) {
+                if (this.escapeHud && this.escapeHud.classList.contains('hidden')) {
+                    this.escapeHud.classList.remove('hidden');
+                    if (document.pointerLockElement) {
+                        document.exitPointerLock();
+                    }
+                }
+            } else {
+                if (this.escapeHud && !this.escapeHud.classList.contains('hidden')) {
+                    this.escapeHud.classList.add('hidden');
+                }
+            }
+        }
+
+        // Update raft assembly animations
+        if (this.raftAssembly) {
+            this.raftAssembly.update(deltaTime);
+        }
 
         // Manage light rotation from Debug UI checkbox
         const rotLightEl = document.getElementById('toggle-light-rot');
@@ -169,10 +360,21 @@ export class GameScene extends Scene {
         // 6. Draw Drifting Debris (on water surface, before water pass)
         this.debrisManager.drawAll(this.basicShader, drawMode);
 
+        // 7. Draw solid components of the Raft Assembly
+        if (this.raftAssembly) {
+            this.raftAssembly.draw(this.basicShader, drawMode, false);
+        }
+
         // --- DRAW WATER (Translucent Geometry, WaterShader) ---
         // Enable blending for transparency
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        // Draw ghost/hologram parts of Raft Assembly (translucent pass)
+        this.basicShader.use();
+        if (this.raftAssembly) {
+            this.raftAssembly.draw(this.basicShader, drawMode, true);
+        }
         
         // Disable backface culling to draw wave interiors correctly
         gl.disable(gl.CULL_FACE);
@@ -220,6 +422,154 @@ export class GameScene extends Scene {
         }
     }
 
+    /**
+     * Toggle the visibility of the crafting panel overlay
+     */
+    _toggleCraftingPanel() {
+        if (!this.craftingPanel) return;
+        const isHidden = this.craftingPanel.classList.contains('hidden');
+        if (isHidden) {
+            this.craftingPanel.classList.remove('hidden');
+            // Exit pointer lock to enable clicking buttons
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+            this._renderCraftingPanel();
+        } else {
+            this._closeCraftingPanel();
+        }
+    }
+
+    /**
+     * Close the crafting panel overlay
+     */
+    _closeCraftingPanel() {
+        if (this.craftingPanel) {
+            this.craftingPanel.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Render dynamic recipes inside the crafting container
+     */
+    _renderCraftingPanel() {
+        if (!this.craftingRecipesContainer) return;
+
+        const recipes = getAllRecipes();
+        let html = '';
+
+        for (const recipe of recipes) {
+            const canCraft = CraftingSystem.canCraft(recipe.id, this.inventory);
+            
+            // Build ingredients HTML
+            let ingredientsHtml = '';
+            for (const [ingredientId, requiredCount] of Object.entries(recipe.ingredients)) {
+                const currentCount = this.inventory.getCount(ingredientId);
+                const isMet = currentCount >= requiredCount;
+                const badgeClass = isMet ? 'met' : 'missing';
+                
+                const resDef = getResourceDef(ingredientId);
+                const ingredientName = resDef ? resDef.name : ingredientId;
+                const ingredientIcon = resDef ? resDef.icon : '';
+
+                ingredientsHtml += `
+                    <span class="ingredient-badge ${badgeClass}">
+                        ${ingredientIcon} ${ingredientName} ${currentCount}/${requiredCount}
+                    </span>
+                `;
+            }
+
+            html += `
+                <div class="recipe-card" id="recipe-${recipe.id}">
+                    <div class="recipe-icon-wrapper">${recipe.icon}</div>
+                    <div class="recipe-info">
+                        <div class="recipe-name-text">${recipe.name}</div>
+                        <div class="recipe-desc-text">${recipe.description}</div>
+                        <div class="recipe-ingredients">
+                            ${ingredientsHtml}
+                        </div>
+                    </div>
+                    <button class="craft-btn" data-recipe-id="${recipe.id}" ${canCraft ? '' : 'disabled'}>
+                        Chế tạo
+                    </button>
+                </div>
+            `;
+        }
+
+        this.craftingRecipesContainer.innerHTML = html;
+
+        // Bind click events
+        const buttons = this.craftingRecipesContainer.querySelectorAll('.craft-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const recipeId = e.currentTarget.getAttribute('data-recipe-id');
+                this._craftItem(recipeId);
+            });
+        });
+    }
+
+    /**
+     * Handle item crafting
+     * @param {string} recipeId
+     */
+    _craftItem(recipeId) {
+        const recipe = getRecipeDef(recipeId);
+        if (!recipe) return;
+
+        const success = CraftingSystem.craft(recipeId, this.inventory);
+        if (success) {
+            this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
+        } else {
+            console.warn(`GameScene: Crafting failed for ${recipeId}`);
+        }
+    }
+
+    /**
+     * Show premium toast notification overlay
+     * @param {string} message
+     */
+    _showNotification(message) {
+        const el = document.getElementById('pickup-notification');
+        if (!el) return;
+
+        el.innerHTML = message;
+        el.classList.remove('hidden');
+        el.classList.remove('animate-out');
+
+        // Force reflow for animation restart
+        void el.offsetWidth;
+        el.classList.add('animate-in');
+
+        // Clear existing timeout if any
+        if (this._notificationTimeoutId) {
+            clearTimeout(this._notificationTimeoutId);
+        }
+
+        this._notificationTimeoutId = setTimeout(() => {
+            el.classList.remove('animate-in');
+            el.classList.add('animate-out');
+            setTimeout(() => {
+                el.classList.add('hidden');
+                el.classList.remove('animate-out');
+            }, 300);
+        }, 2500);
+    }
+
+    /**
+     * Starts the cinematic cutscene sequence
+     */
+    _startEscapeCutscene() {
+        this.isEscaping = true;
+        if (this.escapeHud) {
+            this.escapeHud.classList.add('hidden');
+        }
+        this._closeCraftingPanel();
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+    }
+
+
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
         
@@ -234,9 +584,14 @@ export class GameScene extends Scene {
         if (this.visorMesh) this.visorMesh.delete();
 
         // Cleanup resource system
+        if (this.raftAssembly) this.raftAssembly.delete();
         if (this.resourceManager) this.resourceManager.delete();
         if (this.debrisManager) this.debrisManager.delete();
         if (this.inventory) this.inventory.clear();
+        if (this._notificationTimeoutId) {
+            clearTimeout(this._notificationTimeoutId);
+        }
+
     }
 
     /**

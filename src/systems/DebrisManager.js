@@ -1,5 +1,6 @@
 import { DriftingDebris } from '../entities/DriftingDebris.js';
 import { getDebrisDef, getWeightedRandomDebrisType, randomInRange } from './DebrisDatabase.js';
+import { getResourceDef } from './ResourceDatabase.js';
 
 /**
  * DebrisManager - Orchestrates ocean debris spawning, drifting, pickup, and respawning.
@@ -26,8 +27,8 @@ export class DebrisManager {
         this.nearestPickable = null;
 
         // Configuration
-        this.maxDebris = config.maxDebris || 6;
-        this.spawnInterval = config.spawnInterval || 4;
+        this.maxDebris = config.maxDebris || 15;
+        this.spawnInterval = config.spawnInterval || 2.0;
         this.spawnRadiusMin = config.spawnRadiusMin || 28;
         this.spawnRadiusMax = config.spawnRadiusMax || 40;
 
@@ -203,7 +204,9 @@ export class DebrisManager {
         if (nearestDebris) {
             const def = nearestDebris.debrisDef;
             const gives = def.gives;
-            hintEl.innerHTML = `<span class="hint-key">E</span> Nhặt ${def.icon} ${def.name} <span class="hint-gives">(+${gives.amount} ${gives.resourceId})</span>`;
+            const resDef = getResourceDef(gives.resourceId);
+            const resourceName = resDef ? resDef.name : gives.resourceId;
+            hintEl.innerHTML = `<span class="hint-key">E</span> Nhặt ${def.icon} ${def.name} <span class="hint-gives">(+${gives.amount} ${resourceName})</span>`;
             hintEl.classList.remove('hidden');
             hintEl.dataset.hintOwner = 'debris';
         } else if (hintEl.dataset.hintOwner === 'debris') {
@@ -222,7 +225,9 @@ export class DebrisManager {
         const el = document.getElementById('pickup-notification');
         if (!el) return;
 
-        el.innerHTML = `${debrisDef.icon} ${debrisDef.name} → +${gives.amount} ${gives.resourceId}`;
+        const resDef = getResourceDef(gives.resourceId);
+        const resourceName = resDef ? resDef.name : gives.resourceId;
+        el.innerHTML = `${debrisDef.icon} ${debrisDef.name} → +${gives.amount} ${resourceName}`;
         el.classList.remove('hidden');
         el.classList.remove('animate-out');
 
