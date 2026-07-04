@@ -2,6 +2,7 @@ import { GameLoop } from './GameLoop.js';
 import { SceneManager } from './SceneManager.js';
 import { InputManager } from './InputManager.js';
 import { AssetManager } from './AssetManager.js';
+import { AudioManager } from './AudioManager.js';
 
 /**
  * Core game engine orchestrating WebGL contexts and manager instances
@@ -42,8 +43,12 @@ export class Engine {
         // Core Managers
         this.input = new InputManager(this.canvas);
         this.assets = new AssetManager(gl);
+        this.audio = new AudioManager();
         this.scenes = new SceneManager(this);
         this.loop = new GameLoop();
+
+        // Pause state
+        this.isPaused = false;
 
         // Connect Loop Callbacks
         this.loop.onUpdate = (deltaTime) => this._update(deltaTime);
@@ -63,6 +68,14 @@ export class Engine {
         this.loop.stop();
     }
 
+    pause() {
+        this.isPaused = true;
+    }
+
+    resume() {
+        this.isPaused = false;
+    }
+
     _resize() {
         const displayWidth = window.innerWidth;
         const displayHeight = window.innerHeight;
@@ -75,6 +88,13 @@ export class Engine {
     }
 
     _update(deltaTime) {
+        // When paused, skip game logic updates but still allow scene to handle pause rendering
+        if (this.isPaused) {
+            // Still reset input deltas so they don't accumulate
+            this.input.resetDeltas();
+            return;
+        }
+
         this.scenes.update(deltaTime);
         
         // Reset key/mouse movement deltas post updates
@@ -91,6 +111,10 @@ export class Engine {
         this.input = null;
         this.assets.clear();
         this.assets = null;
+        if (this.audio) {
+            this.audio.destroy();
+            this.audio = null;
+        }
         this.scenes.destroy();
         this.scenes = null;
         this.gl = null;

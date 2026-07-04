@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Island Survival: Escape</title>
+    <meta name="description" content="Island Survival: Escape - Game sinh tồn đảo hoang WebGL 2. Thu thập tài nguyên, chế tạo bè và thoát khỏi đảo!">
     <!-- Premium Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,8 +24,70 @@
                 <div id="loader-bar" class="loader-bar"></div>
             </div>
             <div id="loader-text" class="loader-text">Đang tải tài nguyên (0%)...</div>
+            <div id="loader-tip" class="loader-tip"></div>
         </div>
     </div>
+
+    <!-- UI Overlay: Main Menu -->
+    <div id="main-menu" class="overlay hidden">
+        <div class="menu-content">
+            <div class="menu-logo-wrapper">
+                <div class="menu-logo">ISLAND SURVIVAL</div>
+                <div class="menu-subtitle">E S C A P E</div>
+            </div>
+            <div class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Thoát khỏi đảo hoang.</div>
+            <div class="menu-buttons">
+                <button id="menu-start-btn" class="menu-btn primary">
+                    <span class="btn-icon">⛵</span>
+                    <span class="btn-text">BẮT ĐẦU</span>
+                </button>
+                <button id="menu-tutorial-btn" class="menu-btn secondary">
+                    <span class="btn-icon">📖</span>
+                    <span class="btn-text">HƯỚNG DẪN + CHƠI</span>
+                </button>
+                <button id="menu-sound-btn" class="menu-btn tertiary">
+                    <span class="btn-icon">🔊</span>
+                    <span class="btn-text">ÂM THANH: BẬT</span>
+                </button>
+            </div>
+            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • Procedural Audio</div>
+        </div>
+    </div>
+
+    <!-- UI Overlay: Pause Menu -->
+    <div id="pause-menu" class="overlay hidden">
+        <div class="pause-content">
+            <div class="pause-title">⏸️ TẠM DỪNG</div>
+            <div class="pause-buttons">
+                <button id="pause-resume-btn" class="menu-btn primary">
+                    <span class="btn-icon">▶️</span>
+                    <span class="btn-text">TIẾP TỤC</span>
+                </button>
+                <button id="pause-sound-btn" class="menu-btn tertiary">
+                    <span class="btn-icon">🔊</span>
+                    <span class="btn-text">ÂM THANH: BẬT</span>
+                </button>
+                <button id="pause-menu-btn" class="menu-btn danger">
+                    <span class="btn-icon">🏠</span>
+                    <span class="btn-text">VỀ MENU CHÍNH</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tutorial Overlay - Bottom Center -->
+    <div id="tutorial-overlay" class="tutorial-overlay hidden">
+        <div class="tutorial-card">
+            <div class="tutorial-content">
+                <span id="tutorial-text" class="tutorial-text"></span>
+                <span id="tutorial-step" class="tutorial-step"></span>
+            </div>
+            <button id="tutorial-skip" class="tutorial-skip">Bỏ qua ✕</button>
+        </div>
+    </div>
+
+    <!-- Pickup Notification - Top Center Toast -->
+    <div id="pickup-notification" class="pickup-notification hidden"></div>
 
     <!-- UI Overlay: Premium Debug Panel -->
     <div id="debug-panel" class="debug-panel hidden">
@@ -102,6 +165,7 @@
             <div class="mouse-tip">Giữ Chuột Trái & kéo để xoay Camera. Cuộn chuột để Zoom.</div>
             <div class="mouse-tip highlighted">Bấm phím 'L' để khóa/mở khóa con trỏ chuột.</div>
             <div class="mouse-tip highlighted">Bấm phím 'E' để nhặt tài nguyên gần đó.</div>
+            <div class="mouse-tip highlighted">Bấm phím 'F3' để bật/tắt Debug Panel.</div>
         </div>
     </div>
 

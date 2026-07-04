@@ -1,7 +1,8 @@
 import { Scene } from '../core/Scene.js';
 
 /**
- * Loading screen scene that tracks AssetManager status and updates the UI
+ * Loading screen scene that tracks AssetManager status and updates the UI.
+ * Now includes rotating gameplay tips and routes to MainMenu after loading.
  */
 export class LoadingScene extends Scene {
     init() {
@@ -18,19 +19,53 @@ export class LoadingScene extends Scene {
             debugPanel.classList.add('hidden'); // Hide debug during load
         }
 
+        // Hide resource HUD during loading
+        const resourceHud = document.getElementById('resource-hud');
+        if (resourceHud) resourceHud.style.display = 'none';
+
+        // Loading tips
+        this._tips = [
+            '💡 Thu thập Gỗ, Đá, Dây Thừng và Thùng Gỗ để chế tạo bè.',
+            '🌊 Tài nguyên cũng trôi trên biển — hãy ra bờ biển để nhặt!',
+            '🔨 Bấm C để mở bảng chế tạo và xem công thức.',
+            '⛵ Mục tiêu: Xây bè thoát khỏi đảo hoang!',
+            '🖱️ Giữ chuột trái và kéo để xoay camera.',
+            '📦 Bấm E khi đứng gần tài nguyên để nhặt.',
+            '🎮 Dùng phím W A S D để di chuyển nhân vật.',
+            '🔊 Âm thanh được tạo hoàn toàn bằng Web Audio API!',
+        ];
+        this._tipIndex = Math.floor(Math.random() * this._tips.length);
+        this._tipTimer = 0;
+        this._tipInterval = 3.0; // Change tip every 3 seconds
+        this._updateTip();
+
         // 1. Queue core textures (using small data URLs to guarantee immediate, CORS-free resolution)
         this.engine.assets.loadTexture(
             'player_skin', 
             'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
         );
 
-        // 2. Queue simulated heavy loads (1.5s delay) to showcase the UI animation smoothly
-        this.loadingDelay = new Promise(resolve => setTimeout(resolve, 1500));
+        // 2. Queue simulated heavy loads (2s delay) to showcase the UI animation smoothly
+        this.loadingDelay = new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Staged progress simulation
+        this._progress = 0;
+        this._targetProgress = 0;
+        this._stages = [
+            { at: 0.3, delay: 400, label: 'Đang tạo thế giới...' },
+            { at: 0.6, delay: 800, label: 'Đang tải tài nguyên...' },
+            { at: 0.85, delay: 1200, label: 'Đang chuẩn bị âm thanh...' },
+            { at: 1.0, delay: 1800, label: 'Sắp hoàn tất...' },
+        ];
+        this._stageIndex = 0;
+        this._stageTimer = 0;
 
         // Wait for all assets to resolve
         Promise.all([this.loadingDelay])
             .then(() => {
-                this._onLoadComplete();
+                this._targetProgress = 1.0;
+                // Give a moment for progress bar to catch up
+                setTimeout(() => this._onLoadComplete(), 500);
             })
             .catch(err => {
                 console.error('LoadingScene: Error during asset retrieval', err);
@@ -39,9 +74,20 @@ export class LoadingScene extends Scene {
     }
 
     update(deltaTime) {
-        // Track AssetManager progress ratio
-        const progress = this.engine.assets.getProgress();
-        const percent = Math.round(progress * 100);
+        // Staged progress animation
+        this._stageTimer += deltaTime * 1000;
+        
+        if (this._stageIndex < this._stages.length) {
+            const stage = this._stages[this._stageIndex];
+            if (this._stageTimer >= stage.delay) {
+                this._targetProgress = stage.at;
+                this._stageIndex++;
+            }
+        }
+
+        // Smooth progress interpolation
+        this._progress += (this._targetProgress - this._progress) * deltaTime * 3.0;
+        const percent = Math.round(Math.min(this._progress, 1.0) * 100);
 
         // Update loading progress bar element
         const barEl = document.getElementById('loader-bar');
@@ -52,7 +98,16 @@ export class LoadingScene extends Scene {
         // Update progress readout text
         const textEl = document.getElementById('loader-text');
         if (textEl) {
-            textEl.textContent = `Đang tải tài nguyên (${percent}%)...`;
+            const currentStage = this._stages[Math.min(this._stageIndex, this._stages.length - 1)];
+            textEl.textContent = currentStage ? `${currentStage.label} (${percent}%)` : `Đang tải tài nguyên (${percent}%)...`;
+        }
+
+        // Rotate tips
+        this._tipTimer += deltaTime;
+        if (this._tipTimer >= this._tipInterval) {
+            this._tipTimer = 0;
+            this._tipIndex = (this._tipIndex + 1) % this._tips.length;
+            this._updateTip();
         }
     }
 
@@ -64,8 +119,19 @@ export class LoadingScene extends Scene {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
 
+    _updateTip() {
+        const tipEl = document.getElementById('loader-tip');
+        if (tipEl) {
+            tipEl.style.opacity = '0';
+            setTimeout(() => {
+                tipEl.textContent = this._tips[this._tipIndex];
+                tipEl.style.opacity = '1';
+            }, 200);
+        }
+    }
+
     _onLoadComplete() {
-        console.log('LoadingScene: Assets loaded. Transitioning to Game...');
+        console.log('LoadingScene: Assets loaded. Transitioning to Main Menu...');
 
         // Fade out overlay
         const loaderScreen = document.getElementById('loading-screen');
@@ -73,14 +139,8 @@ export class LoadingScene extends Scene {
             loaderScreen.classList.add('hidden');
         }
 
-        // Reveal debug panel
-        const debugPanel = document.getElementById('debug-panel');
-        if (debugPanel) {
-            debugPanel.classList.remove('hidden');
-        }
-
-        // Switch to Game Scene
-        this.engine.scenes.switchScene('Game');
+        // Switch to Main Menu Scene (not directly to Game)
+        this.engine.scenes.switchScene('MainMenu');
     }
 
     destroy() {

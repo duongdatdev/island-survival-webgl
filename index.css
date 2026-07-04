@@ -44,7 +44,9 @@ body, html {
     pointer-events: none;
 }
 
-/* Loading Screen Content */
+/* ============================================
+   LOADING SCREEN
+   ============================================ */
 .loader-content {
     text-align: center;
     max-width: 450px;
@@ -101,7 +103,320 @@ body, html {
     font-family: 'JetBrains Mono', monospace;
 }
 
-/* Premium Debug Panel - Glassmorphism */
+.loader-tip {
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: #64748b;
+    font-style: italic;
+    min-height: 1.4em;
+    transition: opacity 0.4s ease;
+    line-height: 1.5;
+}
+
+/* ============================================
+   MAIN MENU OVERLAY
+   ============================================ */
+#main-menu.overlay {
+    background: rgba(7, 10, 19, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 15;
+}
+
+.menu-content {
+    text-align: center;
+    max-width: 480px;
+    width: 90%;
+    padding: 50px 40px;
+    border-radius: 28px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    animation: menuFadeIn 0.6s ease-out;
+}
+
+@keyframes menuFadeIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.menu-logo-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.menu-logo {
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: 5px;
+    background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #10b981 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    animation: gradientShift 4s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.menu-subtitle {
+    font-size: 1.1rem;
+    color: #64748b;
+    letter-spacing: 12px;
+    font-weight: 600;
+}
+
+.menu-tagline {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    line-height: 1.5;
+    max-width: 320px;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.menu-btn {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 14px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menu-btn .btn-icon {
+    font-size: 1.1rem;
+}
+
+.menu-btn.primary {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+.menu-btn.primary:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, #34d399, #059669);
+}
+
+.menu-btn.secondary {
+    background: linear-gradient(135deg, #38bdf8, #6366f1);
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.2);
+}
+
+.menu-btn.secondary:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
+    background: linear-gradient(135deg, #60a5fa, #818cf8);
+}
+
+.menu-btn.tertiary {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+}
+
+.menu-btn.tertiary:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.menu-btn.danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.menu-btn.danger:hover {
+    transform: translateY(-2px);
+    background: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.15);
+}
+
+.menu-btn:active {
+    transform: translateY(0) scale(1);
+}
+
+.menu-footer {
+    font-size: 0.7rem;
+    color: #475569;
+    letter-spacing: 1px;
+    margin-top: 8px;
+}
+
+/* ============================================
+   PAUSE MENU OVERLAY
+   ============================================ */
+#pause-menu.overlay {
+    background: rgba(7, 10, 19, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 20;
+}
+
+.pause-content {
+    text-align: center;
+    max-width: 380px;
+    width: 90%;
+    padding: 40px;
+    border-radius: 24px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    animation: pauseFadeIn 0.3s ease-out;
+}
+
+@keyframes pauseFadeIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.pause-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #f8fafc;
+}
+
+.pause-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 260px;
+}
+
+/* ============================================
+   TUTORIAL OVERLAY - Bottom Center
+   ============================================ */
+.tutorial-overlay {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9;
+    transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s ease;
+    pointer-events: auto;
+}
+
+.tutorial-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-50%) translateY(15px);
+    pointer-events: none;
+}
+
+.tutorial-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 16px;
+    padding: 14px 22px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35),
+                0 0 20px rgba(56, 189, 248, 0.08);
+    animation: tutorialPulse 2s ease-in-out infinite;
+}
+
+@keyframes tutorialPulse {
+    0%, 100% { border-color: rgba(56, 189, 248, 0.25); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(56, 189, 248, 0.08); }
+    50% { border-color: rgba(56, 189, 248, 0.45); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 30px rgba(56, 189, 248, 0.15); }
+}
+
+.tutorial-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tutorial-text {
+    font-size: 0.92rem;
+    color: #e2e8f0;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.tutorial-text b {
+    color: #38bdf8;
+    font-weight: 700;
+}
+
+.tutorial-step {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.tutorial-skip {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #64748b;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tutorial-skip:hover {
+    color: #e2e8f0;
+    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   DEBUG PANEL - Glassmorphism
+   ============================================ */
 .debug-panel {
     position: absolute;
     top: 20px;
@@ -129,7 +444,6 @@ body, html {
     pointer-events: none;
 }
 
-/* Scrollbar styles for debug panel */
 .debug-panel::-webkit-scrollbar {
     width: 4px;
 }
@@ -138,7 +452,6 @@ body, html {
     border-radius: 2px;
 }
 
-/* Header */
 .debug-header {
     display: flex;
     justify-content: space-between;
@@ -185,7 +498,6 @@ body, html {
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
-/* Debug Sections */
 .debug-section {
     margin-bottom: 18px;
 }
@@ -225,7 +537,7 @@ body, html {
     text-align: right;
 }
 
-/* Controls - Toggle Switch */
+/* Toggle Switch */
 .switch {
     position: relative;
     display: inline-block;
@@ -275,8 +587,7 @@ input:checked + .slider:before {
     box-shadow: 0 0 6px rgba(129, 140, 248, 0.8);
 }
 
-/* Keyboard Visual Grid - see updated definition below with E key */
-
+/* Keyboard Visual Grid */
 .key-box {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -311,7 +622,32 @@ input:checked + .slider:before {
     transform: translateY(1px);
 }
 
-/* Informative text */
+.key-box.accent {
+    border-color: rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+}
+
+.key-box.accent.active {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: #10b981;
+    color: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.keyboard-grid {
+    display: grid;
+    grid-template-areas: 
+        ". w ."
+        "a s d"
+        "e e e"
+        "space space space";
+    grid-gap: 6px;
+    width: 140px;
+    margin: 10px auto;
+}
+
+#key-e { grid-area: e; width: 100%; }
+
 .mouse-tip {
     font-size: 0.75rem;
     color: #64748b;
@@ -514,36 +850,6 @@ input:checked + .slider:before {
     opacity: 0;
     transform: translateX(-50%) translateY(-10px);
 }
-
-/* ============================================
-   E KEY ACCENT in Debug Keyboard Grid
-   ============================================ */
-.key-box.accent {
-    border-color: rgba(56, 189, 248, 0.3);
-    color: #38bdf8;
-}
-
-.key-box.accent.active {
-    background: rgba(16, 185, 129, 0.25);
-    border-color: #10b981;
-    color: #10b981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
-}
-
-/* Update keyboard grid to include E key */
-.keyboard-grid {
-    display: grid;
-    grid-template-areas: 
-        ". w ."
-        "a s d"
-        "e e e"
-        "space space space";
-    grid-gap: 6px;
-    width: 140px;
-    margin: 10px auto;
-}
-
-#key-e { grid-area: e; width: 100%; }
 
 /* ============================================
    CRAFT TOGGLE BUTTON (Inside Resource HUD)
@@ -859,7 +1165,7 @@ input:checked + .slider:before {
     background: radial-gradient(circle at center, rgba(15, 23, 42, 0.95), rgba(7, 10, 19, 0.99));
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    z-index: 100; /* Make sure it stays on top of debug/HUD elements */
+    z-index: 100;
 }
 
 .victory-content {
@@ -974,6 +1280,3 @@ input:checked + .slider:before {
 .restart-btn:active {
     transform: translateY(0);
 }
-
-
-

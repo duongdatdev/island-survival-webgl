@@ -1,5 +1,6 @@
 import { Engine } from './core/Engine.js';
 import { LoadingScene } from './scenes/LoadingScene.js';
+import { MainMenuScene } from './scenes/MainMenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 
 // Boot strap the WebGL 2 application on DOM completion
@@ -12,9 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 2. Register scenes to manager
         engine.scenes.addScene('Loading', LoadingScene);
+        engine.scenes.addScene('MainMenu', MainMenuScene);
         engine.scenes.addScene('Game', GameScene);
 
-        // 3. Initiate first scene transition
+        // 3. Initiate first scene transition (Loading → MainMenu → Game)
         engine.scenes.switchScene('Loading');
 
         // 4. Start execution of tick loops

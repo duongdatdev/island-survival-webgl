@@ -55,12 +55,27 @@ export class InputManager {
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault();
             }
+
+            // Prevent default for Escape (don't exit fullscreen etc.)
+            if (e.code === 'Escape') {
+                e.preventDefault();
+            }
+
             this.keys[e.code] = true;
             this._updateDebugKeyUI(e.code, true);
 
             // Toggle Pointer Lock with 'L' key
             if (e.code === 'KeyL') {
                 this.togglePointerLock();
+            }
+
+            // Toggle Debug Panel with F3
+            if (e.code === 'F3') {
+                e.preventDefault();
+                const debugPanel = document.getElementById('debug-panel');
+                if (debugPanel) {
+                    debugPanel.classList.toggle('hidden');
+                }
             }
         });
 

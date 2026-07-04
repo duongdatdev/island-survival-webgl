@@ -17,6 +17,8 @@ import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js';
 import { getResourceDef } from '../systems/ResourceDatabase.js';
 import { CraftingSystem } from '../systems/CraftingSystem.js';
 import { RaftAssembly } from '../entities/RaftAssembly.js';
+import { ParticleSystem } from '../systems/ParticleSystem.js';
+import { TutorialSystem } from '../systems/TutorialSystem.js';
 
 
 /**
@@ -68,7 +70,15 @@ export class GameScene extends Scene {
             this._renderCraftingPanel();
         };
 
-        // 8. Crafting UI Bindings
+        // 7. Particle System
+        this.particleSystem = new ParticleSystem(gl);
+
+        // 8. Tutorial System
+        this.tutorial = new TutorialSystem();
+        this.tutorial.init();
+        this.tutorial.start();
+
+        // 9. Crafting UI Bindings
         this.craftingPanel = document.getElementById('crafting-panel');
         this.craftingRecipesContainer = document.getElementById('crafting-recipes');
         this.craftToggleBtn = document.getElementById('craft-toggle-btn');
@@ -106,15 +116,70 @@ export class GameScene extends Scene {
         this.escapeTime = 0.0;
         this.survivalSeconds = 0.0;
 
-        // 7. Running properties
+        // 10. Pause state
+        this.isPaused = false;
+        this._pauseResumeBtn = document.getElementById('pause-resume-btn');
+        this._pauseSoundBtn = document.getElementById('pause-sound-btn');
+        this._pauseMenuBtn = document.getElementById('pause-menu-btn');
+
+        this._onPauseResume = () => {
+            this.engine.audio.playClick();
+            this._resumeGame();
+        };
+        this._onPauseSound = () => {
+            this.engine.audio._ensureContext();
+            const muted = this.engine.audio.toggleMute();
+            this._updatePauseSoundButton(muted);
+            if (!muted) this.engine.audio.playClick();
+        };
+        this._onPauseMenu = () => {
+            this.engine.audio.playClick();
+            this._resumeGame();
+            // Small delay for transition
+            setTimeout(() => {
+                this.engine.scenes.switchScene('MainMenu');
+            }, 100);
+        };
+
+        if (this._pauseResumeBtn) this._pauseResumeBtn.addEventListener('click', this._onPauseResume);
+        if (this._pauseSoundBtn) this._pauseSoundBtn.addEventListener('click', this._onPauseSound);
+        if (this._pauseMenuBtn) this._pauseMenuBtn.addEventListener('click', this._onPauseMenu);
+
+        // 11. Running properties
         this.time = 0.0;
         this.tempMatrix = Mat4.create();
 
+        // Footstep timer
+        this._footstepTimer = 0;
+        this._footstepInterval = 0.35; // Seconds between footstep sounds
+
         // Configure depth states
         gl.clearColor(0.53, 0.74, 0.90, 1.0); // Nice sky blue clear color
+
+        // Show HUD
+        const hud = document.getElementById('resource-hud');
+        if (hud) hud.style.display = '';
+
+        // Start ambient audio
+        this.engine.audio._ensureContext();
+        this.engine.audio.resume();
+        this.engine.audio.startAmbientWaves();
     }
 
     update(deltaTime) {
+        // Handle ESC for pause toggle
+        if (this.engine.input.isKeyPressed('Escape')) {
+            if (this.isPaused) {
+                this._resumeGame();
+            } else {
+                this._pauseGame();
+            }
+            return;
+        }
+
+        // If paused, don't update game logic
+        if (this.isPaused) return;
+
         this.time += deltaTime;
 
         // Escape cutscene update loop
@@ -147,6 +212,19 @@ export class GameScene extends Scene {
             const up = [0, 1.0, 0];
             Mat4.lookAt(this.camera.viewMatrix, this.camera.position, this.camera.target, up);
 
+            // Water splash particles during escape
+            if (Math.random() < 0.3) {
+                const splashPos = [
+                    this.raftAssembly.position[0] + (Math.random() - 0.5) * 1.5,
+                    0.2,
+                    this.raftAssembly.position[2] - 1.0
+                ];
+                this.particleSystem.emit(splashPos, ParticleSystem.PRESET.SPLASH);
+            }
+
+            // Update particles during cutscene
+            this.particleSystem.update(deltaTime);
+
             // Handle victory overlay trigger
             if (this.escapeTime >= 6.0) {
                 if (this.victoryScreen && this.victoryScreen.classList.contains('hidden')) {
@@ -161,6 +239,9 @@ export class GameScene extends Scene {
                     if (document.pointerLockElement) {
                         document.exitPointerLock();
                     }
+
+                    // Play victory fanfare
+                    this.engine.audio.playVictory();
                 }
             }
             return;
@@ -174,6 +255,25 @@ export class GameScene extends Scene {
 
         // Update player movements using keyboards and camera reference
         this.player.update(deltaTime, this.engine.input, this.camera, this.terrain);
+
+        // Footstep sounds while moving
+        if (this.player.currentSpeed > 0.1) {
+            this._footstepTimer += deltaTime;
+            if (this._footstepTimer >= this._footstepInterval) {
+                this._footstepTimer = 0;
+                this.engine.audio.playFootstep();
+
+                // Dust particles at player feet
+                const dustPos = [
+                    this.player.position[0],
+                    this.player.position[1] - 0.8,
+                    this.player.position[2]
+                ];
+                this.particleSystem.emit(dustPos, ParticleSystem.PRESET.DUST);
+            }
+        } else {
+            this._footstepTimer = this._footstepInterval * 0.8; // Quick first step on resume
+        }
 
         // Toggle Crafting Panel via 'C' key
         if (this.engine.input.isKeyPressed('KeyC')) {
@@ -241,13 +341,36 @@ export class GameScene extends Scene {
                 this.raftAssembly.paddlePlaced = true;
                 this._showNotification('🛶 Lắp Mái Chèo thành công!');
             }
+
+            // Sound + particle effects for raft building
+            this.engine.audio.playRaftBuild();
+            this.particleSystem.emit(
+                [this.raftAssembly.position[0], this.raftAssembly.position[1] + 0.5, this.raftAssembly.position[2]],
+                ParticleSystem.PRESET.BUILD
+            );
         }
 
         // Update resource system (animations, pickup detection)
+        const prevPickupCount = this._getTotalInventoryCount();
         this.resourceManager.update(deltaTime, this.player.position, this.inventory, this.engine.input);
+        
+        // Check if a pickup happened (for sound + particles)
+        if (this._getTotalInventoryCount() > prevPickupCount) {
+            this.engine.audio.playPickup();
+            this.particleSystem.emit(this.player.position, ParticleSystem.PRESET.PICKUP);
+            this.tutorial.notifyPickup();
+        }
 
         // Update drifting debris system (skip pickup if resource pickup is available)
+        const prevDebrisCount = this._getTotalInventoryCount();
         this.debrisManager.update(deltaTime, this.player.position, this.inventory, this.engine.input, this.terrain, this.gl, this.resourceManager.nearestPickable);
+
+        // Check if debris pickup happened
+        if (this._getTotalInventoryCount() > prevDebrisCount) {
+            this.engine.audio.playPickup();
+            this.particleSystem.emit(this.player.position, ParticleSystem.PRESET.PICKUP);
+            this.tutorial.notifyPickup();
+        }
 
         // Override pickup hint text if player is at raft build site
         if (showRaftPrompt) {
@@ -278,6 +401,12 @@ export class GameScene extends Scene {
         if (this.raftAssembly) {
             this.raftAssembly.update(deltaTime);
         }
+
+        // Update particle system
+        this.particleSystem.update(deltaTime);
+
+        // Update tutorial
+        this.tutorial.update(deltaTime, this.engine.input, this.player);
 
         // Manage light rotation from Debug UI checkbox
         const rotLightEl = document.getElementById('toggle-light-rot');
@@ -403,6 +532,65 @@ export class GameScene extends Scene {
         // Restore default WebGL drawing state
         gl.enable(gl.CULL_FACE);
         gl.disable(gl.BLEND);
+
+        // 8. Draw Particles (additive blending, on top)
+        this.particleSystem.draw(this.camera);
+    }
+
+    // ============================================
+    //  PAUSE SYSTEM
+    // ============================================
+
+    _pauseGame() {
+        if (this.isPaused || this.isEscaping) return;
+        this.isPaused = true;
+
+        // Show pause menu
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) pauseMenu.classList.remove('hidden');
+
+        // Update sound button state
+        this._updatePauseSoundButton(this.engine.audio.isMuted);
+
+        // Exit pointer lock
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+
+        this.engine.audio.playClick();
+    }
+
+    _resumeGame() {
+        if (!this.isPaused) return;
+        this.isPaused = false;
+
+        // Hide pause menu
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) pauseMenu.classList.add('hidden');
+    }
+
+    _updatePauseSoundButton(isMuted) {
+        if (this._pauseSoundBtn) {
+            this._pauseSoundBtn.innerHTML = isMuted
+                ? '<span class="btn-icon">🔇</span><span class="btn-text">ÂM THANH: TẮT</span>'
+                : '<span class="btn-icon">🔊</span><span class="btn-text">ÂM THANH: BẬT</span>';
+        }
+    }
+
+    // ============================================
+    //  UI HELPERS
+    // ============================================
+
+    /**
+     * Get total count of all items in inventory (for detecting pickups)
+     */
+    _getTotalInventoryCount() {
+        let total = 0;
+        const all = this.inventory.getAll();
+        for (const key in all) {
+            total += all[key];
+        }
+        return total;
     }
 
     /**
@@ -435,6 +623,8 @@ export class GameScene extends Scene {
                 document.exitPointerLock();
             }
             this._renderCraftingPanel();
+            this.tutorial.notifyCraftingOpened();
+            this.engine.audio.playClick();
         } else {
             this._closeCraftingPanel();
         }
@@ -519,6 +709,14 @@ export class GameScene extends Scene {
         const success = CraftingSystem.craft(recipeId, this.inventory);
         if (success) {
             this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
+            
+            // Sound + particle effects
+            this.engine.audio.playCraft();
+            this.particleSystem.emit(
+                [this.player.position[0], this.player.position[1] + 0.5, this.player.position[2]],
+                ParticleSystem.PRESET.CRAFT
+            );
+            this.tutorial.notifyCrafted();
         } else {
             console.warn(`GameScene: Crafting failed for ${recipeId}`);
         }
@@ -567,6 +765,12 @@ export class GameScene extends Scene {
         if (document.pointerLockElement) {
             document.exitPointerLock();
         }
+
+        // Hide tutorial during escape
+        this.tutorial.skip();
+        
+        // Sound
+        this.engine.audio.playClick();
     }
 
 
@@ -592,10 +796,28 @@ export class GameScene extends Scene {
             clearTimeout(this._notificationTimeoutId);
         }
 
+        // Cleanup particle system
+        if (this.particleSystem) this.particleSystem.delete();
+
+        // Cleanup tutorial
+        if (this.tutorial) this.tutorial.destroy();
+
+        // Remove pause button listeners
+        if (this._pauseResumeBtn) this._pauseResumeBtn.removeEventListener('click', this._onPauseResume);
+        if (this._pauseSoundBtn) this._pauseSoundBtn.removeEventListener('click', this._onPauseSound);
+        if (this._pauseMenuBtn) this._pauseMenuBtn.removeEventListener('click', this._onPauseMenu);
+
+        // Hide overlays
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) pauseMenu.classList.add('hidden');
+
+        // Stop ambient sounds
+        this.engine.audio.stopAmbientWaves();
     }
 
     /**
      * Helper to output standard 24-vertex cuboid arrays for flat surface normals
+     * BUG FIX: Corrected left face normal vector (was [-1, -1, 0] → [-1, 0, 0])
      */
     _createCubeData(r, g, b) {
         const positions = new Float32Array([
@@ -624,8 +846,8 @@ export class GameScene extends Scene {
              0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,
             // Right
              1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,
-            // Left
-            -1.0,  0.0,  0.0, -1.0, -1.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0,
+            // Left (BUG FIX: was [-1, -1, 0] for second vertex)
+            -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0,
         ]);
 
         const colors = new Float32Array(24 * 4);
