@@ -1353,11 +1353,13 @@ input:checked + .slider:before {
     grid-template-columns: repeat(5, 1fr);
     gap: 6px;
     flex: 1;
+    align-content: start;
 }
 
 .inv-slot {
     width: 100%;
     aspect-ratio: 1;
+    min-width: 0;
     background: var(--wood-mid);
     border: 2px solid var(--wood-border);
     border-radius: var(--panel-radius);
