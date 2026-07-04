@@ -1116,7 +1116,8 @@ input:checked + .slider:before {
 
 /* === Crafting Column === */
 .crafting-column {
-    width: 45%;
+    flex: 45;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1320,7 +1321,8 @@ input:checked + .slider:before {
 
 /* === Inventory Column === */
 .inventory-column {
-    width: 55%;
+    flex: 55;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
