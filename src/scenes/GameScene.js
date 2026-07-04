@@ -280,6 +280,11 @@ export class GameScene extends Scene {
             this._toggleCraftingPanel();
         }
 
+        // Toggle Inventory HUD via 'Tab' key
+        if (this.engine.input.isKeyPressed('Tab')) {
+            this._toggleInventoryHUD();
+        }
+
         // Developer Debug Cheat: Press 'K' to teleport to beach & get all raft modules
         if (this.engine.input.isKeyPressed('KeyK')) {
             // Teleport close to raft building site
@@ -607,6 +612,17 @@ export class GameScene extends Scene {
             countEl.classList.remove('pulse');
             void countEl.offsetWidth; // Force reflow
             countEl.classList.add('pulse');
+        }
+    }
+
+    /**
+     * Toggle the visibility of the resource HUD (inventory)
+     */
+    _toggleInventoryHUD() {
+        const hud = document.getElementById('resource-hud');
+        if (hud) {
+            hud.classList.toggle('hidden');
+            this.engine.audio.playClick();
         }
     }
 

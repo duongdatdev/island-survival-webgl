@@ -81,10 +81,10 @@ Craft Equipment → Craft Raft Modules → Assemble Raft → Escape
 
 ## Floating Debris
 
+-   Wood
+-   Stone
 -   Rope
 -   Barrel
--   Bottle
--   Scrap
 
 # 8. Inventory
 

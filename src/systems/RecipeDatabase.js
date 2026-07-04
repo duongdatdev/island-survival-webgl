@@ -56,8 +56,8 @@ export const RecipeDatabase = {
         description: 'Phao nổi chế tạo từ các thùng gỗ rỗng liên kết bằng dây thừng.',
         descriptionEn: 'Buoyancy floats made from empty wooden barrels bound with rope.',
         ingredients: {
-            barrel: 4,
-            rope: 2
+            barrel: 3,
+            rope: 1
         }
     }
 };

@@ -1,60 +1,64 @@
 # Folder Structure
 
-Dưới đây là cấu trúc thư mục thực tế của dự án **Island Survival: Escape**:
+Here is the actual folder structure of the **Island Survival: Escape** project:
 
 ```text
 island-survival/
-├── docs/                           # Tài liệu thiết kế và hướng dẫn phát triển
-├── src/                            # Mã nguồn ứng dụng
-│   ├── core/                       # Các module lõi điều hành game
-│   │   ├── AssetManager.js         # Tải tài nguyên (Textures, Text) bất đồng bộ
-│   │   ├── AudioManager.js         # Tổng hợp âm thanh lập trình (Procedural SFX/Ambient)
-│   │   ├── Engine.js               # Khởi tạo WebGL & điều phối vòng lặp, scene
-│   │   ├── GameLoop.js             # Quản lý nhịp cập nhật logic và dựng hình (Tick Loop)
-│   │   ├── InputManager.js         # Lắng nghe sự kiện bàn phím & chuột
-│   │   ├── Scene.js                # Lớp cơ sở cho các phân cảnh game
-│   │   └── SceneManager.js         # Chuyển đổi và quản lý vòng đời của các Scenes
+├── docs/                           # Design documents and development guidelines
+├── src/                            # Application source code
+│   ├── core/                       # Core engine module managers
+│   │   ├── AssetManager.js         # Asynchronous asset loading (Textures, Text)
+│   │   ├── AudioManager.js         # Procedural audio synthesis (SFX/Ambient)
+│   │   ├── Engine.js               # WebGL initialization, loop & scene orchestration
+│   │   ├── GameLoop.js             # Logic updates and rendering tick loop
+│   │   ├── InputManager.js         # Keyboard & mouse event listeners
+│   │   ├── Scene.js                # Base class for game scenes
+│   │   └── SceneManager.js         # Handles transitions and lifecycle of scenes
 │   │
-│   ├── renderer/                   # Lớp bọc WebGL 2 để dựng hình đồ họa
-│   │   ├── Camera.js               # Camera góc nhìn thứ ba (Yaw, Pitch, Zoom, Follow)
-│   │   ├── Light.js                # Quản lý ánh sáng Ambient và Directional (Day/Night)
-│   │   ├── Mesh.js                 # Quản lý buffers hình học (Vertex, Index, UV, Normal)
-│   │   ├── ShaderProgram.js        # Biên dịch và liên kết Vertex & Fragment Shaders
-│   │   └── Texture.js              # Khởi tạo và thiết lập thuộc tính WebGL Texture
+│   ├── math/                       # Matrix and Vector mathematics
+│   │   ├── Mat4.js                 # 4x4 Matrix transformations (Translation, Rotation, Scale, Projection)
+│   │   └── Vec3.js                 # 3D Vector calculation utilities
 │   │
-│   ├── entities/                   # Các đối tượng hiển thị & tương tác trong thế giới
-│   │   ├── Entity.js               # Lớp cơ sở cho thực thể (Transform, Matrix)
-│   │   ├── Player.js               # Thực thể người chơi (Movement, Physics snap, Rotation)
-│   │   ├── Terrain.js              # Tạo lưới địa hình đảo bằng thuật toán
-│   │   ├── Water.js                # Mặt nước biển động với sóng lập trình
-│   │   ├── WorldResource.js        # Tài nguyên trên đảo (Cây cối, bãi đá nhặt được)
-│   │   ├── DriftingDebris.js       # Thùng gỗ, chai nước, dây thừng trôi nổi trên biển
-│   │   └── RaftAssembly.js         # Cụm bè ghép linh hoạt tại bãi biển lắp ráp
+│   ├── renderer/                   # WebGL 2 rendering wrappers
+│   │   ├── Camera.js               # Third-person orbital camera (Yaw, Pitch, Zoom, Follow)
+│   │   ├── Light.js                # Ambient & directional light management (Day/Night)
+│   │   ├── Mesh.js                 # Geometry buffers wrapper (Vertex, Index, UV, Normal)
+│   │   ├── ShaderProgram.js        # Compiles and links Vertex & Fragment Shaders
+│   │   └── Texture.js              # WebGL Texture initialization and properties setup
 │   │
-│   ├── systems/                    # Các hệ thống phụ trợ quản lý logic và trạng thái
-│   │   ├── Inventory.js            # Quản lý số lượng vật phẩm và phát sự kiện thay đổi
-│   │   ├── CraftingSystem.js       # Kiểm tra công thức & tiến hành tiêu hao chế tạo
-│   │   ├── ResourceManager.js      # Quản lý vòng đời spawn, thu thập các tài nguyên trên đảo
-│   │   ├── DebrisManager.js        # Quản lý spawn, chuyển động dòng chảy và nhặt mảnh vỡ
-│   │   ├── ParticleSystem.js       # Tạo hiệu ứng hạt (Dust, Splash, Pickup, Build)
-│   │   ├── TutorialSystem.js       # Quản lý trình tự hướng dẫn người chơi mới
-│   │   ├── ResourceDatabase.js     # Cơ sở dữ liệu thuộc tính của tài nguyên
-│   │   ├── RecipeDatabase.js       # Định nghĩa công thức chế tạo vật phẩm
-│   │   └── DebrisDatabase.js       # Định nghĩa thông số các loại mảnh vỡ trôi nổi
+│   ├── entities/                   # Game world entities
+│   │   ├── Entity.js               # Base entity class (Transform, Model Matrix)
+│   │   ├── Player.js               # Player character (Movement, Terrain snap, Rotation)
+│   │   ├── Terrain.js              # Procedural island heightmap grid generation
+│   │   ├── Water.js                # Procedural dynamic ocean plane with waves
+│   │   ├── WorldResource.js        # Gatherable resources on the island (Trees, Rocks)
+│   │   ├── DriftingDebris.js       # Ocean debris (Wood, Stone, Ropes, Barrels)
+│   │   └── RaftAssembly.js         # Raft construction entity at the beach site
 │   │
-│   ├── shaders/                    # Các tập tin mã nguồn GLSL shader dạng JS
-│   │   ├── BasicShader.js          # Shader cơ bản có Blinn-Phong lighting + Textures
-│   │   ├── WaterShader.js          # Shader chuyển động sóng biển động sinh động
-│   │   └── ParticleShader.js       # Shader tối ưu để render lượng hạt lớn dạng Billboard
+│   ├── systems/                    # Core logic and state management systems
+│   │   ├── Inventory.js            # Tracks item quantities and triggers change events
+│   │   ├── CraftingSystem.js       # Verifies recipes and consumes materials
+│   │   ├── ResourceManager.js      # Spawns, updates, and harvests island resources
+│   │   ├── DebrisManager.js        # Spawns, drifts, and collects ocean debris
+│   │   ├── ParticleSystem.js       # Visual effects system (Dust, Splash, Pickup, Build)
+│   │   ├── TutorialSystem.js       # Sequential tutorial checklist manager
+│   │   ├── ResourceDatabase.js     # Data definitions for resource nodes
+│   │   ├── RecipeDatabase.js       # Crafting recipe definitions
+│   │   └── DebrisDatabase.js       # Floating debris settings and configuration
 │   │
-│   ├── scenes/                     # Các màn chơi (Cảnh) riêng biệt trong game
-│   │   ├── LoadingScene.js         # Màn hình tải dữ liệu giả lập và lời khuyên
-│   │   ├── MainMenuScene.js        # Menu bắt đầu có tương tác nút bấm
-│   │   └── GameScene.js            # Trải nghiệm chơi game chính, liên kết tất cả hệ thống
+│   ├── shaders/                    # GLSL shaders embedded in JS files
+│   │   ├── BasicShader.js          # Blinn-Phong lighting + Textures shader
+│   │   ├── WaterShader.js          # Vertex-displaced wave simulation shader
+│   │   └── ParticleShader.js       # Instanced billboard rendering shader
 │   │
-│   └── main.js                     # Điểm khởi đầu (Bootstrap) ứng dụng
+│   ├── scenes/                     # Distinct game scene modules
+│   │   ├── LoadingScene.js         # Simulated loading screen with rotating gameplay tips
+│   │   ├── MainMenuScene.js        # Interactive main menu scene
+│   │   └── GameScene.js            # Main active gameplay scene
+│   │
+│   └── main.js                     # Application entry point (Bootstrap)
 │
-├── index.html                      # Tệp HTML5 khung chứa Canvas & lớp giao diện UI
-├── index.css                       # Kiểu giao diện hiện đại (Glassmorphism, Neon glow)
-└── README.md                       # Giới thiệu sơ lược dự án
+├── index.html                      # HTML5 Canvas container & HUD overlay
+├── index.css                       # Modern UI styles (Glassmorphism, Neon glows)
+└── README.md                       # Brief project description
 ```

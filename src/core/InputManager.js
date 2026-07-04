@@ -51,8 +51,8 @@ export class InputManager {
     _setupListeners() {
         // Keyboard Events
         window.addEventListener('keydown', (e) => {
-            // Prevent default actions for gameplay keys (like space bar page-scrolling)
-            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+            // Prevent default actions for gameplay keys (like space bar page-scrolling, tab focus cycle)
+            if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault();
             }
 
