@@ -818,7 +818,7 @@ input:checked + .slider:before {
     bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 5;
+    z-index: 15;
     background: var(--wood-dark);
     border: var(--border-width) solid var(--wood-border);
     border-radius: var(--panel-radius);

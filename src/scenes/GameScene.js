@@ -10,16 +10,16 @@ import { Terrain } from '../entities/Terrain.js';
 import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
-import { ResourceManager } from '../systems/ResourceManager.js?v=4';
-import { DebrisManager } from '../systems/DebrisManager.js?v=4';
-import { Inventory } from '../systems/InventoryV2.js?v=4';
-import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js?v=4';
-import { getResourceDef } from '../systems/ResourceDatabase.js?v=4';
-import { CraftingSystem } from '../systems/CraftingSystem.js?v=4';
-import { RaftAssembly } from '../entities/RaftAssembly.js?v=4';
-import { ParticleSystem } from '../systems/ParticleSystem.js?v=4';
-import { TutorialSystem } from '../systems/TutorialSystem.js?v=4';
-import { VitalsSystem } from '../systems/VitalsSystem.js?v=4';
+import { ResourceManager } from '../systems/ResourceManager.js?v=5';
+import { DebrisManager } from '../systems/DebrisManager.js?v=5';
+import { Inventory } from '../systems/InventoryV2.js?v=5';
+import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js?v=5';
+import { getResourceDef } from '../systems/ResourceDatabase.js?v=5';
+import { CraftingSystem } from '../systems/CraftingSystem.js?v=5';
+import { RaftAssembly } from '../entities/RaftAssembly.js?v=5';
+import { ParticleSystem } from '../systems/ParticleSystem.js?v=5';
+import { TutorialSystem } from '../systems/TutorialSystem.js?v=5';
+import { VitalsSystem } from '../systems/VitalsSystem.js?v=5';
 import { Campfire } from '../entities/Campfire.js';
 import { WaterCollector } from '../entities/WaterCollector.js';
 
@@ -118,9 +118,11 @@ export class GameScene extends Scene {
             this._showGameOver();
         };
 
-        // Show vitals HUD
+        // Show vitals & hotbar HUD
         const vitalsHud = document.getElementById('vitals-hud');
         if (vitalsHud) vitalsHud.classList.remove('hidden');
+        const hotbarHud = document.getElementById('hotbar-hud');
+        if (hotbarHud) hotbarHud.classList.remove('hidden');
 
         // 11. Campfire Entity (v0.2) — placed near island center
         this.campfire = new Campfire(gl, [5.0, 0.0, 5.0]);
@@ -1258,6 +1260,10 @@ export class GameScene extends Scene {
             this.gameoverScreen.classList.remove('hidden');
         }
 
+        // Hide hotbar
+        const hotbarHud = document.getElementById('hotbar-hud');
+        if (hotbarHud) hotbarHud.classList.add('hidden');
+
         // Set survival time
         const mins = Math.floor(this.survivalSeconds / 60).toString().padStart(2, '0');
         const secs = Math.floor(this.survivalSeconds % 60).toString().padStart(2, '0');
@@ -1310,7 +1316,11 @@ export class GameScene extends Scene {
         if (this.escapeHud) {
             this.escapeHud.classList.add('hidden');
         }
-        this._closeCraftingPanel();
+        this._closeInventoryMenu();
+
+        // Hide hotbar
+        const hotbarHud = document.getElementById('hotbar-hud');
+        if (hotbarHud) hotbarHud.classList.add('hidden');
         if (document.pointerLockElement) {
             document.exitPointerLock();
         }
@@ -1366,6 +1376,9 @@ export class GameScene extends Scene {
 
         const vitalsHud = document.getElementById('vitals-hud');
         if (vitalsHud) vitalsHud.classList.add('hidden');
+
+        const hotbarHud = document.getElementById('hotbar-hud');
+        if (hotbarHud) hotbarHud.classList.add('hidden');
 
         // Stop ambient sounds
         this.engine.audio.stopAmbientWaves();
