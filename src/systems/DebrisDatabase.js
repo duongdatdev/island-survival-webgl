@@ -19,10 +19,11 @@
  */
 
 export const DebrisType = {
-    WOOD:   'wood',
-    STONE:  'stone',
-    ROPE:   'rope',
-    BARREL: 'barrel',
+    WOOD:     'wood',
+    STONE:    'stone',
+    ROPE:     'rope',
+    BARREL:   'barrel',
+    RAW_FISH: 'raw_fish',
 };
 
 export const DebrisDatabase = {
@@ -79,6 +80,20 @@ export const DebrisDatabase = {
         gives: { resourceId: 'barrel', amount: 1 },
         lifetime: [60, 90],
         driftSpeed: [0.6, 1.4],
+        spawnWeight: 2,
+    },
+
+    [DebrisType.RAW_FISH]: {
+        id: DebrisType.RAW_FISH,
+        name: 'Cá Sống Trôi',
+        nameEn: 'Drifting Raw Fish',
+        icon: '🐟',
+        color: [0.6, 0.65, 0.7],
+        meshScale: [0.4, 0.12, 0.18],
+        pickupRadius: 2.5,
+        gives: { resourceId: 'raw_fish', amount: 1 },
+        lifetime: [40, 70],
+        driftSpeed: [1.5, 2.8],
         spawnWeight: 2,
     },
 };

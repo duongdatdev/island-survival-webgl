@@ -22,6 +22,13 @@ Meshes are generated programmatically using algorithms or built by combining pri
     -   *Raft Frame:* A flat wooden platform composed of intersecting timber beams.
     -   *Barrel Floats:* Three barrels placed horizontally underneath the frame.
     -   *Paddle:* A long steering paddle attached to the rear.
+-   **Survival Structures:**
+    -   *Campfire:* A ring of gray stone blocks with an animated warm orange fire center scale and log base.
+    -   *Water Collector:* A wooden support frame catching drips into a collector container with an animated falling water drop.
+-   **New Collectibles/Consumables:**
+    -   *Coconut:* A small green/brown cube shape.
+    -   *Raw Fish:* A flat silver/gray box shape.
+    -   *Fresh Water:* Blue water surface inside the collector.
 
 ---
 

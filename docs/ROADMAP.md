@@ -4,7 +4,7 @@ This document outlines the milestones and release plan for **Island Survival: Es
 
 ---
 
-## 🚀 Version 0.1 – MVP (Current Version)
+## 🚀 Version 0.1 – MVP ✅
 *Goal: Deliver a fully playable game loop with a clear win condition.*
 
 ### Core Features
@@ -29,16 +29,23 @@ This document outlines the milestones and release plan for **Island Survival: Es
 
 ---
 
-## 🪵 Version 0.2 – Survival Systems
+## 🪵 Version 0.2 – Survival Systems ✅ (Current Version)
 *Goal: Make survival meaningful and introduce survival pressures.*
 
-### Planned Features
-- **Vitals HUD:** Hunger, Thirst, Stamina, and Health indicators.
-- **Campfire:** Placeable structure using Wood + Stone. Provides warmth and cooking capabilities.
-- **Cooking:** Process raw items collected into edible meals to restore hunger.
-- **Water Collector:** Device to capture rainwater and restore thirst.
-- **Grid Inventory:** Re-engineer inventory from simple numerical counts to a visual slot grid with carrying limits.
-- **Item Icons:** Beautifully rendered 2D vector/pixel icons representing all resources and crafted gear.
+### Implemented Features
+- **Vitals HUD:** Hunger, Thirst, Stamina, and Health indicators with drain mechanics.
+- **Campfire:** Placeable structure crafted from 5 Stone + 3 Wood. Allows cooking raw food into Cooked Meals.
+- **Water Collector:** Placeable structure crafted from 4 Wood + 2 Barrel. Captures rainwater over time.
+- **Cooking:** Process Coconuts and Raw Fish into Cooked Meals at the Campfire to restore Hunger.
+- **New Resources:** Coconut (island), Raw Fish (ocean debris), Cooked Meal, Fresh Water.
+- **Grid Inventory:** Visual slot grid with 20-slot carrying limit, tooltip hover, consumable highlighting.
+- **Game-Themed UI:** Complete CSS overhaul from glassmorphism to rustic survival RPG style (wood, leather, earthy tones).
+- **Consume System:** Press Q to eat/drink consumable items, restoring vitals.
+- **Game Over:** Health reaches 0 when starving/dehydrated → death screen with retry.
+
+### v0.2 Recipes
+- **Campfire:** 5 Stone + 3 Wood
+- **Water Collector:** 4 Wood + 2 Barrel
 
 ---
 

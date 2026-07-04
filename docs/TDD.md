@@ -34,8 +34,8 @@ graph TD
 *   **Components:** `src/scenes/`, `src/entities/`, `src/systems/`.
 *   **Responsibility:**
     *   **Scenes (`LoadingScene`, `MainMenuScene`, `GameScene`):** Manages phase transitions and local scene lifecycles. All scenes inherit from the base `Scene.js` class.
-    *   **Entities (`Player`, `Terrain`, `Water`, `WorldResource`, `DriftingDebris`, `RaftAssembly`):** Represents interactive elements in the virtual space. Tracks spatial transforms and computes local model matrices (`this.modelMatrix`). Inherits from `Entity.js`.
-    *   **Systems (`Inventory`, `CraftingSystem`, `DebrisManager`, `ResourceManager`, `ParticleSystem`, `TutorialSystem`):** Performs game logic rules, collision updates, and inventory tracking.
+    *   **Entities (`Player`, `Terrain`, `Water`, `WorldResource`, `DriftingDebris`, `RaftAssembly`, `Campfire`, `WaterCollector`):** Represents interactive elements in the virtual space. Tracks spatial transforms and computes local model matrices (`this.modelMatrix`). Inherits from `Entity.js`.
+    *   **Systems (`InventoryV2`, `VitalsSystem`, `CraftingSystem`, `DebrisManager`, `ResourceManager`, `ParticleSystem`, `TutorialSystem`):** Performs game logic rules, collision updates, survival vitals tracking, and inventory slot management.
 
 ### C. Engine Core Layer (Coordination & I/O)
 *   **Components:** `src/core/`.

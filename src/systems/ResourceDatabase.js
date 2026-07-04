@@ -1,13 +1,19 @@
 /**
  * Resource Database - Central registry of all collectible resource types
  * Each resource defines its visual properties, mesh shape, and gameplay parameters.
+ * 
+ * v0.2: Added Coconut, Raw Fish, Cooked Meal, Fresh Water
  */
 
 export const ResourceType = {
-    WOOD:   'wood',
-    STONE:  'stone',
-    ROPE:   'rope',
-    BARREL: 'barrel'
+    WOOD:         'wood',
+    STONE:        'stone',
+    ROPE:         'rope',
+    BARREL:       'barrel',
+    COCONUT:      'coconut',
+    RAW_FISH:     'raw_fish',
+    COOKED_MEAL:  'cooked_meal',
+    FRESH_WATER:  'fresh_water'
 };
 
 /**
@@ -23,7 +29,8 @@ export const ResourceDatabase = {
         meshScale: [0.25, 0.6, 0.25],    // Tall narrow log shape
         pickupRadius: 2.5,
         stackSize: 99,
-        spawnWeight: 4                     // Higher = more common
+        spawnWeight: 4,                    // Higher = more common
+        consumable: false
     },
 
     [ResourceType.STONE]: {
@@ -35,7 +42,8 @@ export const ResourceDatabase = {
         meshScale: [0.5, 0.3, 0.45],     // Low flat rock shape
         pickupRadius: 2.5,
         stackSize: 99,
-        spawnWeight: 3
+        spawnWeight: 3,
+        consumable: false
     },
 
     [ResourceType.ROPE]: {
@@ -47,7 +55,8 @@ export const ResourceDatabase = {
         meshScale: [0.4, 0.15, 0.4],     // Flat coiled disc shape
         pickupRadius: 2.5,
         stackSize: 99,
-        spawnWeight: 2
+        spawnWeight: 2,
+        consumable: false
     },
 
     [ResourceType.BARREL]: {
@@ -59,7 +68,62 @@ export const ResourceDatabase = {
         meshScale: [0.4, 0.55, 0.4],     // Cylindrical barrel shape
         pickupRadius: 2.8,
         stackSize: 99,
-        spawnWeight: 1                     // Rarer
+        spawnWeight: 1,                    // Rarer
+        consumable: false
+    },
+
+    [ResourceType.COCONUT]: {
+        id: ResourceType.COCONUT,
+        name: 'Dừa',
+        nameEn: 'Coconut',
+        icon: '🥥',
+        color: [0.35, 0.55, 0.2],        // Green-brown coconut
+        meshScale: [0.3, 0.3, 0.3],      // Round shape
+        pickupRadius: 2.5,
+        stackSize: 20,
+        spawnWeight: 2,
+        consumable: false                  // Must be cooked first
+    },
+
+    [ResourceType.RAW_FISH]: {
+        id: ResourceType.RAW_FISH,
+        name: 'Cá Sống',
+        nameEn: 'Raw Fish',
+        icon: '🐟',
+        color: [0.6, 0.65, 0.7],         // Silver fish
+        meshScale: [0.4, 0.15, 0.2],     // Flat fish shape
+        pickupRadius: 2.8,
+        stackSize: 20,
+        spawnWeight: 1,                    // Rare — spawns as ocean debris
+        consumable: false                  // Must be cooked first
+    },
+
+    [ResourceType.COOKED_MEAL]: {
+        id: ResourceType.COOKED_MEAL,
+        name: 'Thức Ăn Chín',
+        nameEn: 'Cooked Meal',
+        icon: '🍖',
+        color: [0.7, 0.35, 0.15],        // Cooked brown
+        meshScale: [0.3, 0.2, 0.3],
+        pickupRadius: 0,                   // Not spawned, only crafted/cooked
+        stackSize: 10,
+        spawnWeight: 0,
+        consumable: true,
+        vitalEffect: { type: 'hunger', amount: 40 }
+    },
+
+    [ResourceType.FRESH_WATER]: {
+        id: ResourceType.FRESH_WATER,
+        name: 'Nước Ngọt',
+        nameEn: 'Fresh Water',
+        icon: '💧',
+        color: [0.2, 0.5, 0.8],          // Blue water
+        meshScale: [0.25, 0.3, 0.25],
+        pickupRadius: 0,                   // Not spawned, only from collector
+        stackSize: 10,
+        spawnWeight: 0,
+        consumable: true,
+        vitalEffect: { type: 'thirst', amount: 50 }
     }
 };
 
@@ -80,11 +144,11 @@ export function getResourceDef(resourceId) {
 }
 
 /**
- * Get a weighted random resource type for spawning
+ * Get a weighted random resource type for spawning (only spawnable resources)
  * @returns {string} Resource ID
  */
 export function getWeightedRandomType() {
-    const resources = getAllResources();
+    const resources = getAllResources().filter(r => r.spawnWeight > 0);
     const totalWeight = resources.reduce((sum, r) => sum + r.spawnWeight, 0);
     let roll = Math.random() * totalWeight;
 

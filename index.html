@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Island Survival: Escape</title>
     <meta name="description" content="Island Survival: Escape - Game sinh tồn đảo hoang WebGL 2. Thu thập tài nguyên, chế tạo bè và thoát khỏi đảo!">
-    <!-- Premium Fonts -->
+    <!-- Game-Themed Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Almendra:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
@@ -18,8 +18,9 @@
     <!-- UI Overlay: Loading Screen -->
     <div id="loading-screen" class="overlay">
         <div class="loader-content">
+            <div class="loader-emblem">⚓</div>
             <div class="loader-logo">ISLAND SURVIVAL</div>
-            <div class="loader-subtitle">ESCAPE – WEBGL 2 FOUNDATION</div>
+            <div class="loader-subtitle">— E S C A P E —</div>
             <div class="loader-bar-container">
                 <div id="loader-bar" class="loader-bar"></div>
             </div>
@@ -32,10 +33,11 @@
     <div id="main-menu" class="overlay hidden">
         <div class="menu-content">
             <div class="menu-logo-wrapper">
+                <div class="menu-emblem">🏝️</div>
                 <div class="menu-logo">ISLAND SURVIVAL</div>
-                <div class="menu-subtitle">E S C A P E</div>
+                <div class="menu-subtitle">— E S C A P E —</div>
             </div>
-            <div class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Thoát khỏi đảo hoang.</div>
+            <div class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Sinh tồn. Thoát khỏi đảo hoang.</div>
             <div class="menu-buttons">
                 <button id="menu-start-btn" class="menu-btn primary">
                     <span class="btn-icon">⛵</span>
@@ -50,7 +52,7 @@
                     <span class="btn-text">ÂM THANH: BẬT</span>
                 </button>
             </div>
-            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • Procedural Audio</div>
+            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • v0.2</div>
         </div>
     </div>
 
@@ -88,6 +90,42 @@
 
     <!-- Pickup Notification - Top Center Toast -->
     <div id="pickup-notification" class="pickup-notification hidden"></div>
+
+    <!-- Vitals HUD - Top Left -->
+    <div id="vitals-hud" class="vitals-hud hidden">
+        <div class="vital-row" id="vital-health">
+            <span class="vital-icon">❤️</span>
+            <span class="vital-label">HP</span>
+            <div class="vital-bar-track">
+                <div class="vital-bar-fill health-fill" id="bar-health" style="width: 100%"></div>
+            </div>
+            <span class="vital-value" id="val-health">100</span>
+        </div>
+        <div class="vital-row" id="vital-hunger">
+            <span class="vital-icon">🍖</span>
+            <span class="vital-label">Đói</span>
+            <div class="vital-bar-track">
+                <div class="vital-bar-fill hunger-fill" id="bar-hunger" style="width: 100%"></div>
+            </div>
+            <span class="vital-value" id="val-hunger">100</span>
+        </div>
+        <div class="vital-row" id="vital-thirst">
+            <span class="vital-icon">💧</span>
+            <span class="vital-label">Khát</span>
+            <div class="vital-bar-track">
+                <div class="vital-bar-fill thirst-fill" id="bar-thirst" style="width: 100%"></div>
+            </div>
+            <span class="vital-value" id="val-thirst">100</span>
+        </div>
+        <div class="vital-row" id="vital-stamina">
+            <span class="vital-icon">⚡</span>
+            <span class="vital-label">Thể lực</span>
+            <div class="vital-bar-track">
+                <div class="vital-bar-fill stamina-fill" id="bar-stamina" style="width: 100%"></div>
+            </div>
+            <span class="vital-value" id="val-stamina">100</span>
+        </div>
+    </div>
 
     <!-- UI Overlay: Premium Debug Panel -->
     <div id="debug-panel" class="debug-panel hidden">
@@ -166,64 +204,32 @@
             <div class="mouse-tip highlighted">Bấm phím 'L' để khóa/mở khóa con trỏ chuột.</div>
             <div class="mouse-tip highlighted">Bấm phím 'Tab' để ẩn/hiện Kho đồ (HUD).</div>
             <div class="mouse-tip highlighted">Bấm phím 'E' để nhặt tài nguyên gần đó.</div>
+            <div class="mouse-tip highlighted">Bấm phím 'Q' để sử dụng thức ăn/nước.</div>
             <div class="mouse-tip highlighted">Bấm phím 'F3' để bật/tắt Debug Panel.</div>
         </div>
     </div>
 
-    <!-- Resource HUD - Bottom Left -->
+    <!-- Resource HUD - Bottom Left (Grid Inventory) -->
     <div id="resource-hud" class="resource-hud">
-        <div class="resource-hud-title">KHO ĐỒ (TAB)</div>
-        <div class="resource-slots">
-            <div class="resource-slot" id="slot-wood">
-                <span class="resource-icon">🪵</span>
-                <span class="resource-name">Gỗ</span>
-                <span class="resource-count" id="count-wood">0</span>
-            </div>
-            <div class="resource-slot" id="slot-stone">
-                <span class="resource-icon">🪨</span>
-                <span class="resource-name">Đá</span>
-                <span class="resource-count" id="count-stone">0</span>
-            </div>
-            <div class="resource-slot" id="slot-rope">
-                <span class="resource-icon">🪢</span>
-                <span class="resource-name">Dây Thừng</span>
-                <span class="resource-count" id="count-rope">0</span>
-            </div>
-            <div class="resource-slot" id="slot-barrel">
-                <span class="resource-icon">🛢️</span>
-                <span class="resource-name">Thùng Gỗ</span>
-                <span class="resource-count" id="count-barrel">0</span>
-            </div>
+        <div class="resource-hud-header">
+            <div class="resource-hud-title">KHO ĐỒ (TAB)</div>
+            <div class="resource-hud-slots" id="slot-counter">0/20</div>
         </div>
 
-        <div class="resource-hud-title" style="margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 10px;">TRANG BỊ / CHẾ TẠO</div>
-        <div class="resource-slots">
-            <div class="resource-slot" id="slot-stone_axe">
-                <span class="resource-icon">🪓</span>
-                <span class="resource-name">Rìu Đá</span>
-                <span class="resource-count" id="count-stone_axe">0</span>
-            </div>
-            <div class="resource-slot" id="slot-raft_frame">
-                <span class="resource-icon">🧱</span>
-                <span class="resource-name">Khung Bè</span>
-                <span class="resource-count" id="count-raft_frame">0</span>
-            </div>
-            <div class="resource-slot" id="slot-paddle">
-                <span class="resource-icon">🛶</span>
-                <span class="resource-name">Mái Chèo</span>
-                <span class="resource-count" id="count-paddle">0</span>
-            </div>
-            <div class="resource-slot" id="slot-barrel_floats">
-                <span class="resource-icon">🛢️</span>
-                <span class="resource-name">Phao Thùng</span>
-                <span class="resource-count" id="count-barrel_floats">0</span>
-            </div>
+        <div class="inventory-grid" id="inventory-grid">
+            <!-- Dynamically populated by JS -->
         </div>
 
-        <button id="craft-toggle-btn" class="craft-toggle-btn">
-            <span class="btn-icon">🔨</span>
-            <span class="btn-text">CHẾ TẠO (C)</span>
-        </button>
+        <div class="hud-action-bar">
+            <button id="craft-toggle-btn" class="craft-toggle-btn">
+                <span class="btn-icon">🔨</span>
+                <span class="btn-text">CHẾ TẠO (C)</span>
+            </button>
+            <button id="consume-btn" class="consume-btn" title="Dùng thức ăn hoặc nước (Q)">
+                <span class="btn-icon">🍖</span>
+                <span class="btn-text">DÙNG (Q)</span>
+            </button>
+        </div>
     </div>
 
     <!-- Crafting Panel Overlay -->
@@ -250,6 +256,24 @@
         <button id="escape-btn" class="escape-btn">
             THOÁT KHỎI ĐẢO
         </button>
+    </div>
+
+    <!-- Game Over Screen Overlay -->
+    <div id="gameover-screen" class="gameover-screen overlay hidden">
+        <div class="gameover-content">
+            <div class="gameover-skull">💀</div>
+            <div class="gameover-title">ĐÃ NGỤC TÚ!</div>
+            <div class="gameover-subtitle">Bạn đã không thể sinh tồn trên đảo hoang...</div>
+            <div class="gameover-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Thời gian sinh tồn:</span>
+                    <span id="gameover-time" class="stat-value">00:00</span>
+                </div>
+            </div>
+            <button id="gameover-restart-btn" class="restart-btn">
+                THỬ LẠI
+            </button>
+        </div>
     </div>
 
     <!-- Victory Screen Overlay (End Game) -->

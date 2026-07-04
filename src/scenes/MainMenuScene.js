@@ -146,6 +146,8 @@ export class MainMenuScene extends Scene {
         if (debug) debug.classList.add('hidden');
         const escapeHud = document.getElementById('escape-hud');
         if (escapeHud) escapeHud.classList.add('hidden');
+        const vitalsHud = document.getElementById('vitals-hud');
+        if (vitalsHud) vitalsHud.classList.add('hidden');
     }
 
     _hideMenu() {

@@ -12,17 +12,20 @@ import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
 import { ResourceManager } from '../systems/ResourceManager.js';
 import { DebrisManager } from '../systems/DebrisManager.js';
-import { Inventory } from '../systems/Inventory.js';
+import { Inventory } from '../systems/InventoryV2.js';
 import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js';
 import { getResourceDef } from '../systems/ResourceDatabase.js';
 import { CraftingSystem } from '../systems/CraftingSystem.js';
 import { RaftAssembly } from '../entities/RaftAssembly.js';
 import { ParticleSystem } from '../systems/ParticleSystem.js';
 import { TutorialSystem } from '../systems/TutorialSystem.js';
+import { VitalsSystem } from '../systems/VitalsSystem.js';
+import { Campfire } from '../entities/Campfire.js';
+import { WaterCollector } from '../entities/WaterCollector.js';
 
 
 /**
- * Main active gameplay scene
+ * Main active gameplay scene — v0.2 with Survival Systems
  */
 export class GameScene extends Scene {
     init() {
@@ -57,16 +60,16 @@ export class GameScene extends Scene {
         this.visorMesh = new Mesh(gl, blackVisorData);
 
         // 6. Resource System Initialization
-        this.inventory = new Inventory();
+        this.inventory = new Inventory(20);
         this.resourceManager = new ResourceManager();
         this.debrisManager = new DebrisManager();
 
-        // Spawn resources scattered across the island
+        // Spawn resources scattered across the island (including coconuts)
         this.resourceManager.spawnRandomResources(gl, this.terrain, 30);
 
         // Bind inventory changes to UI updates
         this.inventory.onChange = (resourceId, newCount, delta) => {
-            this._updateResourceHUD(resourceId, newCount);
+            this._updateGridInventory();
             this._renderCraftingPanel();
         };
 
@@ -92,16 +95,52 @@ export class GameScene extends Scene {
             this.craftingCloseBtn.addEventListener('click', () => this._closeCraftingPanel());
         }
 
+        // Consume button binding
+        this.consumeBtn = document.getElementById('consume-btn');
+        if (this.consumeBtn) {
+            this.consumeBtn.addEventListener('click', () => this._consumeBestItem());
+        }
+
         // Initialize panel render
         this._renderCraftingPanel();
+        this._updateGridInventory();
 
-        // Raft Assembly & Escape HUD Initializations
+        // 10. Vitals System (v0.2)
+        this.vitals = new VitalsSystem();
+        this.vitals.onChange = (vitalId, value, max) => {
+            this._updateVitalBar(vitalId, value, max);
+        };
+        this.vitals.onGameOver = () => {
+            this._showGameOver();
+        };
+
+        // Show vitals HUD
+        const vitalsHud = document.getElementById('vitals-hud');
+        if (vitalsHud) vitalsHud.classList.remove('hidden');
+
+        // 11. Campfire Entity (v0.2) — placed near island center
+        this.campfire = new Campfire(gl, [5.0, 0.0, 5.0]);
+        // Position campfire on terrain
+        const campfireY = this.terrain.getHeight(5.0, 5.0);
+        this.campfire.position[1] = campfireY;
+        this.campfire.updateModelMatrix();
+
+        // 12. Water Collector Entity (v0.2) — placed near beach
+        this.waterCollector = new WaterCollector(gl, [-5.0, 0.0, 15.0]);
+        const wcY = this.terrain.getHeight(-5.0, 15.0);
+        this.waterCollector.position[1] = wcY;
+        this.waterCollector.updateModelMatrix();
+
+        // 13. Raft Assembly & Escape HUD Initializations
         this.raftAssembly = new RaftAssembly(gl, [0.0, 0.0, 20.0]);
         this.escapeHud = document.getElementById('escape-hud');
         this.escapeBtn = document.getElementById('escape-btn');
         this.victoryScreen = document.getElementById('victory-screen');
         this.restartBtn = document.getElementById('restart-btn');
         this.statTimeEl = document.getElementById('stat-time');
+        this.gameoverScreen = document.getElementById('gameover-screen');
+        this.gameoverRestartBtn = document.getElementById('gameover-restart-btn');
+        this.gameoverTimeEl = document.getElementById('gameover-time');
 
         if (this.escapeBtn) {
             this.escapeBtn.addEventListener('click', () => this._startEscapeCutscene());
@@ -111,12 +150,18 @@ export class GameScene extends Scene {
                 window.location.reload();
             });
         }
+        if (this.gameoverRestartBtn) {
+            this.gameoverRestartBtn.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
 
         this.isEscaping = false;
         this.escapeTime = 0.0;
         this.survivalSeconds = 0.0;
+        this._isGameOver = false;
 
-        // 10. Pause state
+        // 14. Pause state
         this.isPaused = false;
         this._pauseResumeBtn = document.getElementById('pause-resume-btn');
         this._pauseSoundBtn = document.getElementById('pause-sound-btn');
@@ -145,7 +190,7 @@ export class GameScene extends Scene {
         if (this._pauseSoundBtn) this._pauseSoundBtn.addEventListener('click', this._onPauseSound);
         if (this._pauseMenuBtn) this._pauseMenuBtn.addEventListener('click', this._onPauseMenu);
 
-        // 11. Running properties
+        // 15. Running properties
         this.time = 0.0;
         this.tempMatrix = Mat4.create();
 
@@ -177,8 +222,8 @@ export class GameScene extends Scene {
             return;
         }
 
-        // If paused, don't update game logic
-        if (this.isPaused) return;
+        // If paused or game over, don't update game logic
+        if (this.isPaused || this._isGameOver) return;
 
         this.time += deltaTime;
 
@@ -253,6 +298,13 @@ export class GameScene extends Scene {
         // Rescale aspect ratio if canvas resized
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
 
+        // Update Vitals System (v0.2)
+        const isPlayerMoving = this.player.currentSpeed > 0.1;
+        this.vitals.update(deltaTime, isPlayerMoving);
+
+        // Apply stamina speed modifier to player
+        this.player.speed = 5.0 * this.vitals.getSpeedMultiplier();
+
         // Update player movements using keyboards and camera reference
         this.player.update(deltaTime, this.engine.input, this.camera, this.terrain);
 
@@ -285,6 +337,11 @@ export class GameScene extends Scene {
             this._toggleInventoryHUD();
         }
 
+        // Consume item via 'Q' key (v0.2)
+        if (this.engine.input.isKeyPressed('KeyQ')) {
+            this._consumeBestItem();
+        }
+
         // Developer Debug Cheat: Press 'K' to teleport to beach & get all raft modules
         if (this.engine.input.isKeyPressed('KeyK')) {
             // Teleport close to raft building site
@@ -304,6 +361,65 @@ export class GameScene extends Scene {
 
         // Snap camera tracking around player
         this.camera.update(this.engine.input, this.player.position);
+
+        // ---- Campfire proximity (v0.2) ----
+        let showCampfirePrompt = false;
+        let campfirePromptText = '';
+        if (this.campfire.isPlayerNear(this.player.position)) {
+            const hasRawFood = this.inventory.hasItem('coconut') || this.inventory.hasItem('raw_fish');
+            if (hasRawFood) {
+                campfirePromptText = '<span class="hint-key">E</span> Nấu thức ăn 🔥';
+                showCampfirePrompt = true;
+            }
+        }
+
+        // Handle campfire cooking via 'E' key
+        if (showCampfirePrompt && this.engine.input.isKeyPressed('KeyE')) {
+            this.engine.input.keys['KeyE'] = false;
+            // Cook raw fish first, then coconut
+            if (this.inventory.hasItem('raw_fish')) {
+                this.inventory.removeItem('raw_fish', 1);
+                this.inventory.addItem('cooked_meal', 1);
+                this._showNotification('🔥 Đã nấu: 🍖 Thức Ăn Chín!');
+                this.engine.audio.playCraft();
+                this.particleSystem.emit(
+                    [this.campfire.position[0], this.campfire.position[1] + 0.5, this.campfire.position[2]],
+                    ParticleSystem.PRESET.CRAFT
+                );
+            } else if (this.inventory.hasItem('coconut')) {
+                this.inventory.removeItem('coconut', 1);
+                this.inventory.addItem('cooked_meal', 1);
+                this._showNotification('🔥 Đã nấu: 🍖 Thức Ăn Chín!');
+                this.engine.audio.playCraft();
+                this.particleSystem.emit(
+                    [this.campfire.position[0], this.campfire.position[1] + 0.5, this.campfire.position[2]],
+                    ParticleSystem.PRESET.CRAFT
+                );
+            }
+        }
+
+        // ---- Water Collector proximity (v0.2) ----
+        let showWaterPrompt = false;
+        let waterPromptText = '';
+        if (this.waterCollector.isPlayerNear(this.player.position)) {
+            if (this.waterCollector.waterStored > 0) {
+                waterPromptText = `<span class="hint-key">E</span> Lấy nước (${this.waterCollector.waterStored}/${this.waterCollector.maxWater}) 💧`;
+                showWaterPrompt = true;
+            } else {
+                waterPromptText = 'Bẫy nước đang hứng... (0/' + this.waterCollector.maxWater + ') 💧';
+                showWaterPrompt = true;
+            }
+        }
+
+        // Handle water collection via 'E' key
+        if (showWaterPrompt && this.waterCollector.waterStored > 0 && this.engine.input.isKeyPressed('KeyE')) {
+            this.engine.input.keys['KeyE'] = false;
+            if (this.waterCollector.collectWater()) {
+                this.inventory.addItem('fresh_water', 1);
+                this._showNotification('💧 Đã lấy: Nước Ngọt!');
+                this.engine.audio.playPickup();
+            }
+        }
 
         // Proximity detection for raft assembly
         let showRaftPrompt = false;
@@ -377,13 +493,17 @@ export class GameScene extends Scene {
             this.tutorial.notifyPickup();
         }
 
-        // Override pickup hint text if player is at raft build site
-        if (showRaftPrompt) {
-            const hintEl = document.getElementById('pickup-hint');
-            if (hintEl) {
-                hintEl.innerHTML = raftPromptText;
-                hintEl.classList.remove('hidden');
-            }
+        // Override pickup hint text — priority: campfire > water collector > raft > default
+        const hintEl = document.getElementById('pickup-hint');
+        if (showCampfirePrompt && hintEl) {
+            hintEl.innerHTML = campfirePromptText;
+            hintEl.classList.remove('hidden');
+        } else if (showWaterPrompt && hintEl) {
+            hintEl.innerHTML = waterPromptText;
+            hintEl.classList.remove('hidden');
+        } else if (showRaftPrompt && hintEl) {
+            hintEl.innerHTML = raftPromptText;
+            hintEl.classList.remove('hidden');
         }
 
         // Display Escape HUD if raft is completed
@@ -406,6 +526,10 @@ export class GameScene extends Scene {
         if (this.raftAssembly) {
             this.raftAssembly.update(deltaTime);
         }
+
+        // Update Campfire + WaterCollector animations (v0.2)
+        this.campfire.update(deltaTime);
+        this.waterCollector.update(deltaTime);
 
         // Update particle system
         this.particleSystem.update(deltaTime);
@@ -499,6 +623,12 @@ export class GameScene extends Scene {
             this.raftAssembly.draw(this.basicShader, drawMode, false);
         }
 
+        // 8. Draw Campfire (v0.2)
+        this.campfire.draw(this.basicShader, drawMode);
+
+        // 9. Draw Water Collector (v0.2)
+        this.waterCollector.draw(this.basicShader, drawMode);
+
         // --- DRAW WATER (Translucent Geometry, WaterShader) ---
         // Enable blending for transparency
         gl.enable(gl.BLEND);
@@ -538,7 +668,7 @@ export class GameScene extends Scene {
         gl.enable(gl.CULL_FACE);
         gl.disable(gl.BLEND);
 
-        // 8. Draw Particles (additive blending, on top)
+        // 10. Draw Particles (additive blending, on top)
         this.particleSystem.draw(this.camera);
     }
 
@@ -599,20 +729,118 @@ export class GameScene extends Scene {
     }
 
     /**
-     * Update the Resource HUD UI when inventory changes
-     * @param {string} resourceId
-     * @param {number} newCount
+     * Update the Grid Inventory HUD (v0.2 — replaces old resource slots)
      */
-    _updateResourceHUD(resourceId, newCount) {
-        const countEl = document.getElementById(`count-${resourceId}`);
-        if (countEl) {
-            countEl.textContent = newCount;
+    _updateGridInventory() {
+        const gridEl = document.getElementById('inventory-grid');
+        const counterEl = document.getElementById('slot-counter');
+        if (!gridEl) return;
 
-            // Trigger pulse animation
-            countEl.classList.remove('pulse');
-            void countEl.offsetWidth; // Force reflow
-            countEl.classList.add('pulse');
+        const slots = this.inventory.getSlots();
+        const maxSlots = this.inventory.maxSlots;
+
+        // Update slot counter
+        if (counterEl) {
+            counterEl.textContent = `${slots.length}/${maxSlots}`;
         }
+
+        let html = '';
+
+        // Render occupied slots
+        for (const slot of slots) {
+            const resDef = getResourceDef(slot.id);
+            const icon = resDef ? resDef.icon : '📦';
+            const name = resDef ? resDef.name : slot.id;
+            const isConsumable = resDef && resDef.consumable;
+            const consumableClass = isConsumable ? ' consumable' : '';
+
+            html += `
+                <div class="inv-slot${consumableClass}" title="${name}">
+                    <span class="slot-icon">${icon}</span>
+                    <span class="slot-count">${slot.count}</span>
+                    <div class="slot-tooltip">${name}</div>
+                </div>
+            `;
+        }
+
+        // Render empty slots
+        const emptyCount = Math.max(0, 10 - slots.length); // Show at least 10 slots for visual structure
+        for (let i = 0; i < emptyCount; i++) {
+            html += `<div class="inv-slot empty"><span class="slot-icon">·</span></div>`;
+        }
+
+        gridEl.innerHTML = html;
+    }
+
+    /**
+     * Update a single vital bar in the HUD (v0.2)
+     * @param {string} vitalId - 'health', 'hunger', 'thirst', 'stamina'
+     * @param {number} value
+     * @param {number} max
+     */
+    _updateVitalBar(vitalId, value, max) {
+        const barEl = document.getElementById(`bar-${vitalId}`);
+        const valEl = document.getElementById(`val-${vitalId}`);
+        if (barEl) {
+            const pct = Math.max(0, Math.min(100, (value / max) * 100));
+            barEl.style.width = `${pct}%`;
+
+            // Flash red when low
+            if (pct <= 25) {
+                barEl.classList.add('low');
+            } else {
+                barEl.classList.remove('low');
+            }
+        }
+        if (valEl) {
+            valEl.textContent = Math.round(value);
+        }
+    }
+
+    /**
+     * Consume the best available food or water item (v0.2)
+     * Priority: if hunger is lower → eat first; if thirst is lower → drink first
+     */
+    _consumeBestItem() {
+        const hungerPct = this.vitals.hunger;
+        const thirstPct = this.vitals.thirst;
+
+        // Try to address the most urgent need
+        if (hungerPct <= thirstPct) {
+            // Try to eat
+            if (this._tryEat()) return;
+            // If no food, try to drink
+            if (this._tryDrink()) return;
+        } else {
+            // Try to drink
+            if (this._tryDrink()) return;
+            // If no water, try to eat
+            if (this._tryEat()) return;
+        }
+
+        this._showNotification('❌ Không có thức ăn hoặc nước để sử dụng!');
+    }
+
+    _tryEat() {
+        if (this.inventory.hasItem('cooked_meal')) {
+            this.inventory.useItem('cooked_meal', 1);
+            this.vitals.eat(40);
+            this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
+            this.engine.audio.playPickup();
+            return true;
+        }
+        return false;
+    }
+
+    _tryDrink() {
+        if (this.inventory.hasItem('fresh_water')) {
+            this.inventory.useItem('fresh_water', 1);
+            this.vitals.drink(50);
+            this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
+            this.engine.audio.playPickup();
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -665,6 +893,10 @@ export class GameScene extends Scene {
         let html = '';
 
         for (const recipe of recipes) {
+            // Skip structure recipes that are already built
+            if (recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) continue;
+            if (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) continue;
+
             const canCraft = CraftingSystem.canCraft(recipe.id, this.inventory);
             
             // Build ingredients HTML
@@ -715,7 +947,7 @@ export class GameScene extends Scene {
     }
 
     /**
-     * Handle item crafting
+     * Handle item crafting — with special handling for structure recipes (v0.2)
      * @param {string} recipeId
      */
     _craftItem(recipeId) {
@@ -724,7 +956,20 @@ export class GameScene extends Scene {
 
         const success = CraftingSystem.craft(recipeId, this.inventory);
         if (success) {
-            this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
+            // Special handling for structure recipes (v0.2)
+            if (recipeId === 'campfire') {
+                this.campfire.isBuilt = true;
+                // Remove the campfire "item" from inventory since it's placed
+                this.inventory.removeItem('campfire', 1);
+                this._showNotification('🔥 Đã dựng Lửa Trại! Đến gần để nấu ăn.');
+            } else if (recipeId === 'water_collector') {
+                this.waterCollector.isBuilt = true;
+                // Remove the water collector "item" from inventory since it's placed
+                this.inventory.removeItem('water_collector', 1);
+                this._showNotification('💧 Đã dựng Bẫy Nước Mưa! Nước sẽ tự hứng theo thời gian.');
+            } else {
+                this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
+            }
             
             // Sound + particle effects
             this.engine.audio.playCraft();
@@ -735,6 +980,30 @@ export class GameScene extends Scene {
             this.tutorial.notifyCrafted();
         } else {
             console.warn(`GameScene: Crafting failed for ${recipeId}`);
+        }
+    }
+
+    /**
+     * Show game over screen (v0.2)
+     */
+    _showGameOver() {
+        this._isGameOver = true;
+
+        // Show game over screen
+        if (this.gameoverScreen) {
+            this.gameoverScreen.classList.remove('hidden');
+        }
+
+        // Set survival time
+        const mins = Math.floor(this.survivalSeconds / 60).toString().padStart(2, '0');
+        const secs = Math.floor(this.survivalSeconds % 60).toString().padStart(2, '0');
+        if (this.gameoverTimeEl) {
+            this.gameoverTimeEl.textContent = `${mins}:${secs}`;
+        }
+
+        // Exit pointer lock
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
         }
     }
 
@@ -818,6 +1087,10 @@ export class GameScene extends Scene {
         // Cleanup tutorial
         if (this.tutorial) this.tutorial.destroy();
 
+        // Cleanup v0.2 entities
+        if (this.campfire) this.campfire.delete();
+        if (this.waterCollector) this.waterCollector.delete();
+
         // Remove pause button listeners
         if (this._pauseResumeBtn) this._pauseResumeBtn.removeEventListener('click', this._onPauseResume);
         if (this._pauseSoundBtn) this._pauseSoundBtn.removeEventListener('click', this._onPauseSound);
@@ -826,6 +1099,9 @@ export class GameScene extends Scene {
         // Hide overlays
         const pauseMenu = document.getElementById('pause-menu');
         if (pauseMenu) pauseMenu.classList.add('hidden');
+
+        const vitalsHud = document.getElementById('vitals-hud');
+        if (vitalsHud) vitalsHud.classList.add('hidden');
 
         // Stop ambient sounds
         this.engine.audio.stopAmbientWaves();
