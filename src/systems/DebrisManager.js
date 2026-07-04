@@ -178,16 +178,20 @@ export class DebrisManager {
         const def = debris.debrisDef;
         const gives = def.gives;
 
+        const equipped = inventory.getEquippedItem();
+        const hasAxe = equipped && equipped.id === 'stone_axe';
+        const finalAmount = gives.amount * (hasAxe ? 2 : 1);
+
         // Add the mapped resource to inventory
-        inventory.addItem(gives.resourceId, gives.amount);
+        inventory.addItem(gives.resourceId, finalAmount);
 
         // Mark as collected (will be cleaned up next frame)
         debris.collect();
 
         // Show pickup notification
-        this._showNotification(def, gives);
+        this._showNotification(def, gives, hasAxe);
 
-        console.log(`DebrisManager: Picked up ${def.name} → +${gives.amount} ${gives.resourceId}`);
+        console.log(`DebrisManager: Picked up ${def.name} → +${finalAmount} ${gives.resourceId} (hasAxe: ${hasAxe})`);
     }
 
     /**
@@ -221,13 +225,16 @@ export class DebrisManager {
      * @param {object} debrisDef
      * @param {object} gives - { resourceId, amount }
      */
-    _showNotification(debrisDef, gives) {
+    _showNotification(debrisDef, gives, hasAxe = false) {
         const el = document.getElementById('pickup-notification');
         if (!el) return;
 
         const resDef = getResourceDef(gives.resourceId);
         const resourceName = resDef ? resDef.name : gives.resourceId;
-        el.innerHTML = `${debrisDef.icon} ${debrisDef.name} → +${gives.amount} ${resourceName}`;
+        const finalAmount = gives.amount * (hasAxe ? 2 : 1);
+        const axeMultiplierText = hasAxe ? ' (Rìu Đá x2!)' : '';
+
+        el.innerHTML = `${debrisDef.icon} ${debrisDef.name} → +${finalAmount} ${resourceName}${axeMultiplierText}`;
         el.classList.remove('hidden');
         el.classList.remove('animate-out');
 

@@ -10,16 +10,16 @@ import { Terrain } from '../entities/Terrain.js';
 import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
-import { ResourceManager } from '../systems/ResourceManager.js';
-import { DebrisManager } from '../systems/DebrisManager.js';
-import { Inventory } from '../systems/InventoryV2.js';
-import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js';
-import { getResourceDef } from '../systems/ResourceDatabase.js';
-import { CraftingSystem } from '../systems/CraftingSystem.js';
-import { RaftAssembly } from '../entities/RaftAssembly.js';
-import { ParticleSystem } from '../systems/ParticleSystem.js';
-import { TutorialSystem } from '../systems/TutorialSystem.js';
-import { VitalsSystem } from '../systems/VitalsSystem.js';
+import { ResourceManager } from '../systems/ResourceManager.js?v=4';
+import { DebrisManager } from '../systems/DebrisManager.js?v=4';
+import { Inventory } from '../systems/InventoryV2.js?v=4';
+import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js?v=4';
+import { getResourceDef } from '../systems/ResourceDatabase.js?v=4';
+import { CraftingSystem } from '../systems/CraftingSystem.js?v=4';
+import { RaftAssembly } from '../entities/RaftAssembly.js?v=4';
+import { ParticleSystem } from '../systems/ParticleSystem.js?v=4';
+import { TutorialSystem } from '../systems/TutorialSystem.js?v=4';
+import { VitalsSystem } from '../systems/VitalsSystem.js?v=4';
 import { Campfire } from '../entities/Campfire.js';
 import { WaterCollector } from '../entities/WaterCollector.js';
 
@@ -81,28 +81,32 @@ export class GameScene extends Scene {
         this.tutorial.init();
         this.tutorial.start();
 
-        // 9. Crafting UI Bindings
-        this.craftingPanel = document.getElementById('crafting-panel');
-        this.craftingRecipesContainer = document.getElementById('crafting-recipes');
-        this.craftToggleBtn = document.getElementById('craft-toggle-btn');
-        this.craftingCloseBtn = document.getElementById('crafting-close');
+        // 9. Unified Inventory & Crafting UI Bindings
+        this.inventoryMenu = document.getElementById('inventory-menu');
+        this.inventoryMenuCloseBtn = document.getElementById('inventory-menu-close');
+        this.selectedCraftingCategory = 'tool';
+        this.selectedRecipeId = null;
         this._notificationTimeoutId = null;
 
-        if (this.craftToggleBtn) {
-            this.craftToggleBtn.addEventListener('click', () => this._toggleCraftingPanel());
-        }
-        if (this.craftingCloseBtn) {
-            this.craftingCloseBtn.addEventListener('click', () => this._closeCraftingPanel());
+        if (this.inventoryMenuCloseBtn) {
+            this.inventoryMenuCloseBtn.addEventListener('click', () => this._closeInventoryMenu());
         }
 
-        // Consume button binding
-        this.consumeBtn = document.getElementById('consume-btn');
-        if (this.consumeBtn) {
-            this.consumeBtn.addEventListener('click', () => this._consumeBestItem());
-        }
+        // Bind category button clicks inside menu
+        const categoryButtons = document.querySelectorAll('.cat-btn');
+        categoryButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                categoryButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                this.selectedCraftingCategory = btn.getAttribute('data-category');
+                this.selectedRecipeId = null; // Clear selection on category switch
+                this._renderCraftingPanel();
+                this.engine.audio.playClick();
+            });
+        });
 
         // Initialize panel render
-        this._renderCraftingPanel();
         this._updateGridInventory();
 
         // 10. Vitals System (v0.2)
@@ -327,19 +331,39 @@ export class GameScene extends Scene {
             this._footstepTimer = this._footstepInterval * 0.8; // Quick first step on resume
         }
 
-        // Toggle Crafting Panel via 'C' key
-        if (this.engine.input.isKeyPressed('KeyC')) {
-            this._toggleCraftingPanel();
+        // Toggle Inventory & Crafting Menu via 'C' or 'Tab' key
+        if (this.engine.input.isKeyPressed('KeyC') || this.engine.input.isKeyPressed('Tab')) {
+            this._toggleInventoryMenu();
         }
 
-        // Toggle Inventory HUD via 'Tab' key
-        if (this.engine.input.isKeyPressed('Tab')) {
-            this._toggleInventoryHUD();
-        }
-
-        // Consume item via 'Q' key (v0.2)
+        // Consume or place item via 'Q' key
         if (this.engine.input.isKeyPressed('KeyQ')) {
-            this._consumeBestItem();
+            this._useActiveItem();
+        }
+
+        // Hotbar selection keys 1 to 8
+        for (let i = 0; i < 8; i++) {
+            if (this.engine.input.isKeyPressed('Digit' + (i + 1))) {
+                this.inventory.selectedHotbarIndex = i;
+                this.engine.audio.playClick();
+                this._updateGridInventory();
+            }
+        }
+
+        // Mouse scroll hotbar selection (only when menu is closed)
+        const isMenuOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+        if (!isMenuOpen) {
+            const scroll = this.engine.input.mouse.wheelDelta;
+            const isShiftDown = this.engine.input.isKeyDown('ShiftLeft') || this.engine.input.isKeyDown('ShiftRight');
+            if (scroll !== 0 && !isShiftDown) {
+                let nextIndex = this.inventory.selectedHotbarIndex + scroll;
+                if (nextIndex < 0) nextIndex = 7;
+                else if (nextIndex > 7) nextIndex = 0;
+                
+                this.inventory.selectedHotbarIndex = nextIndex;
+                this._updateGridInventory();
+                this.engine.input.mouse.wheelDelta = 0; // Consume the scroll delta
+            }
         }
 
         // Developer Debug Cheat: Press 'K' to teleport to beach & get all raft modules
@@ -729,47 +753,239 @@ export class GameScene extends Scene {
     }
 
     /**
-     * Update the Grid Inventory HUD (v0.2 — replaces old resource slots)
+     * Update the Grid Inventory & Hotbar HUD (replaces old resource slots)
      */
     _updateGridInventory() {
         const gridEl = document.getElementById('inventory-grid');
+        const hotbarEl = document.getElementById('hotbar-hud');
         const counterEl = document.getElementById('slot-counter');
-        if (!gridEl) return;
 
-        const slots = this.inventory.getSlots();
-        const maxSlots = this.inventory.maxSlots;
-
-        // Update slot counter
         if (counterEl) {
-            counterEl.textContent = `${slots.length}/${maxSlots}`;
+            counterEl.textContent = `${this.inventory.getUsedSlots()}/${this.inventory.maxSlots}`;
         }
 
-        let html = '';
+        // Render Main Inventory Grid (slots 0 to 19)
+        if (gridEl) {
+            let html = '';
+            for (let i = 0; i < 20; i++) {
+                const slot = this.inventory.slots[i];
+                if (slot) {
+                    const resDef = getResourceDef(slot.id);
+                    const icon = resDef ? resDef.icon : '📦';
+                    const name = resDef ? resDef.name : slot.id;
+                    const isConsumable = resDef && resDef.consumable;
+                    const consumableClass = isConsumable ? ' consumable' : '';
 
-        // Render occupied slots
-        for (const slot of slots) {
-            const resDef = getResourceDef(slot.id);
-            const icon = resDef ? resDef.icon : '📦';
-            const name = resDef ? resDef.name : slot.id;
-            const isConsumable = resDef && resDef.consumable;
-            const consumableClass = isConsumable ? ' consumable' : '';
-
-            html += `
-                <div class="inv-slot${consumableClass}" title="${name}">
-                    <span class="slot-icon">${icon}</span>
-                    <span class="slot-count">${slot.count}</span>
-                    <div class="slot-tooltip">${name}</div>
-                </div>
-            `;
+                    html += `
+                        <div class="inv-slot${consumableClass}" data-index="${i}" draggable="true" title="${name}">
+                            <span class="slot-icon">${icon}</span>
+                            <span class="slot-count">${slot.count}</span>
+                            <div class="slot-tooltip">${name}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="inv-slot empty" data-index="${i}">
+                            <span class="slot-icon">·</span>
+                        </div>
+                    `;
+                }
+            }
+            gridEl.innerHTML = html;
         }
 
-        // Render empty slots
-        const emptyCount = Math.max(0, 10 - slots.length); // Show at least 10 slots for visual structure
-        for (let i = 0; i < emptyCount; i++) {
-            html += `<div class="inv-slot empty"><span class="slot-icon">·</span></div>`;
+        // Render Hotbar HUD (slots 20 to 27)
+        if (hotbarEl) {
+            let html = '';
+            for (let i = 0; i < 8; i++) {
+                const slotIndex = 20 + i;
+                const slot = this.inventory.slots[slotIndex];
+                const isActive = (i === this.inventory.selectedHotbarIndex) ? ' active' : '';
+                
+                if (slot) {
+                    const resDef = getResourceDef(slot.id);
+                    const icon = resDef ? resDef.icon : '📦';
+                    const name = resDef ? resDef.name : slot.id;
+                    const isConsumable = resDef && resDef.consumable;
+                    const consumableClass = isConsumable ? ' consumable' : '';
+
+                    html += `
+                        <div class="hotbar-slot${isActive}${consumableClass}" data-index="${slotIndex}" draggable="true" title="${name}">
+                            <span class="hotbar-key">${i + 1}</span>
+                            <span class="slot-icon">${icon}</span>
+                            <span class="slot-count">${slot.count}</span>
+                            <div class="slot-tooltip">${name}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="hotbar-slot empty${isActive}" data-index="${slotIndex}">
+                            <span class="hotbar-key">${i + 1}</span>
+                            <span class="slot-icon">·</span>
+                        </div>
+                    `;
+                }
+            }
+            hotbarEl.innerHTML = html;
         }
 
-        gridEl.innerHTML = html;
+        // Re-bind drag & drop and click events
+        this._bindDragAndDropEvents();
+        this._bindRightClickEvents();
+    }
+
+    _bindDragAndDropEvents() {
+        const slots = document.querySelectorAll('.inv-slot, .hotbar-slot');
+        let dragSourceIndex = null;
+
+        slots.forEach(slot => {
+            slot.addEventListener('dragstart', (e) => {
+                const indexAttr = slot.getAttribute('data-index');
+                if (indexAttr === null) return;
+                
+                dragSourceIndex = parseInt(indexAttr);
+                e.dataTransfer.setData('text/plain', dragSourceIndex);
+                slot.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            slot.addEventListener('dragend', () => {
+                slot.classList.remove('dragging');
+                const trashEl = document.getElementById('trash-slot');
+                if (trashEl) trashEl.classList.remove('drag-over');
+            });
+
+            slot.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
+            slot.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                if (!slot.classList.contains('dragging')) {
+                    slot.classList.add('drag-over');
+                }
+            });
+
+            slot.addEventListener('dragleave', () => {
+                slot.classList.remove('drag-over');
+            });
+
+            slot.addEventListener('drop', (e) => {
+                e.preventDefault();
+                slot.classList.remove('drag-over');
+                
+                const srcIdxStr = e.dataTransfer.getData('text/plain');
+                if (!srcIdxStr) return;
+                
+                const srcIdx = parseInt(srcIdxStr);
+                const destIdx = parseInt(slot.getAttribute('data-index'));
+                
+                if (srcIdx !== destIdx) {
+                    this.inventory.moveOrMerge(srcIdx, destIdx);
+                    this.engine.audio.playClick();
+                }
+            });
+        });
+
+        // Trash Slot
+        const trashEl = document.getElementById('trash-slot');
+        if (trashEl) {
+            trashEl.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+
+            trashEl.addEventListener('dragenter', () => {
+                trashEl.classList.add('drag-over');
+            });
+
+            trashEl.addEventListener('dragleave', () => {
+                trashEl.classList.remove('drag-over');
+            });
+
+            trashEl.addEventListener('drop', (e) => {
+                e.preventDefault();
+                trashEl.classList.remove('drag-over');
+                
+                const srcIdxStr = e.dataTransfer.getData('text/plain');
+                if (!srcIdxStr) return;
+                
+                const srcIdx = parseInt(srcIdxStr);
+                const item = this.inventory.slots[srcIdx];
+                if (item) {
+                    const def = getResourceDef(item.id);
+                    const name = def ? def.name : item.id;
+                    this.inventory.slots[srcIdx] = null;
+                    this.inventory.onChange();
+                    this._showNotification(`🗑️ Đã vứt bỏ: ${item.count}x ${name}`);
+                    this.engine.audio.playClick();
+                }
+            });
+        }
+    }
+
+    _bindRightClickEvents() {
+        const slots = document.querySelectorAll('.inv-slot, .hotbar-slot');
+        slots.forEach(slot => {
+            // Right-click to consume/place
+            slot.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const indexAttr = slot.getAttribute('data-index');
+                if (indexAttr === null) return;
+                
+                const idx = parseInt(indexAttr);
+                const item = this.inventory.slots[idx];
+                if (!item) return;
+
+                const resDef = getResourceDef(item.id);
+                if (resDef && resDef.consumable) {
+                    if (item.id === 'cooked_meal') {
+                        this.inventory.removeItemAt(idx, 1);
+                        this.vitals.eat(40);
+                        this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
+                        this.engine.audio.playPickup();
+                    } else if (item.id === 'fresh_water') {
+                        this.inventory.removeItemAt(idx, 1);
+                        this.vitals.drink(50);
+                        this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
+                        this.engine.audio.playPickup();
+                    } else if (item.id === 'campfire' || item.id === 'water_collector') {
+                        // Place structures
+                        const hotbarOffset = idx - 20;
+                        if (hotbarOffset >= 0 && hotbarOffset < 8) {
+                            this.inventory.selectedHotbarIndex = hotbarOffset;
+                        }
+                        this._closeInventoryMenu();
+                        this._showNotification(`🔧 Đã chọn ${resDef.name}. Nhấn Q để đặt!`);
+                    }
+                }
+            });
+
+            // Double click to consume
+            slot.addEventListener('dblclick', () => {
+                const indexAttr = slot.getAttribute('data-index');
+                if (indexAttr === null) return;
+                
+                const idx = parseInt(indexAttr);
+                const item = this.inventory.slots[idx];
+                if (!item) return;
+
+                const resDef = getResourceDef(item.id);
+                if (resDef && resDef.consumable && (item.id === 'cooked_meal' || item.id === 'fresh_water')) {
+                    if (item.id === 'cooked_meal') {
+                        this.inventory.removeItemAt(idx, 1);
+                        this.vitals.eat(40);
+                        this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
+                        this.engine.audio.playPickup();
+                    } else if (item.id === 'fresh_water') {
+                        this.inventory.removeItemAt(idx, 1);
+                        this.vitals.drink(50);
+                        this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
+                        this.engine.audio.playPickup();
+                    }
+                }
+            });
+        });
     }
 
     /**
@@ -785,7 +1001,6 @@ export class GameScene extends Scene {
             const pct = Math.max(0, Math.min(100, (value / max) * 100));
             barEl.style.width = `${pct}%`;
 
-            // Flash red when low
             if (pct <= 25) {
                 barEl.classList.add('low');
             } else {
@@ -798,88 +1013,106 @@ export class GameScene extends Scene {
     }
 
     /**
-     * Consume the best available food or water item (v0.2)
-     * Priority: if hunger is lower → eat first; if thirst is lower → drink first
+     * Use or place active item in selected hotbar slot
      */
-    _consumeBestItem() {
-        const hungerPct = this.vitals.hunger;
-        const thirstPct = this.vitals.thirst;
+    _useActiveItem() {
+        const activeIdx = 20 + this.inventory.selectedHotbarIndex;
+        const activeItem = this.inventory.slots[activeIdx];
+        if (!activeItem) {
+            this._showNotification('❌ Ô hotbar đang chọn trống!');
+            return;
+        }
 
-        // Try to address the most urgent need
-        if (hungerPct <= thirstPct) {
-            // Try to eat
-            if (this._tryEat()) return;
-            // If no food, try to drink
-            if (this._tryDrink()) return;
+        const resDef = getResourceDef(activeItem.id);
+        if (!resDef) return;
+
+        if (resDef.consumable) {
+            if (activeItem.id === 'cooked_meal') {
+                this.inventory.removeItemAt(activeIdx, 1);
+                this.vitals.eat(40);
+                this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
+                this.engine.audio.playPickup();
+            } else if (activeItem.id === 'fresh_water') {
+                this.inventory.removeItemAt(activeIdx, 1);
+                this.vitals.drink(50);
+                this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
+                this.engine.audio.playPickup();
+            } else if (activeItem.id === 'campfire') {
+                this._placeStructure('campfire');
+            } else if (activeItem.id === 'water_collector') {
+                this._placeStructure('water_collector');
+            }
         } else {
-            // Try to drink
-            if (this._tryDrink()) return;
-            // If no water, try to eat
-            if (this._tryEat()) return;
+            if (activeItem.id === 'stone_axe') {
+                this._showNotification('🪓 Đang trang bị Rìu Đá! Tăng gấp đôi tài nguyên thu hoạch.');
+            } else {
+                this._showNotification(`📦 Không thể sử dụng trực tiếp ${resDef.name}!`);
+            }
         }
-
-        this._showNotification('❌ Không có thức ăn hoặc nước để sử dụng!');
     }
 
-    _tryEat() {
-        if (this.inventory.hasItem('cooked_meal')) {
-            this.inventory.useItem('cooked_meal', 1);
-            this.vitals.eat(40);
-            this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
-            this.engine.audio.playPickup();
-            return true;
-        }
-        return false;
-    }
+    _placeStructure(type) {
+        const dist = 2.0;
+        const yaw = this.player.rotation[1];
+        const placeX = this.player.position[0] + Math.sin(yaw) * dist;
+        const placeZ = this.player.position[2] + Math.cos(yaw) * dist;
 
-    _tryDrink() {
-        if (this.inventory.hasItem('fresh_water')) {
-            this.inventory.useItem('fresh_water', 1);
-            this.vitals.drink(50);
-            this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
-            this.engine.audio.playPickup();
-            return true;
+        const boundaryLimit = 22.0;
+        const clampedX = Math.max(-boundaryLimit, Math.min(placeX, boundaryLimit));
+        const clampedZ = Math.max(-boundaryLimit, Math.min(placeZ, boundaryLimit));
+        const placeY = this.terrain.getHeight(clampedX, clampedZ);
+
+        const activeIdx = 20 + this.inventory.selectedHotbarIndex;
+
+        if (type === 'campfire') {
+            this.campfire.position[0] = clampedX;
+            this.campfire.position[1] = placeY;
+            this.campfire.position[2] = clampedZ;
+            this.campfire.isBuilt = true;
+            this.campfire.updateModelMatrix();
+            this.inventory.removeItemAt(activeIdx, 1);
+            this._showNotification('🔥 Đã đặt Lửa Trại! Đến gần để nấu ăn.');
+        } else if (type === 'water_collector') {
+            this.waterCollector.position[0] = clampedX;
+            this.waterCollector.position[1] = placeY;
+            this.waterCollector.position[2] = clampedZ;
+            this.waterCollector.isBuilt = true;
+            this.waterCollector.updateModelMatrix();
+            this.inventory.removeItemAt(activeIdx, 1);
+            this._showNotification('💧 Đã đặt Bẫy Nước Mưa! Nước hứng tự động.');
         }
-        return false;
+
+        this.engine.audio.playRaftBuild();
+        this.particleSystem.emit(
+            [clampedX, placeY + 0.5, clampedZ],
+            ParticleSystem.PRESET.BUILD
+        );
     }
 
     /**
-     * Toggle the visibility of the resource HUD (inventory)
+     * Toggle the visibility of the inventory & crafting overlay
      */
-    _toggleInventoryHUD() {
-        const hud = document.getElementById('resource-hud');
-        if (hud) {
-            hud.classList.toggle('hidden');
-            this.engine.audio.playClick();
-        }
-    }
-
-    /**
-     * Toggle the visibility of the crafting panel overlay
-     */
-    _toggleCraftingPanel() {
-        if (!this.craftingPanel) return;
-        const isHidden = this.craftingPanel.classList.contains('hidden');
+    _toggleInventoryMenu() {
+        if (!this.inventoryMenu) return;
+        const isHidden = this.inventoryMenu.classList.contains('hidden');
         if (isHidden) {
-            this.craftingPanel.classList.remove('hidden');
-            // Exit pointer lock to enable clicking buttons
+            this.inventoryMenu.classList.remove('hidden');
             if (document.pointerLockElement) {
                 document.exitPointerLock();
             }
             this._renderCraftingPanel();
+            this._updateGridInventory();
             this.tutorial.notifyCraftingOpened();
             this.engine.audio.playClick();
         } else {
-            this._closeCraftingPanel();
+            this._closeInventoryMenu();
         }
     }
 
-    /**
-     * Close the crafting panel overlay
-     */
-    _closeCraftingPanel() {
-        if (this.craftingPanel) {
-            this.craftingPanel.classList.add('hidden');
+    _closeInventoryMenu() {
+        if (this.inventoryMenu) {
+            this.inventoryMenu.classList.add('hidden');
+            this.engine.audio.playClick();
         }
     }
 
@@ -887,97 +1120,128 @@ export class GameScene extends Scene {
      * Render dynamic recipes inside the crafting container
      */
     _renderCraftingPanel() {
-        if (!this.craftingRecipesContainer) return;
+        const recipesListEl = document.getElementById('crafting-recipes-list');
+        const detailsEl = document.getElementById('recipe-details-panel');
+        if (!recipesListEl || !detailsEl) return;
 
         const recipes = getAllRecipes();
+
+        const filtered = recipes.filter(recipe => {
+            if (recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) return false;
+            if (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) return false;
+            return recipe.category === this.selectedCraftingCategory;
+        });
+
         let html = '';
-
-        for (const recipe of recipes) {
-            // Skip structure recipes that are already built
-            if (recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) continue;
-            if (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) continue;
-
+        for (const recipe of filtered) {
             const canCraft = CraftingSystem.canCraft(recipe.id, this.inventory);
-            
-            // Build ingredients HTML
-            let ingredientsHtml = '';
-            for (const [ingredientId, requiredCount] of Object.entries(recipe.ingredients)) {
-                const currentCount = this.inventory.getCount(ingredientId);
-                const isMet = currentCount >= requiredCount;
-                const badgeClass = isMet ? 'met' : 'missing';
-                
-                const resDef = getResourceDef(ingredientId);
-                const ingredientName = resDef ? resDef.name : ingredientId;
-                const ingredientIcon = resDef ? resDef.icon : '';
-
-                ingredientsHtml += `
-                    <span class="ingredient-badge ${badgeClass}">
-                        ${ingredientIcon} ${ingredientName} ${currentCount}/${requiredCount}
-                    </span>
-                `;
-            }
+            const canCraftClass = canCraft ? ' can-craft' : '';
+            const isSelected = (recipe.id === this.selectedRecipeId) ? ' selected' : '';
 
             html += `
-                <div class="recipe-card" id="recipe-${recipe.id}">
-                    <div class="recipe-icon-wrapper">${recipe.icon}</div>
-                    <div class="recipe-info">
-                        <div class="recipe-name-text">${recipe.name}</div>
-                        <div class="recipe-desc-text">${recipe.description}</div>
-                        <div class="recipe-ingredients">
-                            ${ingredientsHtml}
-                        </div>
+                <div class="recipe-item-card${canCraftClass}${isSelected}" data-recipe-id="${recipe.id}">
+                    <div class="recipe-item-icon">${recipe.icon}</div>
+                    <div class="recipe-item-info">
+                        <div class="recipe-item-name">${recipe.name}</div>
+                        <div class="recipe-item-desc">${recipe.description}</div>
                     </div>
-                    <button class="craft-btn" data-recipe-id="${recipe.id}" ${canCraft ? '' : 'disabled'}>
-                        Chế tạo
-                    </button>
+                    <div class="recipe-item-status">${canCraft ? '✔️' : '❌'}</div>
                 </div>
             `;
         }
 
-        this.craftingRecipesContainer.innerHTML = html;
+        recipesListEl.innerHTML = html || `<div class="details-placeholder" style="margin-top: 20px;">Không có công thức nào trong nhóm này</div>`;
 
-        // Bind click events
-        const buttons = this.craftingRecipesContainer.querySelectorAll('.craft-btn');
-        buttons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const recipeId = e.currentTarget.getAttribute('data-recipe-id');
-                this._craftItem(recipeId);
+        const cards = recipesListEl.querySelectorAll('.recipe-item-card');
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                this.selectedRecipeId = card.getAttribute('data-recipe-id');
+                this._renderCraftingPanel();
             });
         });
+
+        this._renderRecipeDetails(detailsEl);
     }
 
-    /**
-     * Handle item crafting — with special handling for structure recipes (v0.2)
-     * @param {string} recipeId
-     */
+    _renderRecipeDetails(detailsEl) {
+        if (!this.selectedRecipeId) {
+            detailsEl.innerHTML = `<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>`;
+            return;
+        }
+
+        const recipe = getRecipeDef(this.selectedRecipeId);
+        if (!recipe) {
+            detailsEl.innerHTML = `<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>`;
+            return;
+        }
+
+        if ((recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) ||
+            (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt)) {
+            this.selectedRecipeId = null;
+            detailsEl.innerHTML = `<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>`;
+            return;
+        }
+
+        const canCraft = CraftingSystem.canCraft(recipe.id, this.inventory);
+
+        let ingredientsHtml = '';
+        for (const [ingredientId, requiredCount] of Object.entries(recipe.ingredients)) {
+            const currentCount = this.inventory.getCount(ingredientId);
+            const isMet = currentCount >= requiredCount;
+            const badgeClass = isMet ? 'met' : 'missing';
+
+            const resDef = getResourceDef(ingredientId);
+            const ingredientName = resDef ? resDef.name : ingredientId;
+            const ingredientIcon = resDef ? resDef.icon : '';
+
+            ingredientsHtml += `
+                <span class="ingredient-badge ${badgeClass}">
+                    ${ingredientIcon} ${ingredientName} ${currentCount}/${requiredCount}
+                </span>
+            `;
+        }
+
+        detailsEl.innerHTML = `
+            <div class="details-header">
+                <div class="details-icon">${recipe.icon}</div>
+                <div class="details-meta">
+                    <div class="details-name">${recipe.name}</div>
+                    <div class="details-desc">${recipe.description}</div>
+                </div>
+            </div>
+            <div class="details-ingredients">
+                ${ingredientsHtml}
+            </div>
+            <div class="details-craft-btn-row">
+                <button id="details-craft-btn" class="craft-btn" ${canCraft ? '' : 'disabled'}>
+                    Chế tạo
+                </button>
+            </div>
+        `;
+
+        const craftBtn = document.getElementById('details-craft-btn');
+        if (craftBtn) {
+            craftBtn.addEventListener('click', () => {
+                this._craftItem(recipe.id);
+            });
+        }
+    }
+
     _craftItem(recipeId) {
         const recipe = getRecipeDef(recipeId);
         if (!recipe) return;
 
         const success = CraftingSystem.craft(recipeId, this.inventory);
         if (success) {
-            // Special handling for structure recipes (v0.2)
-            if (recipeId === 'campfire') {
-                this.campfire.isBuilt = true;
-                // Remove the campfire "item" from inventory since it's placed
-                this.inventory.removeItem('campfire', 1);
-                this._showNotification('🔥 Đã dựng Lửa Trại! Đến gần để nấu ăn.');
-            } else if (recipeId === 'water_collector') {
-                this.waterCollector.isBuilt = true;
-                // Remove the water collector "item" from inventory since it's placed
-                this.inventory.removeItem('water_collector', 1);
-                this._showNotification('💧 Đã dựng Bẫy Nước Mưa! Nước sẽ tự hứng theo thời gian.');
-            } else {
-                this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
-            }
-            
-            // Sound + particle effects
+            this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
+
             this.engine.audio.playCraft();
             this.particleSystem.emit(
                 [this.player.position[0], this.player.position[1] + 0.5, this.player.position[2]],
                 ParticleSystem.PRESET.CRAFT
             );
             this.tutorial.notifyCrafted();
+            this._renderCraftingPanel();
         } else {
             console.warn(`GameScene: Crafting failed for ${recipeId}`);
         }

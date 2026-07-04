@@ -13,7 +13,13 @@ export const ResourceType = {
     COCONUT:      'coconut',
     RAW_FISH:     'raw_fish',
     COOKED_MEAL:  'cooked_meal',
-    FRESH_WATER:  'fresh_water'
+    FRESH_WATER:  'fresh_water',
+    STONE_AXE:        'stone_axe',
+    CAMPFIRE:         'campfire',
+    WATER_COLLECTOR:  'water_collector',
+    RAFT_FRAME:       'raft_frame',
+    BARREL_FLOATS:    'barrel_floats',
+    PADDLE:           'paddle'
 };
 
 /**
@@ -124,6 +130,84 @@ export const ResourceDatabase = {
         spawnWeight: 0,
         consumable: true,
         vitalEffect: { type: 'thirst', amount: 50 }
+    },
+
+    [ResourceType.STONE_AXE]: {
+        id: ResourceType.STONE_AXE,
+        name: 'Rìu Đá',
+        nameEn: 'Stone Axe',
+        icon: '🪓',
+        color: [0.4, 0.4, 0.4],
+        meshScale: [0.3, 0.3, 0.3],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.CAMPFIRE]: {
+        id: ResourceType.CAMPFIRE,
+        name: 'Lửa Trại',
+        nameEn: 'Campfire',
+        icon: '🔥',
+        color: [0.8, 0.3, 0.1],
+        meshScale: [0.4, 0.4, 0.4],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: true
+    },
+
+    [ResourceType.WATER_COLLECTOR]: {
+        id: ResourceType.WATER_COLLECTOR,
+        name: 'Bẫy Nước Mưa',
+        nameEn: 'Water Collector',
+        icon: '💧',
+        color: [0.3, 0.5, 0.7],
+        meshScale: [0.4, 0.5, 0.4],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: true
+    },
+
+    [ResourceType.RAFT_FRAME]: {
+        id: ResourceType.RAFT_FRAME,
+        name: 'Khung Bè',
+        nameEn: 'Raft Frame',
+        icon: '🧱',
+        color: [0.6, 0.4, 0.2],
+        meshScale: [0.5, 0.2, 0.5],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.BARREL_FLOATS]: {
+        id: ResourceType.BARREL_FLOATS,
+        name: 'Phao Thùng',
+        nameEn: 'Barrel Floats',
+        icon: '🛢️',
+        color: [0.5, 0.3, 0.2],
+        meshScale: [0.5, 0.4, 0.5],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.PADDLE]: {
+        id: ResourceType.PADDLE,
+        name: 'Mái Chèo',
+        nameEn: 'Paddle',
+        icon: '🛶',
+        color: [0.6, 0.4, 0.2],
+        meshScale: [0.2, 0.8, 0.2],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
     }
 };
 

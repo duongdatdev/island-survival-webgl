@@ -209,40 +209,53 @@
         </div>
     </div>
 
-    <!-- Resource HUD - Bottom Left (Grid Inventory) -->
-    <div id="resource-hud" class="resource-hud">
-        <div class="resource-hud-header">
-            <div class="resource-hud-title">KHO ĐỒ (TAB)</div>
-            <div class="resource-hud-slots" id="slot-counter">0/20</div>
-        </div>
-
-        <div class="inventory-grid" id="inventory-grid">
-            <!-- Dynamically populated by JS -->
-        </div>
-
-        <div class="hud-action-bar">
-            <button id="craft-toggle-btn" class="craft-toggle-btn">
-                <span class="btn-icon">🔨</span>
-                <span class="btn-text">CHẾ TẠO (C)</span>
-            </button>
-            <button id="consume-btn" class="consume-btn" title="Dùng thức ăn hoặc nước (Q)">
-                <span class="btn-icon">🍖</span>
-                <span class="btn-text">DÙNG (Q)</span>
-            </button>
-        </div>
+    <!-- Hotbar HUD - Bottom Center (Always visible, key 1-8 or mouse scroll) -->
+    <div id="hotbar-hud" class="hotbar-hud">
+        <!-- Dynamically populated by JS: 8 slots (indices 20 to 27) -->
     </div>
 
-    <!-- Crafting Panel Overlay -->
-    <div id="crafting-panel" class="crafting-panel hidden">
-        <div class="crafting-content">
-            <div class="crafting-header">
-                <div class="crafting-title">
-                    <span class="title-icon">🔨</span> CHẾ TẠO
+    <!-- Unified Inventory & Crafting Menu Overlay (Tab/C toggles it) -->
+    <div id="inventory-menu" class="inventory-menu-overlay hidden">
+        <div class="inventory-menu-content">
+            <div class="inventory-menu-header">
+                <div class="inventory-menu-title">
+                    <span class="menu-header-icon">⚓</span> Sinh Tồn: Kho Đồ & Chế Tạo
                 </div>
-                <button id="crafting-close" class="crafting-close">&times;</button>
+                <button id="inventory-menu-close" class="inventory-menu-close">&times;</button>
             </div>
-            <div id="crafting-recipes" class="crafting-recipes">
-                <!-- Injected dynamically via JS -->
+            <div class="inventory-menu-body">
+                <!-- Left Column: Crafting Panel -->
+                <div class="crafting-column">
+                    <div class="crafting-categories">
+                        <button class="cat-btn active" data-category="tool">🪓 CÔNG CỤ</button>
+                        <button class="cat-btn" data-category="structure">🔥 SINH TỒN</button>
+                        <button class="cat-btn" data-category="raft">⛵ CHIẾC BÈ</button>
+                    </div>
+                    <div id="crafting-recipes-list" class="crafting-recipes-list">
+                        <!-- Recipes populated dynamically -->
+                    </div>
+                    <div id="recipe-details-panel" class="recipe-details-panel">
+                        <!-- Recipe details shown here upon click -->
+                        <div class="details-placeholder">Chọn một công thức để chế tạo</div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Main Inventory Grid -->
+                <div class="inventory-column">
+                    <div class="inventory-column-header">
+                        <span class="column-title">🎒 KHO ĐỒ CHÍNH</span>
+                        <span id="slot-counter" class="slot-counter">0/20</span>
+                    </div>
+                    <div class="inventory-grid" id="inventory-grid">
+                        <!-- Dynamically populated by JS: 20 slots (indices 0 to 19) -->
+                    </div>
+                    <div class="trash-slot-container">
+                        <div id="trash-slot" class="trash-slot" title="Kéo vật phẩm vào đây để vứt bỏ">
+                            <span class="trash-icon">🗑️</span>
+                            <span class="trash-text">Thả vào đây để vứt bỏ</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -309,6 +322,6 @@
     </div>
 
     <!-- Main Module Loading -->
-    <script type="module" src="src/main.js"></script>
+    <script type="module" src="src/main.js?v=4"></script>
 </body>
 </html>

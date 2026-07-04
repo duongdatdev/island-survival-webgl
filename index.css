@@ -811,113 +811,95 @@ input:checked + .slider:before {
 }
 
 /* ============================================
-   RESOURCE HUD — Bottom Left (Grid Inventory)
+   HOTBAR HUD — Bottom Center
    ============================================ */
-.resource-hud {
+.hotbar-hud {
     position: absolute;
     bottom: 16px;
-    left: 16px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 5;
     background: var(--wood-dark);
     border: var(--border-width) solid var(--wood-border);
     border-radius: var(--panel-radius);
-    padding: 12px 14px;
+    padding: 8px 10px;
     box-shadow: var(--panel-shadow);
-    min-width: 220px;
-    max-width: 260px;
+    display: flex;
+    gap: 6px;
     transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-.resource-hud.hidden {
-    transform: translateX(-40px);
+.hotbar-hud.hidden {
+    transform: translateX(-50%) translateY(40px);
     opacity: 0;
     pointer-events: none;
 }
 
-.resource-hud-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--wood-border);
-    margin-bottom: 10px;
-}
-
-.resource-hud-title {
-    font-family: var(--font-heading);
-    font-size: 0.65rem;
-    font-weight: 800;
-    color: var(--text-dim);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-}
-
-.resource-hud-slots {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--text-dim);
-}
-
-/* === Grid Inventory === */
-.inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
-    margin-bottom: 10px;
-}
-
-.inv-slot {
-    width: 40px;
-    height: 40px;
+.hotbar-slot {
+    width: 52px;
+    height: 52px;
     background: var(--wood-mid);
-    border: 1px solid var(--wood-border);
-    border-radius: 2px;
+    border: 2px solid var(--wood-border);
+    border-radius: var(--panel-radius);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
     cursor: default;
-    transition: border-color 0.15s ease;
+    transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.inv-slot:hover {
+.hotbar-slot:hover {
     border-color: var(--wood-accent);
+    background: var(--leather);
 }
 
-.inv-slot.empty {
-    opacity: 0.4;
+.hotbar-slot.active {
+    border-color: var(--yellow-fire);
+    background: var(--leather-light);
+    transform: translateY(-6px) scale(1.08);
+    box-shadow: 0 0 12px rgba(212, 160, 40, 0.5), var(--panel-shadow);
 }
 
-.inv-slot .slot-icon {
-    font-size: 1.1rem;
+.hotbar-slot.empty {
+    opacity: 0.5;
+}
+
+.hotbar-slot .slot-icon {
+    font-size: 1.4rem;
     line-height: 1;
 }
 
-.inv-slot .slot-count {
+.hotbar-slot .slot-count {
     position: absolute;
-    bottom: 1px;
-    right: 3px;
+    bottom: 2px;
+    right: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+
+.hotbar-slot .hotbar-key {
+    position: absolute;
+    top: 2px;
+    left: 4px;
     font-family: var(--font-mono);
     font-size: 0.55rem;
     font-weight: 700;
-    color: var(--text-bright);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    color: var(--text-dim);
+    text-shadow: 0 1px 1px rgba(0,0,0,0.8);
 }
 
-.inv-slot.consumable {
-    border-color: var(--green-forest);
+.hotbar-slot.active .hotbar-key {
+    color: var(--yellow-fire);
 }
 
-.inv-slot.consumable:hover {
-    border-color: var(--green-bright);
-    box-shadow: 0 0 4px rgba(95, 160, 110, 0.2);
-}
-
-.inv-slot .slot-tooltip {
+.hotbar-slot .slot-tooltip {
     display: none;
     position: absolute;
-    bottom: 44px;
+    bottom: 60px;
     left: 50%;
     transform: translateX(-50%);
     background: var(--wood-dark);
@@ -931,55 +913,20 @@ input:checked + .slider:before {
     box-shadow: var(--panel-shadow);
 }
 
-.inv-slot:hover .slot-tooltip {
+.hotbar-slot:hover .slot-tooltip {
     display: block;
 }
 
-/* === HUD Action Bar === */
-.hud-action-bar {
-    display: flex;
-    gap: 6px;
-    border-top: 1px solid var(--wood-border);
-    padding-top: 8px;
+/* Drag and Drop classes */
+.hotbar-slot.drag-over, .inv-slot.drag-over {
+    border-color: var(--yellow-fire) !important;
+    background: rgba(212, 160, 40, 0.15) !important;
+    box-shadow: inset 0 0 5px rgba(212, 160, 40, 0.4);
 }
 
-.craft-toggle-btn,
-.consume-btn {
-    flex: 1;
-    padding: 8px 10px;
-    background: var(--wood-mid);
-    border: var(--border-width) solid var(--wood-border);
-    border-radius: var(--panel-radius);
-    color: var(--text-parchment);
-    font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 0.65rem;
-    letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    cursor: pointer;
-    box-shadow: var(--panel-shadow);
-    transition: all 0.15s ease;
-    text-transform: uppercase;
-}
-
-.craft-toggle-btn:hover,
-.consume-btn:hover {
-    background: var(--wood-light);
-    border-color: var(--wood-accent);
-}
-
-.craft-toggle-btn:active,
-.consume-btn:active {
-    transform: translateY(1px);
-    box-shadow: none;
-}
-
-.craft-toggle-btn .btn-icon,
-.consume-btn .btn-icon {
-    font-size: 0.85rem;
+.hotbar-slot.dragging, .inv-slot.dragging {
+    opacity: 0.3 !important;
+    border-style: dashed !important;
 }
 
 /* ============================================
@@ -1074,73 +1021,75 @@ input:checked + .slider:before {
 }
 
 /* ============================================
-   CRAFTING PANEL OVERLAY
+   UNIFIED INVENTORY & CRAFTING MENU OVERLAY
    ============================================ */
-.crafting-panel {
+.inventory-menu-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 10;
+    z-index: 12;
     display: flex;
     justify-content: center;
     align-items: center;
     background: rgba(10, 8, 4, 0.65);
+    backdrop-filter: blur(2px);
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.crafting-panel.hidden {
+.inventory-menu-overlay.hidden {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
 }
 
-.crafting-content {
-    width: 480px;
-    max-width: 90%;
-    max-height: 80vh;
+.inventory-menu-content {
+    width: 860px;
+    max-width: 95%;
+    height: 600px;
+    max-height: 85vh;
     background: var(--wood-dark);
     border: var(--border-width) solid var(--wood-border);
     border-radius: var(--panel-radius);
     padding: 20px;
-    box-shadow: var(--panel-shadow), 0 16px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--panel-shadow), 0 16px 40px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
     gap: 16px;
     transform: scale(1);
-    transition: transform 0.25s ease;
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.15);
 }
 
-.crafting-panel.hidden .crafting-content {
+.inventory-menu-overlay.hidden .inventory-menu-content {
     transform: scale(0.96);
 }
 
-.crafting-header {
+.inventory-menu-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--wood-border);
+    border-bottom: 2px solid var(--wood-border);
     padding-bottom: 12px;
 }
 
-.crafting-title {
+.inventory-menu-title {
     font-family: var(--font-heading);
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: var(--text-gold);
     letter-spacing: 1px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-shadow: 1px 1px 0 #0a0804;
 }
 
-.title-icon {
-    font-size: 1.2rem;
+.menu-header-icon {
+    font-size: 1.4rem;
 }
 
-.crafting-close {
+.inventory-menu-close {
     background: var(--wood-mid);
     border: 1px solid var(--wood-border);
     border-radius: 2px;
@@ -1152,49 +1101,181 @@ input:checked + .slider:before {
     line-height: 1;
 }
 
-.crafting-close:hover {
+.inventory-menu-close:hover {
     color: var(--text-parchment);
     border-color: var(--wood-accent);
     background: var(--wood-light);
 }
 
-.crafting-recipes {
+.inventory-menu-body {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* === Crafting Column === */
+.crafting-column {
+    width: 45%;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    min-height: 0;
+    border-right: 1px solid var(--wood-border);
+    padding-right: 16px;
+}
+
+.crafting-categories {
+    display: flex;
+    gap: 4px;
+}
+
+.cat-btn {
+    flex: 1;
+    padding: 6px 4px;
+    background: var(--wood-mid);
+    border: 1px solid var(--wood-border);
+    border-radius: 2px;
+    color: var(--text-dim);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.cat-btn:hover {
+    background: var(--wood-light);
+    color: var(--text-parchment);
+}
+
+.cat-btn.active {
+    background: var(--wood-accent);
+    border-color: var(--text-gold);
+    color: var(--text-bright);
+    box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.1);
+}
+
+.crafting-recipes-list {
+    flex: 1;
     overflow-y: auto;
-    padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 6px;
     scrollbar-width: thin;
     scrollbar-color: var(--wood-border) transparent;
 }
 
-.crafting-recipes::-webkit-scrollbar {
+.crafting-recipes-list::-webkit-scrollbar {
     width: 4px;
 }
 
-.crafting-recipes::-webkit-scrollbar-thumb {
+.crafting-recipes-list::-webkit-scrollbar-thumb {
     background: var(--wood-border);
     border-radius: 2px;
 }
 
-.recipe-card {
+.recipe-item-card {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
+    gap: 10px;
+    padding: 8px 10px;
     background: var(--wood-mid);
     border: 1px solid var(--wood-border);
     border-radius: var(--panel-radius);
+    cursor: pointer;
     transition: all 0.15s ease;
 }
 
-.recipe-card:hover {
+.recipe-item-card:hover {
     border-color: var(--wood-accent);
     background: var(--leather);
 }
 
-.recipe-icon-wrapper {
-    font-size: 1.6rem;
+.recipe-item-card.selected {
+    border-color: var(--text-gold);
+    background: var(--leather-light);
+    box-shadow: 0 0 6px rgba(196, 163, 90, 0.2);
+}
+
+.recipe-item-icon {
+    font-size: 1.4rem;
+    width: 36px;
+    height: 36px;
+    background: var(--wood-dark);
+    border: 1px solid var(--wood-border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.recipe-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.recipe-item-name {
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-parchment);
+}
+
+.recipe-item-desc {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.recipe-item-status {
+    font-size: 0.9rem;
+}
+
+.recipe-item-card.can-craft .recipe-item-status {
+    color: var(--green-bright);
+}
+
+.recipe-item-card:not(.can-craft) .recipe-item-status {
+    color: var(--text-dim);
+    opacity: 0.5;
+}
+
+/* === Recipe Details Panel === */
+.recipe-details-panel {
+    background: var(--wood-mid);
+    border: 1px solid var(--wood-border);
+    border-radius: var(--panel-radius);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 140px;
+    justify-content: center;
+}
+
+.details-placeholder {
+    text-align: center;
+    font-style: italic;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.details-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.details-icon {
+    font-size: 1.8rem;
     width: 44px;
     height: 44px;
     background: var(--wood-dark);
@@ -1203,92 +1284,188 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
 }
 
-.recipe-info {
-    flex: 1;
+.details-meta {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
 }
 
-.recipe-name-text {
+.details-name {
     font-family: var(--font-heading);
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-parchment);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-gold);
 }
 
-.recipe-desc-text {
-    font-size: 0.7rem;
+.details-desc {
+    font-size: 0.72rem;
     color: var(--text-dim);
     line-height: 1.3;
 }
 
-.recipe-ingredients {
+.details-ingredients {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 3px;
+    gap: 5px;
+    margin-top: 4px;
 }
 
-.ingredient-badge {
-    display: inline-flex;
+.details-craft-btn-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+/* === Inventory Column === */
+.inventory-column {
+    width: 55%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.inventory-column-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 3px;
-    font-size: 0.65rem;
-    padding: 1px 5px;
-    border-radius: 2px;
-    font-family: var(--font-mono);
 }
 
-.ingredient-badge.met {
-    background: rgba(95, 160, 110, 0.1);
-    color: var(--green-bright);
-    border: 1px solid rgba(95, 160, 110, 0.2);
-}
-
-.ingredient-badge.missing {
-    background: rgba(184, 92, 56, 0.1);
-    color: var(--red-earth);
-    border: 1px solid rgba(184, 92, 56, 0.2);
-}
-
-.craft-btn {
-    padding: 7px 14px;
-    background: var(--green-forest);
-    border: var(--border-width) solid var(--green-bright);
-    border-radius: var(--panel-radius);
-    color: var(--text-bright);
+.column-title {
     font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 0.72rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    box-shadow: var(--panel-shadow);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-}
-
-.craft-btn:hover:not(:disabled) {
-    background: var(--green-bright);
-    box-shadow: var(--panel-shadow), 0 0 8px rgba(95, 160, 110, 0.25);
-}
-
-.craft-btn:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow: none;
-}
-
-.craft-btn:disabled {
-    background: var(--wood-mid);
-    border-color: var(--wood-border);
+    font-size: 0.95rem;
+    font-weight: 800;
     color: var(--text-dim);
-    cursor: not-allowed;
-    box-shadow: none;
-    opacity: 0.5;
+    letter-spacing: 1px;
+}
+
+.slot-counter {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    flex: 1;
+}
+
+.inv-slot {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--wood-mid);
+    border: 2px solid var(--wood-border);
+    border-radius: var(--panel-radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: default;
+    transition: all 0.15s ease;
+}
+
+.inv-slot:hover {
+    border-color: var(--wood-accent);
+    background: var(--leather);
+}
+
+.inv-slot.empty {
+    opacity: 0.4;
+}
+
+.inv-slot .slot-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.inv-slot .slot-count {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+
+.inv-slot.consumable {
+    border-color: var(--green-forest);
+}
+
+.inv-slot.consumable:hover {
+    border-color: var(--green-bright);
+    box-shadow: inset 0 0 6px rgba(95, 160, 110, 0.2);
+}
+
+.inv-slot .slot-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 105%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--wood-dark);
+    border: 1px solid var(--wood-accent);
+    border-radius: 2px;
+    padding: 4px 8px;
+    font-size: 0.65rem;
+    color: var(--text-parchment);
+    white-space: nowrap;
+    z-index: 2000;
+    box-shadow: var(--panel-shadow);
+}
+
+.inv-slot:hover .slot-tooltip {
+    display: block;
+}
+
+/* === Trash Slot === */
+.trash-slot-container {
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid var(--wood-border);
+}
+
+.trash-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 48px;
+    border: 2px dashed var(--wood-border);
+    border-radius: var(--panel-radius);
+    color: var(--text-dim);
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.trash-slot:hover {
+    border-color: var(--red-earth);
+    color: var(--red-earth);
+    background: rgba(184, 92, 56, 0.05);
+}
+
+.trash-slot.drag-over {
+    border-color: var(--red-earth) !important;
+    color: var(--text-bright) !important;
+    background: rgba(184, 92, 56, 0.2) !important;
+    box-shadow: 0 0 10px rgba(184, 92, 56, 0.3);
+    transform: scale(1.02);
+}
+
+.trash-icon {
+    font-size: 1.2rem;
+}
+
+.trash-text {
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 /* ============================================

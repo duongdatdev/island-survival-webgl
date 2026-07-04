@@ -48,8 +48,9 @@ export class Camera {
         Vec3.copy(this.target, targetPos);
         this.target[1] += 1.2;
 
-        // Handle Scroll Wheel Zoom
-        if (inputManager.mouse.wheelDelta !== 0) {
+        // Handle Scroll Wheel Zoom (Only when holding Shift)
+        const isShiftDown = inputManager.isKeyDown('ShiftLeft') || inputManager.isKeyDown('ShiftRight');
+        if (inputManager.mouse.wheelDelta !== 0 && isShiftDown) {
             this.distance += inputManager.mouse.wheelDelta * 0.75;
             this.distance = Math.max(2.5, Math.min(this.distance, 25.0)); // Zoom constraints
         }
