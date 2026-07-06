@@ -1,4 +1,5 @@
 import { Scene } from '../core/Scene.js';
+import { WorldGenerator } from '../gameplay/world/WorldGenerator.js?v=6';
 
 /**
  * Loading screen scene that tracks AssetManager status and updates the UI.
@@ -45,6 +46,9 @@ export class LoadingScene extends Scene {
             'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
         );
 
+        // Queue environment metadata loading
+        const metadataPromise = this.engine.assets.loadEnvironmentMetadata('assets/environment/manifest.json');
+
         // 2. Queue simulated heavy loads (2s delay) to showcase the UI animation smoothly
         this.loadingDelay = new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -61,14 +65,27 @@ export class LoadingScene extends Scene {
         this._stageTimer = 0;
 
         // Wait for all assets to resolve
-        Promise.all([this.loadingDelay])
-            .then(() => {
+        Promise.all([this.loadingDelay, metadataPromise])
+            .then(async () => {
+                const seed = new URLSearchParams(window.location.search).get('seed') || Math.floor(Math.random() * 1000000).toString();
+                this.engine.worldSeed = seed;
+
+                console.log(`LoadingScene: Generating world with seed: ${seed}`);
+                const generator = new WorldGenerator(120, 100.0);
+                const world = generator.generate(seed, this.engine.assets.environmentMetadata, false);
+                this.engine.generatedWorld = world;
+
+                // Collect and compile unique meshes
+                const uniquePaths = Array.from(new Set(world.placedObjects.map(obj => obj.objPath)));
+                console.log(`LoadingScene: Compiling ${uniquePaths.length} unique environment models...`);
+                await this.engine.assets.compileUniqueModels(uniquePaths);
+
                 this._targetProgress = 1.0;
                 // Give a moment for progress bar to catch up
                 setTimeout(() => this._onLoadComplete(), 500);
             })
             .catch(err => {
-                console.error('LoadingScene: Error during asset retrieval', err);
+                console.error('LoadingScene: Error during asset retrieval or world generation', err);
                 this._onLoadComplete(); // Safe fallback
             });
     }

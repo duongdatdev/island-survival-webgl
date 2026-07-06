@@ -144,6 +144,13 @@
         </div>
 
         <div class="debug-section">
+            <div class="section-title">THÔNG TIN THẾ GIỚI</div>
+            <div class="debug-row"><span class="label">Seed:</span><span id="debug-world-seed" class="value">--</span></div>
+            <div class="debug-row"><span class="label">Thời Gian Tạo:</span><span id="debug-world-gentime" class="value">--</span></div>
+            <div class="debug-row"><span class="label">Tổng Số Vật Thể:</span><span id="debug-world-objcount" class="value">--</span></div>
+        </div>
+
+        <div class="debug-section">
             <div class="section-title">PLAYER TRANSFORMS</div>
             <div class="debug-row"><span class="label">Position:</span><span id="debug-pos" class="value">X: 0.00, Y: 0.00, Z: 0.00</span></div>
             <div class="debug-row"><span class="label">Speed:</span><span id="debug-speed" class="value">0.0 m/s</span></div>
@@ -184,6 +191,24 @@
                 <span class="value">
                     <label class="switch">
                         <input type="checkbox" id="toggle-water" checked>
+                        <span class="slider"></span>
+                    </label>
+                </span>
+            </div>
+            <div class="debug-row">
+                <span class="label">Draw Biome Colors:</span>
+                <span class="value">
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-biome-colors">
+                        <span class="slider"></span>
+                    </label>
+                </span>
+            </div>
+            <div class="debug-row">
+                <span class="label">Collision Debug:</span>
+                <span class="value">
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-collision-debug">
                         <span class="slider"></span>
                     </label>
                 </span>

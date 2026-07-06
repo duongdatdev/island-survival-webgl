@@ -23,6 +23,11 @@ import { VitalsSystem } from '../systems/VitalsSystem.js?v=6';
 import { Campfire } from '../entities/Campfire.js';
 import { WaterCollector } from '../entities/WaterCollector.js';
 import { Waterfall } from '../entities/Waterfall.js';
+import { WorldGenerator } from '../gameplay/world/WorldGenerator.js?v=6';
+import { EnvironmentObject } from '../entities/EnvironmentObject.js?v=6';
+import { WorldResource } from '../entities/WorldResource.js?v=6';
+import { CollisionSystem } from '../systems/CollisionSystem.js';
+import { CollisionDebug } from '../systems/CollisionDebug.js';
 
 
 /**
@@ -47,8 +52,42 @@ export class GameScene extends Scene {
 
         // 4. Entities Setup
         this.player = new Player();
-        this.terrain = new Terrain(gl, 120, 100.0); // 120x120 divisions, size 100
+        
+        // Procedural World Generation Setup
+        this.worldSeed = this.engine.worldSeed || Math.floor(Math.random() * 1000000).toString();
+        this.debugBiomeColors = false;
+        this.worldGenerator = new WorldGenerator(120, 100.0);
+        
+        if (this.engine.generatedWorld) {
+            this.world = this.engine.generatedWorld;
+            this.worldSeed = this.world.seed;
+        } else {
+            console.log(`GameScene: Generating fallback world with seed: ${this.worldSeed}`);
+            this.world = this.worldGenerator.generate(this.worldSeed, this.engine.assets.environmentMetadata, this.debugBiomeColors);
+        }
+
+        // Initialize terrain with generated data
+        this.terrain = new Terrain(gl, 120, 100.0, this.world.terrain, this.world.terrainGenerator);
         this.water = new Water(gl, 100, 200.0);   // 100x100 divisions, size 200
+
+        // Instantiate environment props (trees, bushes, rocks) from the generated world
+        this.environmentEntities = [];
+        for (const obj of this.world.placedObjects) {
+            const mesh = this.engine.assets.models[obj.objPath];
+            if (mesh) {
+                const entity = new EnvironmentObject(
+                    gl,
+                    mesh,
+                    obj.position,
+                    obj.rotation,
+                    obj.scale,
+                    obj.collision,
+                    obj.navigationBlocker,
+                    obj.category || ''
+                );
+                this.environmentEntities.push(entity);
+            }
+        }
 
         // 5. Build Player Meshes (Cube data)
         const redBodyData = this._createCubeData(0.9, 0.25, 0.25); // Red body
@@ -65,8 +104,18 @@ export class GameScene extends Scene {
         this.resourceManager = new ResourceManager();
         this.debrisManager = new DebrisManager();
 
-        // Spawn resources scattered across the island (including coconuts)
-        this.resourceManager.spawnRandomResources(gl, this.terrain, 80);
+        // Spawn resources from procedural generator nodes list
+        this.resourceManager.worldResources = [];
+        for (const node of this.world.resourceNodes) {
+            const def = getResourceDef(node.id);
+            if (def) {
+                const terrainY = this.terrain.getHeight(node.position[0], node.position[2]);
+                const y = terrainY + def.meshScale[1] * 0.5 + 0.3;
+
+                const resource = new WorldResource(gl, def, [node.position[0], y, node.position[2]]);
+                this.resourceManager.worldResources.push(resource);
+            }
+        }
 
         // Bind inventory changes to UI updates
         this.inventory.onChange = (resourceId, newCount, delta) => {
@@ -138,8 +187,24 @@ export class GameScene extends Scene {
         this.waterCollector.position[1] = wcY;
         this.waterCollector.updateModelMatrix();
 
-        // 13. Raft Assembly & Escape HUD Initializations (v0.3: moved to Z=42.0 on larger island shore)
-        this.raftAssembly = new RaftAssembly(gl, [0.0, 0.0, 42.0]);
+        // 13. Raft Assembly & Escape HUD Initializations (v0.3: procedurally placed buildArea)
+        this.raftAssembly = new RaftAssembly(gl, this.world.buildArea);
+
+        // Setup Biome Colors debug switch
+        this.toggleBiomeColorsEl = document.getElementById('toggle-biome-colors');
+        if (this.toggleBiomeColorsEl) {
+            this.toggleBiomeColorsEl.checked = this.debugBiomeColors;
+            
+            // Remove any old listeners by replacing the element or adding a standard event listener
+            const newListener = (e) => {
+                this.debugBiomeColors = e.target.checked;
+                this._regenerateWorld();
+            };
+            this.toggleBiomeColorsEl.addEventListener('change', newListener);
+        }
+        
+        // Render initial world metrics in the debug HUD
+        this._updateWorldDebugInfo();
         
         // 13.5 Waterfall POI (v0.3)
         this.waterfall = new Waterfall(gl, [25.0, 0.0, -20.5]);
@@ -222,6 +287,24 @@ export class GameScene extends Scene {
         // Footstep timer
         this._footstepTimer = 0;
         this._footstepInterval = 0.35; // Seconds between footstep sounds
+
+        // 16. Collision System
+        this.collisionSystem = new CollisionSystem();
+        this.collisionDebug = new CollisionDebug(gl);
+
+        this.collisionSystem.register(this.player);
+        for (const entity of this.environmentEntities) {
+            this.collisionSystem.register(entity);
+        }
+
+        // 17. Debug Collision toggle
+        const debugCollisionEl = document.getElementById('toggle-collision-debug');
+        if (debugCollisionEl) {
+            debugCollisionEl.addEventListener('change', (e) => {
+                this.collisionSystem.setDebugMode(e.target.checked);
+                this.collisionDebug.setEnabled(e.target.checked);
+            });
+        }
 
         // Configure depth states
         gl.clearColor(0.53, 0.74, 0.90, 1.0); // Nice sky blue clear color
@@ -408,11 +491,18 @@ export class GameScene extends Scene {
         // Apply stamina speed modifier to player
         this.player.speed = this.isFishing ? 0.0 : 5.0 * this.vitals.getSpeedMultiplier();
 
+        const prevPlayerPos = [this.player.position[0], this.player.position[1], this.player.position[2]];
+
         // Update player movements using keyboards and camera reference
         const movementInput = this.isFishing 
             ? { isKeyDown: () => false, isKeyPressed: () => false, keys: {} } 
             : this.engine.input;
         this.player.update(deltaTime, movementInput, this.camera, this.terrain);
+
+        // Collision resolution via CollisionSystem (data-driven, layer-filtered)
+        if (this.collisionSystem) {
+            this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain);
+        }
 
         // Footstep sounds while moving
         if (this.player.currentSpeed > 0.1) {
@@ -835,6 +925,13 @@ export class GameScene extends Scene {
             this.raftAssembly.draw(this.basicShader, drawMode, false);
         }
 
+        // Draw environment objects (trees, bushes, rocks)
+        if (this.environmentEntities) {
+            for (const entity of this.environmentEntities) {
+                entity.draw(this.basicShader, drawMode);
+            }
+        }
+
         // 8. Draw Campfire (v0.2)
         this.campfire.draw(this.basicShader, drawMode);
 
@@ -887,6 +984,17 @@ export class GameScene extends Scene {
 
         // 10. Draw Particles (additive blending, on top)
         this.particleSystem.draw(this.camera);
+
+        // 11. Collision Debug Overlay
+        if (this.collisionDebug && this.collisionDebug.isEnabled()) {
+            const colliders = this.collisionSystem.getColliders();
+            this.collisionDebug.draw(
+                this.basicShader,
+                this.camera.viewMatrix,
+                this.camera.projectionMatrix,
+                colliders
+            );
+        }
     }
 
     // ============================================
@@ -1595,9 +1703,26 @@ export class GameScene extends Scene {
         // Cleanup tutorial
         if (this.tutorial) this.tutorial.destroy();
 
-        // Cleanup v0.2 entities
         if (this.campfire) this.campfire.delete();
         if (this.waterCollector) this.waterCollector.delete();
+
+        // Cleanup environment entities list
+        if (this.environmentEntities) {
+            for (const entity of this.environmentEntities) {
+                entity.delete();
+            }
+            this.environmentEntities = [];
+        }
+
+        // Cleanup collision system
+        if (this.collisionSystem) {
+            this.collisionSystem.clear();
+            this.collisionSystem = null;
+        }
+        if (this.collisionDebug) {
+            this.collisionDebug.delete();
+            this.collisionDebug = null;
+        }
 
         // Remove pause button listeners
         if (this._pauseResumeBtn) this._pauseResumeBtn.removeEventListener('click', this._onPauseResume);
@@ -1686,5 +1811,111 @@ export class GameScene extends Scene {
         ]);
 
         return { positions, normals, colors, texCoords, indices };
+    }
+
+    /**
+     * Regenerate world dynamically (triggered on debug mode switch)
+     */
+    _regenerateWorld() {
+        console.log(`GameScene: Regenerating world with debugBiomeColors = ${this.debugBiomeColors}`);
+        const gl = this.gl;
+
+        // 1. Generate new world
+        this.world = this.worldGenerator.generate(
+            this.worldSeed, 
+            this.engine.assets.environmentMetadata, 
+            this.debugBiomeColors
+        );
+        
+        // 2. Rebuild terrain geometry buffers
+        this.terrain.rebuild(this.world.terrain, this.world.terrainGenerator);
+        
+        // 3. Re-instantiate environment objects
+        if (this.environmentEntities) {
+            for (const entity of this.environmentEntities) {
+                entity.delete();
+            }
+        }
+        this.environmentEntities = [];
+        
+        for (const obj of this.world.placedObjects) {
+            const mesh = this.engine.assets.models[obj.objPath];
+            if (mesh) {
+                const entity = new EnvironmentObject(
+                    gl,
+                    mesh,
+                    obj.position,
+                    obj.rotation,
+                    obj.scale,
+                    obj.collision,
+                    obj.navigationBlocker,
+                    obj.category || ''
+                );
+                this.environmentEntities.push(entity);
+            }
+        }
+        
+        // 4. Re-spawn resource nodes list
+        if (this.resourceManager) {
+            this.resourceManager.delete();
+            this.resourceManager.worldResources = [];
+            for (const node of this.world.resourceNodes) {
+                const def = getResourceDef(node.id);
+                if (def) {
+                    const terrainY = this.terrain.getHeight(node.position[0], node.position[2]);
+                    const y = terrainY + def.meshScale[1] * 0.5 + 0.3;
+
+                    const resource = new WorldResource(gl, def, [node.position[0], y, node.position[2]]);
+                    this.resourceManager.worldResources.push(resource);
+                }
+            }
+        }
+
+        // 5. Adjust POIs positions relative to new terrain
+        if (this.campfire) {
+            const cy = this.terrain.getHeight(this.campfire.position[0], this.campfire.position[2]);
+            this.campfire.position[1] = cy;
+            this.campfire.updateModelMatrix();
+        }
+        if (this.waterCollector) {
+            const wy = this.terrain.getHeight(this.waterCollector.position[0], this.waterCollector.position[2]);
+            this.waterCollector.position[1] = wy;
+            this.waterCollector.updateModelMatrix();
+        }
+        if (this.waterfall) {
+            const wfy = this.terrain.getHeight(this.waterfall.position[0], this.waterfall.position[2]);
+            this.waterfall.position[1] = wfy;
+            this.waterfall.updateModelMatrix();
+        }
+
+        // 6. Relocate Raft assembly to procedurally calculated buildArea
+        if (this.raftAssembly) {
+            this.raftAssembly.position[0] = this.world.buildArea[0];
+            this.raftAssembly.position[1] = this.world.buildArea[1];
+            this.raftAssembly.position[2] = this.world.buildArea[2];
+            this.raftAssembly.updateModelMatrix();
+        }
+
+        // 7. Snap player position to new terrain slope heights
+        const py = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
+        this.player.position[1] = py + 0.9;
+        this.player.updateModelMatrix();
+
+        // 8. Update HUD Metrics
+        this._updateWorldDebugInfo();
+    }
+
+    /**
+     * Render seed and metrics in Debug Panel
+     */
+    _updateWorldDebugInfo() {
+        const seedEl = document.getElementById('debug-world-seed');
+        if (seedEl) seedEl.textContent = this.worldSeed;
+
+        const gentimeEl = document.getElementById('debug-world-gentime');
+        if (gentimeEl) gentimeEl.textContent = `${this.world.generationTimeMs.toFixed(1)} ms`;
+
+        const objcountEl = document.getElementById('debug-world-objcount');
+        if (objcountEl) objcountEl.textContent = this.world.objectCount.toString();
     }
 }
