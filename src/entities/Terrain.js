@@ -6,20 +6,39 @@ import { Vec3 } from '../math/Vec3.js';
  * Procedural Island Terrain Grid
  */
 export class Terrain extends Entity {
-    constructor(gl, size = 60, width = 60.0) {
+    constructor(gl, size = 60, width = 60.0, generatedData = null, generator = null) {
         super();
         this.gl = gl;
         this.size = size;
         this.width = width;
+        this.generator = generator;
 
-        // Generate geometry
-        const data = this._generateTerrainData();
-        this.mesh = new Mesh(gl, data);
+        if (generatedData) {
+            this.mesh = new Mesh(gl, generatedData);
+        } else {
+            // Generate geometry fallback
+            const data = this._generateTerrainData();
+            this.mesh = new Mesh(gl, data);
+        }
         
         this.updateModelMatrix();
     }
 
+    /**
+     * Rebuild the terrain mesh with procedurally generated data
+     */
+    rebuild(generatedData, generator) {
+        if (this.mesh) {
+            this.mesh.delete();
+        }
+        this.generator = generator;
+        this.mesh = new Mesh(this.gl, generatedData);
+    }
+
     _getHeight(x, z) {
+        if (this.generator) {
+            return this.generator.getHeight(x, z);
+        }
         const d = Math.sqrt(x * x + z * z);
         let height = 0.0;
         
