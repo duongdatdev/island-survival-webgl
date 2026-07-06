@@ -1,5 +1,6 @@
 import { Entity } from './Entity.js';
 import { Vec3 } from '../math/Vec3.js';
+import { CollisionLayers } from '../systems/CollisionLayers.js';
 
 /**
  * Player Entity controlled by the keyboard relative to camera orientation
@@ -13,6 +14,15 @@ export class Player extends Entity {
         // Origin at center, scale represent dimensions [width, height, depth]
         Vec3.set(this.scale, 0.8, 1.8, 0.8);
         Vec3.set(this.position, 0.0, 0.9, 0.0); // Stand on ground (height = 1.8, half = 0.9)
+
+        // Player capsule collider — data-driven
+        this.collider = {
+            type: 'capsule',
+            trigger: false,
+            layer: CollisionLayers.Player,
+            radius: 0.45,
+            height: 1.8,
+        };
     }
 
     /**
@@ -69,10 +79,16 @@ export class Player extends Entity {
             this.currentSpeed = 0.0;
         }
 
-        // Keep player bounded within a circular/square island region
+        // Keep player bounded within the circular island
         const boundaryLimit = 46.0;
-        this.position[0] = Math.max(-boundaryLimit, Math.min(this.position[0], boundaryLimit));
-        this.position[2] = Math.max(-boundaryLimit, Math.min(this.position[2], boundaryLimit));
+        const px = this.position[0];
+        const pz = this.position[2];
+        const dist = Math.sqrt(px * px + pz * pz);
+        if (dist > boundaryLimit) {
+            const scale = boundaryLimit / dist;
+            this.position[0] = px * scale;
+            this.position[2] = pz * scale;
+        }
         
         // Let player stand on the terrain (adjust height based on terrain height dynamically)
         if (terrain) {
