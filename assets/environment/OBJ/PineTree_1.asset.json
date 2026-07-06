@@ -1,0 +1,51 @@
+{
+  "id": "pinetree_1",
+  "displayName": "Pine Tree 1",
+  "category": "Tree",
+  "tags": [
+    "tree",
+    "pine",
+    "nature",
+    "mountain",
+    "forest",
+    "wood",
+    "obstacle"
+  ],
+  "prefabType": "EnvironmentObject",
+  "biome": "Mountain",
+  "terrain": "Grass",
+  "spawnWeight": 5,
+  "minScale": 0.75,
+  "maxScale": 1.25,
+  "randomRotation": true,
+  "collision": true,
+  "navigationBlocker": true,
+  "pickup": false,
+  "interactable": false,
+  "proceduralPlacement": true,
+  "clusterRules": {
+    "minSize": 3,
+    "maxSize": 7,
+    "density": 0.35
+  },
+  "placementRules": {
+    "minDistanceToAnother": 3.5,
+    "minDistanceToBeach": 12,
+    "minDistanceToWater": 15,
+    "maxSlope": 35,
+    "heightRange": {
+      "min": 1.5,
+      "max": 8
+    },
+    "density": 0.15,
+    "spawnChance": 0.75
+  },
+  "explanation": null,
+  "collider": {
+    "type": "capsule",
+    "trigger": false,
+    "layer": "Environment",
+    "radius": 0.6,
+    "height": 2
+  }
+}

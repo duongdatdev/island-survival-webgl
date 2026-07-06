@@ -1,0 +1,46 @@
+{
+  "id": "flower_2",
+  "displayName": "Flower 2",
+  "category": "Flower",
+  "tags": [
+    "flower",
+    "flora",
+    "nature",
+    "color"
+  ],
+  "prefabType": "EnvironmentObject",
+  "biome": "Grassland",
+  "terrain": "Grass",
+  "spawnWeight": 12,
+  "minScale": 0.85,
+  "maxScale": 1.15,
+  "randomRotation": true,
+  "collision": false,
+  "navigationBlocker": false,
+  "pickup": false,
+  "interactable": false,
+  "proceduralPlacement": true,
+  "clusterRules": {
+    "minSize": 5,
+    "maxSize": 15,
+    "density": 0.5
+  },
+  "placementRules": {
+    "minDistanceToAnother": 1,
+    "minDistanceToBeach": 3,
+    "minDistanceToWater": 4,
+    "maxSlope": 15,
+    "heightRange": {
+      "min": 0.1,
+      "max": 4.5
+    },
+    "density": 0.35,
+    "spawnChance": 0.95
+  },
+  "explanation": null,
+  "collider": {
+    "type": "none",
+    "trigger": false,
+    "layer": "Environment"
+  }
+}

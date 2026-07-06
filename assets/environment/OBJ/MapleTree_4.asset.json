@@ -1,0 +1,50 @@
+{
+  "id": "mapletree_4",
+  "displayName": "Maple Tree 4",
+  "category": "Tree",
+  "tags": [
+    "tree",
+    "maple",
+    "nature",
+    "forest",
+    "wood",
+    "obstacle"
+  ],
+  "prefabType": "EnvironmentObject",
+  "biome": "Forest",
+  "terrain": "Grass",
+  "spawnWeight": 6,
+  "minScale": 0.8,
+  "maxScale": 1.2,
+  "randomRotation": true,
+  "collision": true,
+  "navigationBlocker": true,
+  "pickup": false,
+  "interactable": false,
+  "proceduralPlacement": true,
+  "clusterRules": {
+    "minSize": 2,
+    "maxSize": 5,
+    "density": 0.25
+  },
+  "placementRules": {
+    "minDistanceToAnother": 4.5,
+    "minDistanceToBeach": 8,
+    "minDistanceToWater": 10,
+    "maxSlope": 25,
+    "heightRange": {
+      "min": 0.2,
+      "max": 4
+    },
+    "density": 0.08,
+    "spawnChance": 0.65
+  },
+  "explanation": null,
+  "collider": {
+    "type": "capsule",
+    "trigger": false,
+    "layer": "Environment",
+    "radius": 0.6,
+    "height": 2
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "bush",
+  "displayName": "Bush",
+  "category": "Bush",
+  "tags": [
+    "bush",
+    "shrub",
+    "nature",
+    "foliage",
+    "obstacle"
+  ],
+  "prefabType": "EnvironmentObject",
+  "biome": "Grassland",
+  "terrain": "Grass",
+  "spawnWeight": 10,
+  "minScale": 0.8,
+  "maxScale": 1.3,
+  "randomRotation": true,
+  "collision": true,
+  "navigationBlocker": false,
+  "pickup": false,
+  "interactable": false,
+  "proceduralPlacement": true,
+  "clusterRules": {
+    "minSize": 3,
+    "maxSize": 8,
+    "density": 0.4
+  },
+  "placementRules": {
+    "minDistanceToAnother": 2,
+    "minDistanceToBeach": 4,
+    "minDistanceToWater": 5,
+    "maxSlope": 20,
+    "heightRange": {
+      "min": 0.1,
+      "max": 5
+    },
+    "density": 0.25,
+    "spawnChance": 0.9
+  },
+  "explanation": null,
+  "collider": {
+    "type": "sphere",
+    "trigger": true,
+    "layer": "Trigger",
+    "radius": 0.4
+  }
+}

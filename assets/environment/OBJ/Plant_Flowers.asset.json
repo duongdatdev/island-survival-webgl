@@ -1,0 +1,46 @@
+{
+  "id": "plant_flowers",
+  "displayName": "Plant Flowers",
+  "category": "Plant",
+  "tags": [
+    "plant",
+    "flora",
+    "nature",
+    "foliage"
+  ],
+  "prefabType": "EnvironmentObject",
+  "biome": "Jungle",
+  "terrain": "Grass",
+  "spawnWeight": 9,
+  "minScale": 0.8,
+  "maxScale": 1.2,
+  "randomRotation": true,
+  "collision": false,
+  "navigationBlocker": false,
+  "pickup": false,
+  "interactable": false,
+  "proceduralPlacement": true,
+  "clusterRules": {
+    "minSize": 3,
+    "maxSize": 10,
+    "density": 0.45
+  },
+  "placementRules": {
+    "minDistanceToAnother": 1.5,
+    "minDistanceToBeach": 5,
+    "minDistanceToWater": 6,
+    "maxSlope": 25,
+    "heightRange": {
+      "min": 0.1,
+      "max": 5
+    },
+    "density": 0.22,
+    "spawnChance": 0.88
+  },
+  "explanation": null,
+  "collider": {
+    "type": "none",
+    "trigger": false,
+    "layer": "Environment"
+  }
+}
