@@ -10,6 +10,7 @@ export class Entity {
         this.rotation = Vec3.create(0, 0, 0); // Euler angles: [pitch, yaw, roll]
         this.scale = Vec3.create(1, 1, 1);
         this.modelMatrix = Mat4.create();
+        this.collider = null;
     }
 
     /**
