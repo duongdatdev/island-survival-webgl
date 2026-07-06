@@ -56,7 +56,7 @@ export class ResourceManager {
      * @param {number} count - Target number of resources to spawn
      */
     spawnRandomResources(gl, terrain, count = 30) {
-        const islandRadius = 20.0; // Match player boundary limit from Player.js
+        const islandRadius = 42.0; // Match player boundary limit from Player.js
         let spawned = 0;
         let attempts = 0;
         const maxAttempts = count * 5; // Prevent infinite loops

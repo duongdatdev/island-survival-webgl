@@ -10,18 +10,19 @@ import { Terrain } from '../entities/Terrain.js';
 import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
-import { ResourceManager } from '../systems/ResourceManager.js?v=5';
-import { DebrisManager } from '../systems/DebrisManager.js?v=5';
-import { Inventory } from '../systems/InventoryV2.js?v=5';
-import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js?v=5';
-import { getResourceDef } from '../systems/ResourceDatabase.js?v=5';
-import { CraftingSystem } from '../systems/CraftingSystem.js?v=5';
-import { RaftAssembly } from '../entities/RaftAssembly.js?v=5';
-import { ParticleSystem } from '../systems/ParticleSystem.js?v=5';
-import { TutorialSystem } from '../systems/TutorialSystem.js?v=5';
-import { VitalsSystem } from '../systems/VitalsSystem.js?v=5';
+import { ResourceManager } from '../systems/ResourceManager.js?v=6';
+import { DebrisManager } from '../systems/DebrisManager.js?v=6';
+import { Inventory } from '../systems/InventoryV2.js?v=6';
+import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js?v=6';
+import { getResourceDef } from '../systems/ResourceDatabase.js?v=6';
+import { CraftingSystem } from '../systems/CraftingSystem.js?v=6';
+import { RaftAssembly } from '../entities/RaftAssembly.js?v=6';
+import { ParticleSystem } from '../systems/ParticleSystem.js?v=6';
+import { TutorialSystem } from '../systems/TutorialSystem.js?v=6';
+import { VitalsSystem } from '../systems/VitalsSystem.js?v=6';
 import { Campfire } from '../entities/Campfire.js';
 import { WaterCollector } from '../entities/WaterCollector.js';
+import { Waterfall } from '../entities/Waterfall.js';
 
 
 /**
@@ -46,8 +47,8 @@ export class GameScene extends Scene {
 
         // 4. Entities Setup
         this.player = new Player();
-        this.terrain = new Terrain(gl, 80, 50.0); // 80x80 divisions, size 50
-        this.water = new Water(gl, 60, 100.0);   // 60x60 divisions, size 100
+        this.terrain = new Terrain(gl, 120, 100.0); // 120x120 divisions, size 100
+        this.water = new Water(gl, 100, 200.0);   // 100x100 divisions, size 200
 
         // 5. Build Player Meshes (Cube data)
         const redBodyData = this._createCubeData(0.9, 0.25, 0.25); // Red body
@@ -65,7 +66,7 @@ export class GameScene extends Scene {
         this.debrisManager = new DebrisManager();
 
         // Spawn resources scattered across the island (including coconuts)
-        this.resourceManager.spawnRandomResources(gl, this.terrain, 30);
+        this.resourceManager.spawnRandomResources(gl, this.terrain, 80);
 
         // Bind inventory changes to UI updates
         this.inventory.onChange = (resourceId, newCount, delta) => {
@@ -137,8 +138,26 @@ export class GameScene extends Scene {
         this.waterCollector.position[1] = wcY;
         this.waterCollector.updateModelMatrix();
 
-        // 13. Raft Assembly & Escape HUD Initializations
-        this.raftAssembly = new RaftAssembly(gl, [0.0, 0.0, 20.0]);
+        // 13. Raft Assembly & Escape HUD Initializations (v0.3: moved to Z=42.0 on larger island shore)
+        this.raftAssembly = new RaftAssembly(gl, [0.0, 0.0, 42.0]);
+        
+        // 13.5 Waterfall POI (v0.3)
+        this.waterfall = new Waterfall(gl, [25.0, 0.0, -20.5]);
+        const wfY = this.terrain.getHeight(25.0, -20.5);
+        this.waterfall.position[1] = wfY;
+        this.waterfall.updateModelMatrix();
+
+        // 13.6 Blueprints & Fishing tracking (v0.3)
+        this.unlockedBlueprints = new Set();
+        this.isFishing = false;
+        this.fishingTimer = 0.0;
+
+        // 13.7 Spawning Treasure Chests (v0.3)
+        this.resourceManager.spawnResource(gl, 'treasure_chest', -25.0, 25.0, this.terrain);
+        this.resourceManager.spawnResource(gl, 'treasure_chest', 22.0, -18.0, this.terrain);
+        this.resourceManager.spawnResource(gl, 'treasure_chest', 25.0, 25.0, this.terrain);
+        this.resourceManager.spawnResource(gl, 'treasure_chest', -35.0, -35.0, this.terrain);
+
         this.escapeHud = document.getElementById('escape-hud');
         this.escapeBtn = document.getElementById('escape-btn');
         this.victoryScreen = document.getElementById('victory-screen');
@@ -237,8 +256,14 @@ export class GameScene extends Scene {
         if (this.isEscaping) {
             this.escapeTime += deltaTime;
 
-            // Sail the raft forward
-            const sailSpeed = 1.0 + this.escapeTime * 0.8;
+            // Sail the raft forward (v0.3: dynamic speed based on raft upgrades)
+            let sailSpeed = 1.0 + this.escapeTime * 0.8;
+            if (this.raftAssembly.motorPlaced) {
+                sailSpeed = 8.0 + this.escapeTime * 3.0;
+            } else if (this.raftAssembly.sailPlaced) {
+                sailSpeed = 3.5 + this.escapeTime * 1.5;
+            }
+
             this.raftAssembly.position[2] += sailSpeed * deltaTime;
             this.raftAssembly.position[1] = Math.sin(this.time * 2.5) * 0.08;
             this.raftAssembly.updateModelMatrix();
@@ -273,6 +298,29 @@ export class GameScene extends Scene {
                 this.particleSystem.emit(splashPos, ParticleSystem.PRESET.SPLASH);
             }
 
+            // Engine exhaust particles during escape (v0.3)
+            if (this.raftAssembly.motorPlaced && Math.random() < 0.4) {
+                const enginePos = [
+                    this.raftAssembly.position[0] + (Math.random() - 0.5) * 0.3,
+                    0.3,
+                    this.raftAssembly.position[2] - 1.6
+                ];
+                this.particleSystem.emit(enginePos, {
+                    count: 3,
+                    color: [0.3, 0.3, 0.3],
+                    colorVariance: 0.05,
+                    size: 6,
+                    sizeVariance: 2,
+                    speed: 1.5,
+                    speedVariance: 0.5,
+                    lifetime: 0.8,
+                    lifetimeVariance: 0.3,
+                    gravity: 0.8, // Float upwards
+                    spread: 0.3,
+                    yBias: 1.0,
+                });
+            }
+
             // Update particles during cutscene
             this.particleSystem.update(deltaTime);
 
@@ -285,6 +333,18 @@ export class GameScene extends Scene {
                     const secs = Math.floor(this.survivalSeconds % 60).toString().padStart(2, '0');
                     if (this.statTimeEl) {
                         this.statTimeEl.textContent = `${mins}:${secs}`;
+                    }
+
+                    // Update custom victory description (v0.3)
+                    const subtitleEl = this.victoryScreen.querySelector('.victory-subtitle');
+                    if (subtitleEl) {
+                        if (this.raftAssembly.motorPlaced) {
+                            subtitleEl.innerHTML = "⚡ <b>CHIẾN THẮNG TUYỆT ĐỐI!</b> Bạn đã lắp động cơ phản lực cực mạnh, phóng rẽ sóng vượt đại dương và trở về đất liền trong sự ngỡ ngàng của mọi người!";
+                        } else if (this.raftAssembly.sailPlaced) {
+                            subtitleEl.innerHTML = "⛵ <b>CHIẾN THẮNG VẺ VANG!</b> Nhờ cánh buồm đón gió lộng căng tràn, bè lướt êm ru vượt nghìn trùng khơi đưa bạn về đất liền an toàn.";
+                        } else {
+                            subtitleEl.innerHTML = "🛶 <b>BÈ GỖ THÔ SƠ!</b> Bè gỗ ọp ẹp cùng mái chèo thô mộc đưa bạn đi chậm chạp. Hành trình đầy gian nan thử thách nhưng cuối cùng bạn đã thoát hiểm thành công!";
+                        }
                     }
 
                     if (document.pointerLockElement) {
@@ -304,15 +364,55 @@ export class GameScene extends Scene {
         // Rescale aspect ratio if canvas resized
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
 
+        // ---- Fishing Channel Update (v0.3) ----
+        if (this.isFishing) {
+            this.fishingTimer -= deltaTime;
+            
+            // Show prompt with countdown
+            const hintEl = document.getElementById('pickup-hint');
+            if (hintEl) {
+                hintEl.innerHTML = `🎣 Đang câu cá... (còn ${Math.max(1, Math.ceil(this.fishingTimer))} giây)`;
+                hintEl.classList.remove('hidden');
+                hintEl.dataset.hintOwner = 'fishing';
+            }
+
+            // Periodically emit water splash particles in player's forward direction
+            if (Math.random() < 0.25) {
+                const angle = this.player.rotation[1];
+                const splashPos = [
+                    this.player.position[0] + Math.sin(angle) * 3.0,
+                    0.15,
+                    this.player.position[2] + Math.cos(angle) * 3.0
+                ];
+                this.particleSystem.emit(splashPos, ParticleSystem.PRESET.SPLASH);
+            }
+
+            if (this.fishingTimer <= 0.0) {
+                this.isFishing = false;
+                this.inventory.addItem('raw_fish', 1);
+                this._showNotification('🐟 Bạn đã câu được: Cá Sống!');
+                this.engine.audio.playPickup();
+                
+                const angle = this.player.rotation[1];
+                this.particleSystem.emit(
+                    [this.player.position[0] + Math.sin(angle) * 3.0, 0.3, this.player.position[2] + Math.cos(angle) * 3.0],
+                    ParticleSystem.PRESET.PICKUP
+                );
+            }
+        }
+
         // Update Vitals System (v0.2)
         const isPlayerMoving = this.player.currentSpeed > 0.1;
         this.vitals.update(deltaTime, isPlayerMoving);
 
         // Apply stamina speed modifier to player
-        this.player.speed = 5.0 * this.vitals.getSpeedMultiplier();
+        this.player.speed = this.isFishing ? 0.0 : 5.0 * this.vitals.getSpeedMultiplier();
 
         // Update player movements using keyboards and camera reference
-        this.player.update(deltaTime, this.engine.input, this.camera, this.terrain);
+        const movementInput = this.isFishing 
+            ? { isKeyDown: () => false, isKeyPressed: () => false, keys: {} } 
+            : this.engine.input;
+        this.player.update(deltaTime, movementInput, this.camera, this.terrain);
 
         // Footstep sounds while moving
         if (this.player.currentSpeed > 0.1) {
@@ -368,20 +468,28 @@ export class GameScene extends Scene {
             }
         }
 
-        // Developer Debug Cheat: Press 'K' to teleport to beach & get all raft modules
+        // Developer Debug Cheat: Press 'K' to teleport to beach & get all raft modules (v0.3: upgraded)
         if (this.engine.input.isKeyPressed('KeyK')) {
-            // Teleport close to raft building site
+            // Teleport close to raft building site (Z = 38.5)
             this.player.position[0] = 0.0;
             this.player.position[1] = 0.9;
-            this.player.position[2] = 16.5;
+            this.player.position[2] = 38.5;
             this.player.updateModelMatrix();
 
-            // Add required items
+            // Add required items & upgrades
             this.inventory.addItem('raft_frame', 1);
             this.inventory.addItem('barrel_floats', 1);
             this.inventory.addItem('paddle', 1);
+            this.inventory.addItem('raft_sail', 1);
+            this.inventory.addItem('raft_motor', 1);
+            this.inventory.addItem('fishing_rod', 1);
 
-            this._showNotification('🛠️ CHEAT: Teleported to beach & raft modules added!');
+            // Unlock blueprints
+            this.unlockedBlueprints.add('fishing_rod_blueprint');
+            this.unlockedBlueprints.add('sail_raft_blueprint');
+            this.unlockedBlueprints.add('motor_raft_blueprint');
+
+            this._showNotification('🛠️ CHEAT: Teleported to beach, items added & blueprints unlocked!');
         }
 
 
@@ -447,28 +555,40 @@ export class GameScene extends Scene {
             }
         }
 
-        // Proximity detection for raft assembly
+        // Proximity detection for raft assembly (v0.3: support sequential sail and motor upgrades)
         let showRaftPrompt = false;
         let raftPromptText = '';
         let hasModule = false;
         let targetModule = '';
 
         const distToRaft = this.raftAssembly.distanceTo(this.player.position);
-        if (distToRaft < 3.0 && !this.raftAssembly.isComplete()) {
+        if (distToRaft < 3.0) {
             if (!this.raftAssembly.framePlaced) {
                 targetModule = 'raft_frame';
                 hasModule = this.inventory.hasItem('raft_frame');
                 raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Khung Bè 🧱' : 'Cần chế tạo Khung Bè 🧱 để lắp ráp';
+                showRaftPrompt = true;
             } else if (!this.raftAssembly.floatsPlaced) {
                 targetModule = 'barrel_floats';
                 hasModule = this.inventory.hasItem('barrel_floats');
                 raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Phao Thùng 🛢️' : 'Cần chế tạo Phao Thùng 🛢️ để lắp ráp';
+                showRaftPrompt = true;
             } else if (!this.raftAssembly.paddlePlaced) {
                 targetModule = 'paddle';
                 hasModule = this.inventory.hasItem('paddle');
                 raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Mái Chèo 🛶' : 'Cần chế tạo Mái Chèo 🛶 để lắp ráp';
+                showRaftPrompt = true;
+            } else if (!this.raftAssembly.sailPlaced) {
+                targetModule = 'raft_sail';
+                hasModule = this.inventory.hasItem('raft_sail');
+                raftPromptText = hasModule ? '<span class="hint-key">E</span> Nâng Cấp: Lắp Cánh Buồm ⛵' : 'Chế tạo Cánh Buồm ⛵ giúp di chuyển nhanh hơn';
+                showRaftPrompt = true;
+            } else if (!this.raftAssembly.motorPlaced) {
+                targetModule = 'raft_motor';
+                hasModule = this.inventory.hasItem('raft_motor');
+                raftPromptText = hasModule ? '<span class="hint-key">E</span> Nâng Cấp: Lắp Động Cơ Bè 🚀' : 'Chế tạo Động Cơ Bè 🚀 để đạt tốc độ tối đa!';
+                showRaftPrompt = true;
             }
-            showRaftPrompt = true;
         }
 
         // Intercept KeyE to place modules on the raft assembly
@@ -487,6 +607,14 @@ export class GameScene extends Scene {
                 this.inventory.removeItem('paddle', 1);
                 this.raftAssembly.paddlePlaced = true;
                 this._showNotification('🛶 Lắp Mái Chèo thành công!');
+            } else if (targetModule === 'raft_sail') {
+                this.inventory.removeItem('raft_sail', 1);
+                this.raftAssembly.sailPlaced = true;
+                this._showNotification('⛵ Lắp Cánh Buồm thành công! Bè lướt gió nhanh hơn.');
+            } else if (targetModule === 'raft_motor') {
+                this.inventory.removeItem('raft_motor', 1);
+                this.raftAssembly.motorPlaced = true;
+                this._showNotification('🚀 Lắp Động Cơ thành công! Đạt công suất phản lực.');
             }
 
             // Sound + particle effects for raft building
@@ -495,6 +623,50 @@ export class GameScene extends Scene {
                 [this.raftAssembly.position[0], this.raftAssembly.position[1] + 0.5, this.raftAssembly.position[2]],
                 ParticleSystem.PRESET.BUILD
             );
+        }
+
+        // ---- v0.3: Waterfall Interaction Check ----
+        let showWaterfallPrompt = false;
+        if (this.waterfall && this.waterfall.isPlayerInPond(this.player.position)) {
+            showWaterfallPrompt = true;
+            if (this.engine.input.isKeyPressed('KeyE')) {
+                this.engine.input.keys['KeyE'] = false; // Consume key
+                this.vitals.drink(100); // Fully restore thirst
+                this._showNotification('💧 Đã uống nước thác! Khôi phục hết Thối Khát.');
+                this.engine.audio.playPickup();
+                
+                this.particleSystem.emit(
+                    [this.player.position[0], this.player.position[1] - 0.5, this.player.position[2]],
+                    ParticleSystem.PRESET.SPLASH
+                );
+            }
+        }
+
+        // ---- v0.3: Coastline Fishing Check ----
+        let showFishingPrompt = false;
+        const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
+        const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
+        const hotbarItem = this.inventory.slots[hotbarIdx];
+        const hasFishingRod = hotbarItem && hotbarItem.id === 'fishing_rod';
+
+        if (playerTerrainHeight <= 0.15 && hasFishingRod && !this.isFishing) {
+            showFishingPrompt = true;
+            if (this.engine.input.isKeyPressed('KeyE')) {
+                this.engine.input.keys['KeyE'] = false; // Consume key
+                this.isFishing = true;
+                this.fishingTimer = 4.0; // 4 seconds channel
+                this.engine.audio.playRaftBuild();
+            }
+        }
+
+        // ---- v0.3: Treasure Chest Interaction Check ----
+        let showChestPrompt = false;
+        if (this.resourceManager.nearestPickable && this.resourceManager.nearestPickable.resourceId === 'treasure_chest') {
+            showChestPrompt = true;
+            if (this.engine.input.isKeyPressed('KeyE')) {
+                this.engine.input.keys['KeyE'] = false; // Consume key
+                this._openTreasureChest(this.resourceManager.nearestPickable);
+            }
         }
 
         // Update resource system (animations, pickup detection)
@@ -519,9 +691,18 @@ export class GameScene extends Scene {
             this.tutorial.notifyPickup();
         }
 
-        // Override pickup hint text — priority: campfire > water collector > raft > default
+        // Override pickup hint text — priority: waterfall > fishing > chest > campfire > water collector > raft > default
         const hintEl = document.getElementById('pickup-hint');
-        if (showCampfirePrompt && hintEl) {
+        if (showWaterfallPrompt && hintEl) {
+            hintEl.innerHTML = `<span class="hint-key">E</span> Uống nước thác ngọt mát 💧`;
+            hintEl.classList.remove('hidden');
+        } else if (showFishingPrompt && hintEl) {
+            hintEl.innerHTML = `<span class="hint-key">E</span> Thả cần câu cá 🎣`;
+            hintEl.classList.remove('hidden');
+        } else if (showChestPrompt && hintEl) {
+            hintEl.innerHTML = `<span class="hint-key">E</span> Mở Rương Kho Báu 📦`;
+            hintEl.classList.remove('hidden');
+        } else if (showCampfirePrompt && hintEl) {
             hintEl.innerHTML = campfirePromptText;
             hintEl.classList.remove('hidden');
         } else if (showWaterPrompt && hintEl) {
@@ -559,6 +740,11 @@ export class GameScene extends Scene {
 
         // Update particle system
         this.particleSystem.update(deltaTime);
+
+        // Update Waterfall POI (v0.3)
+        if (this.waterfall) {
+            this.waterfall.update(deltaTime, this.particleSystem);
+        }
 
         // Update tutorial
         this.tutorial.update(deltaTime, this.engine.input, this.player);
@@ -664,6 +850,11 @@ export class GameScene extends Scene {
         this.basicShader.use();
         if (this.raftAssembly) {
             this.raftAssembly.draw(this.basicShader, drawMode, true);
+        }
+
+        // Draw Waterfall POI with translucency (v0.3)
+        if (this.waterfall) {
+            this.waterfall.draw(this.basicShader, drawMode);
         }
         
         // Disable backface culling to draw wave interiors correctly
@@ -1131,6 +1322,12 @@ export class GameScene extends Scene {
         const filtered = recipes.filter(recipe => {
             if (recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) return false;
             if (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) return false;
+            
+            // Check blueprint requirements (v0.3)
+            if (recipe.requiresBlueprint && !this.unlockedBlueprints.has(recipe.requiresBlueprint)) {
+                return false;
+            }
+            
             return recipe.category === this.selectedCraftingCategory;
         });
 
@@ -1249,6 +1446,42 @@ export class GameScene extends Scene {
         }
     }
 
+    _openTreasureChest(chest) {
+        chest.collect();
+        this.engine.audio.playPickup();
+
+        this.particleSystem.emit(
+            [chest.position[0], chest.position[1] + 0.5, chest.position[2]],
+            ParticleSystem.PRESET.CRAFT
+        );
+
+        const cx = chest.position[0];
+        const cz = chest.position[2];
+
+        let msg = '';
+        if (cx < 0 && cz > 0) {
+            this.unlockedBlueprints.add('fishing_rod_blueprint');
+            this.inventory.addItem('rope', 4);
+            msg = 'Bản Thiết Kế Cần Câu 🎣 + 4 Dây Thừng!';
+        } else if (cx > 0 && cz < 0) {
+            this.unlockedBlueprints.add('sail_raft_blueprint');
+            this.inventory.addItem('wood', 5);
+            this.inventory.addItem('rope', 5);
+            msg = 'Bản Thiết Kế Cánh Buồm ⛵ + 5 Gỗ & 5 Dây!';
+        } else if (cx > 0 && cz > 0) {
+            this.unlockedBlueprints.add('motor_raft_blueprint');
+            this.inventory.addItem('barrel', 2);
+            msg = 'Bản Thiết Kế Động Cơ Bè 🚀 + 2 Thùng Gỗ!';
+        } else {
+            this.inventory.addItem('sail_cloth', 1);
+            this.inventory.addItem('engine_parts', 2);
+            msg = 'Tìm thấy: ⛵ Vải Buồm & ⚙️ Phụ Tùng Động Cơ!';
+        }
+
+        this._showNotification(`🎉 Mở Rương: ${msg}`);
+        this._renderCraftingPanel();
+    }
+
     /**
      * Show game over screen (v0.2)
      */
@@ -1348,6 +1581,7 @@ export class GameScene extends Scene {
 
         // Cleanup resource system
         if (this.raftAssembly) this.raftAssembly.delete();
+        if (this.waterfall) this.waterfall.delete();
         if (this.resourceManager) this.resourceManager.delete();
         if (this.debrisManager) this.debrisManager.delete();
         if (this.inventory) this.inventory.clear();

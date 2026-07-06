@@ -1730,3 +1730,15 @@ input:checked + .slider:before {
     50% { transform: scale(1.4); color: var(--yellow-fire); text-shadow: 0 0 6px rgba(212, 160, 40, 0.5); }
     100% { transform: scale(1); color: var(--text-parchment); }
 }
+
+/* === Recipe Locked Styles (v0.3) === */
+.recipe-item-card.recipe-locked {
+    opacity: 0.55;
+    background: #15110c;
+    border-color: #332211;
+    cursor: default;
+}
+.recipe-item-card.recipe-locked:hover {
+    border-color: #332211;
+    background: #15110c;
+}

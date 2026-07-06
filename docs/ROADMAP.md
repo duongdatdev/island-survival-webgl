@@ -49,12 +49,12 @@ This document outlines the milestones and release plan for **Island Survival: Es
 
 ---
 
-## 🏝️ Version 0.3 – Island Expansion
+## 🏝️ Version 0.3 – Island Expansion ✅ (Current Version)
 *Goal: Encourage deep exploration and expand world scale.*
 
-### Planned Features
-- **Larger Terrain:** Dynamically generated larger islands.
-- **Biomes & POIs:** Forest, dense rocky areas, caverns, and waterfalls.
+### Implemented Features
+- **Larger Terrain:** Dynamically generated larger islands (100x100 world bounds).
+- **Biomes & POIs:** Forest, dense rocky areas, caverns, and interactive waterfall cliffs with thirst-restoring water.
 - **Fishing:** Craftable fishing rod to catch fish along the coastline for food.
 - **Treasure Chests:** Hidden chests containing rare resources and Crafting Blueprints.
 - **Raft Upgrades:** Progress from a basic wooden raft to a sail-powered or engine-powered vessel.

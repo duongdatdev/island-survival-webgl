@@ -10,7 +10,10 @@ export const RecipeType = {
     PADDLE:           'paddle',
     BARREL_FLOATS:    'barrel_floats',
     CAMPFIRE:         'campfire',
-    WATER_COLLECTOR:  'water_collector'
+    WATER_COLLECTOR:  'water_collector',
+    FISHING_ROD:      'fishing_rod',
+    RAFT_SAIL:        'raft_sail',
+    RAFT_MOTOR:       'raft_motor'
 };
 
 export const RecipeDatabase = {
@@ -94,6 +97,53 @@ export const RecipeDatabase = {
         ingredients: {
             barrel: 3,
             rope: 1
+        }
+    },
+
+    [RecipeType.FISHING_ROD]: {
+        id: RecipeType.FISHING_ROD,
+        name: 'Cần Câu',
+        nameEn: 'Fishing Rod',
+        icon: '🎣',
+        description: 'Dùng câu cá dọc bờ biển để kiếm thức ăn.',
+        descriptionEn: 'Used to catch fish along the coastline for food.',
+        category: 'tool',
+        requiresBlueprint: 'fishing_rod_blueprint',
+        ingredients: {
+            wood: 3,
+            rope: 2
+        }
+    },
+
+    [RecipeType.RAFT_SAIL]: {
+        id: RecipeType.RAFT_SAIL,
+        name: 'Cánh Buồm',
+        nameEn: 'Raft Sail',
+        icon: '⛵',
+        description: 'Lắp vào bè để tận dụng sức gió, giúp di chuyển nhanh hơn.',
+        descriptionEn: 'Attach to the raft to harness wind power and travel faster.',
+        category: 'raft',
+        requiresBlueprint: 'sail_raft_blueprint',
+        ingredients: {
+            wood: 3,
+            rope: 2,
+            sail_cloth: 1
+        }
+    },
+
+    [RecipeType.RAFT_MOTOR]: {
+        id: RecipeType.RAFT_MOTOR,
+        name: 'Động Cơ Bè',
+        nameEn: 'Raft Motor',
+        icon: '🚀',
+        description: 'Động cơ xăng gắn đuôi bè giúp tăng tốc độ tối đa!',
+        descriptionEn: 'Outboard engine to propel your raft at maximum speed!',
+        category: 'raft',
+        requiresBlueprint: 'motor_raft_blueprint',
+        ingredients: {
+            wood: 5,
+            rope: 2,
+            engine_parts: 2
         }
     }
 };

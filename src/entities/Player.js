@@ -70,7 +70,7 @@ export class Player extends Entity {
         }
 
         // Keep player bounded within a circular/square island region
-        const boundaryLimit = 23.0;
+        const boundaryLimit = 46.0;
         this.position[0] = Math.max(-boundaryLimit, Math.min(this.position[0], boundaryLimit));
         this.position[2] = Math.max(-boundaryLimit, Math.min(this.position[2], boundaryLimit));
         

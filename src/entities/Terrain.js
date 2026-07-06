@@ -24,20 +24,42 @@ export class Terrain extends Entity {
         let height = 0.0;
         
         // Circular island boundary check
-        if (d < this.width * 0.45) {
-            // Gaussian bell curve shape peaking at 2.8 units
-            height = 2.8 * Math.exp(-0.005 * d * d) - 0.3;
+        if (d < this.width * 0.46) {
+            // Gaussian bell curve shape peaking at 3.5 units
+            height = 3.5 * Math.exp(-0.0015 * d * d) - 0.3;
             height = Math.max(0.0, height);
             
-            // Apply high-frequency noise if above water
+            // Apply Biome & POI height adjustments
             if (height > 0.0) {
+                // 1. Forest Biome (Smooth rolling terrain)
+                if (x > 10 && z > 10) {
+                    const hill = Math.sin(x * 0.3) * Math.cos(z * 0.3) * 0.3;
+                    height += hill;
+                }
+                // 2. Dense Rocky Biome (High cliff plateau)
+                else if (x < -10 && z < -10) {
+                    const cliff = Math.sin(x * 0.4) * Math.cos(z * 0.4) * 0.6;
+                    height += 0.8 + cliff;
+                }
+                // 3. Waterfall POI (Steep waterfall cliff)
+                else if (x > 18 && z < -18) {
+                    const plateau = 2.8 * Math.exp(-0.005 * ((x - 25) * (x - 25) + (z + 25) * (z + 25)));
+                    height += plateau;
+                }
+                // 4. Caverns POI (Cavern mountain hill)
+                else if (x < -18 && z > 18) {
+                    const mountain = 2.5 * Math.exp(-0.006 * ((x + 25) * (x + 25) + (z - 25) * (z - 25)));
+                    height += mountain;
+                }
+
+                // Apply high-frequency noise
                 const noise1 = Math.sin(x * 0.5) * Math.cos(z * 0.5) * 0.2;
                 const noise2 = Math.sin(x * 1.5) * Math.cos(z * 1.5) * 0.05;
                 height += noise1 + noise2;
             }
         }
         
-        return height;
+        return Math.max(0.0, height);
     }
 
     getHeight(x, z) {
@@ -66,20 +88,38 @@ export class Terrain extends Entity {
                 positions.push(px, py, pz);
                 texCoords.push(x / size, z / size);
 
-                // Compute color based on height
+                // Compute color based on height and coordinate position (biomes)
                 let r, g, b;
                 if (py <= 0.08) {
                     // Sand beach color
                     r = 0.90; g = 0.83; b = 0.65;
-                } else if (py <= 1.4) {
+                } else if (px > 10 && pz > 10) {
+                    // Forest Biome - Deep moss green
+                    const factor = Math.min(py / 3.0, 1.0);
+                    r = mix(0.12, 0.08, factor);
+                    g = mix(0.38, 0.28, factor);
+                    b = mix(0.15, 0.10, factor);
+                } else if (px < -10 && pz < -10) {
+                    // Rocky Biome - Charcoal dark grey
+                    const factor = Math.min((py - 0.5) / 3.0, 1.0);
+                    r = mix(0.32, 0.45, factor);
+                    g = mix(0.32, 0.45, factor);
+                    b = mix(0.35, 0.48, factor);
+                } else if (px > 18 && pz < -18) {
+                    // Waterfall POI color - Slate grey cliff
+                    r = 0.42; g = 0.42; b = 0.45;
+                } else if (px < -18 && pz > 18) {
+                    // Caverns POI color - Earthy dark brown/grey
+                    r = 0.38; g = 0.34; b = 0.30;
+                } else if (py <= 1.8) {
                     // Lush green grass color with slight height variance
-                    const factor = py / 1.4;
+                    const factor = py / 1.8;
                     r = mix(0.24, 0.18, factor);
                     g = mix(0.55, 0.42, factor);
                     b = mix(0.26, 0.20, factor);
                 } else {
                     // Gray stone color for mountain peak
-                    const factor = Math.min((py - 1.4) / 1.5, 1.0);
+                    const factor = Math.min((py - 1.8) / 2.0, 1.0);
                     r = mix(0.40, 0.70, factor);
                     g = mix(0.40, 0.70, factor);
                     b = mix(0.40, 0.70, factor);

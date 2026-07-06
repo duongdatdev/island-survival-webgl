@@ -29,8 +29,8 @@ export class DebrisManager {
         // Configuration
         this.maxDebris = config.maxDebris || 15;
         this.spawnInterval = config.spawnInterval || 2.0;
-        this.spawnRadiusMin = config.spawnRadiusMin || 28;
-        this.spawnRadiusMax = config.spawnRadiusMax || 40;
+        this.spawnRadiusMin = config.spawnRadiusMin || 50;
+        this.spawnRadiusMax = config.spawnRadiusMax || 68;
 
         // Spawn timer state
         this._spawnTimer = 2.0; // Initial delay before first spawn wave

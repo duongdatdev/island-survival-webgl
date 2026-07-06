@@ -19,7 +19,13 @@ export const ResourceType = {
     WATER_COLLECTOR:  'water_collector',
     RAFT_FRAME:       'raft_frame',
     BARREL_FLOATS:    'barrel_floats',
-    PADDLE:           'paddle'
+    PADDLE:           'paddle',
+    FISHING_ROD:      'fishing_rod',
+    SAIL_CLOTH:       'sail_cloth',
+    ENGINE_PARTS:     'engine_parts',
+    RAFT_SAIL:        'raft_sail',
+    RAFT_MOTOR:       'raft_motor',
+    TREASURE_CHEST:   'treasure_chest'
 };
 
 /**
@@ -205,6 +211,84 @@ export const ResourceDatabase = {
         color: [0.6, 0.4, 0.2],
         meshScale: [0.2, 0.8, 0.2],
         pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.FISHING_ROD]: {
+        id: ResourceType.FISHING_ROD,
+        name: 'Cần Câu',
+        nameEn: 'Fishing Rod',
+        icon: '🎣',
+        color: [0.7, 0.5, 0.3],
+        meshScale: [0.1, 0.9, 0.1],
+        pickupRadius: 2.5, // Allow pickup if dropped or spawned
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.SAIL_CLOTH]: {
+        id: ResourceType.SAIL_CLOTH,
+        name: 'Vải Buồm',
+        nameEn: 'Sail Cloth',
+        icon: '⛵',
+        color: [0.95, 0.95, 0.95],
+        meshScale: [0.4, 0.4, 0.05],
+        pickupRadius: 2.5,
+        stackSize: 10,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.ENGINE_PARTS]: {
+        id: ResourceType.ENGINE_PARTS,
+        name: 'Phụ Tùng Động Cơ',
+        nameEn: 'Engine Parts',
+        icon: '⚙️',
+        color: [0.5, 0.5, 0.5],
+        meshScale: [0.3, 0.3, 0.3],
+        pickupRadius: 2.5,
+        stackSize: 10,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.RAFT_SAIL]: {
+        id: ResourceType.RAFT_SAIL,
+        name: 'Cánh Buồm',
+        nameEn: 'Raft Sail',
+        icon: '⛵',
+        color: [0.9, 0.9, 0.9],
+        meshScale: [0.4, 0.8, 0.4],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.RAFT_MOTOR]: {
+        id: ResourceType.RAFT_MOTOR,
+        name: 'Động Cơ Bè',
+        nameEn: 'Raft Motor',
+        icon: '🚀',
+        color: [0.35, 0.35, 0.35],
+        meshScale: [0.4, 0.4, 0.4],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false
+    },
+
+    [ResourceType.TREASURE_CHEST]: {
+        id: ResourceType.TREASURE_CHEST,
+        name: 'Rương Kho Báu',
+        nameEn: 'Treasure Chest',
+        icon: '📦',
+        color: [0.8, 0.5, 0.2],
+        meshScale: [0.6, 0.5, 0.5],
+        pickupRadius: 2.8,
         stackSize: 1,
         spawnWeight: 0,
         consumable: false

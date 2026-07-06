@@ -17,10 +17,12 @@ export class RaftAssembly extends Entity {
         this.gl = gl;
         Vec3.copy(this.position, position);
 
-        // State of the three required modules
+        // State of required and upgrade modules
         this.framePlaced = false;
         this.floatsPlaced = false;
         this.paddlePlaced = false;
+        this.sailPlaced = false;
+        this.motorPlaced = false;
 
         this.time = 0.0;
         this.tempMatrix = Mat4.create();
@@ -29,6 +31,9 @@ export class RaftAssembly extends Entity {
         this.woodMesh = new Mesh(gl, this._createCubeData(0.55, 0.35, 0.18, 1.0));    // Warm brown logs
         this.barrelMesh = new Mesh(gl, this._createCubeData(0.45, 0.28, 0.15, 1.0));  // Dark wood barrels
         this.paddleMesh = new Mesh(gl, this._createCubeData(0.75, 0.60, 0.40, 1.0));  // Light wood paddle
+        this.sailMesh = new Mesh(gl, this._createCubeData(0.95, 0.95, 0.95, 1.0));    // White sail cloth
+        this.mastMesh = new Mesh(gl, this._createCubeData(0.55, 0.35, 0.18, 1.0));    // Dark brown wood mast
+        this.motorMesh = new Mesh(gl, this._createCubeData(0.35, 0.35, 0.35, 1.0));   // Dark grey motor metal
 
         // 2. Build Holographic Ghost Mesh (translucent neon blue)
         this.ghostMesh = new Mesh(gl, this._createCubeData(0.20, 0.60, 1.00, 0.25));
@@ -106,6 +111,34 @@ export class RaftAssembly extends Entity {
         } else {
             if (isGhostPass) {
                 this._drawPaddle(shaderProgram, drawMode, this.ghostMesh, pulse);
+            }
+        }
+
+        // --- 4. RENDER SAIL ---
+        // Only show sail ghost when basic raft is complete
+        if (this.framePlaced && this.floatsPlaced && this.paddlePlaced) {
+            if (this.sailPlaced) {
+                if (!isGhostPass) {
+                    this._drawSail(shaderProgram, drawMode, this.mastMesh, this.sailMesh, 1.0);
+                }
+            } else {
+                if (isGhostPass) {
+                    this._drawSail(shaderProgram, drawMode, this.ghostMesh, this.ghostMesh, pulse);
+                }
+            }
+        }
+
+        // --- 5. RENDER MOTOR ---
+        // Only show motor ghost when sail is placed
+        if (this.framePlaced && this.floatsPlaced && this.paddlePlaced && this.sailPlaced) {
+            if (this.motorPlaced) {
+                if (!isGhostPass) {
+                    this._drawMotor(shaderProgram, drawMode, this.motorMesh, 1.0);
+                }
+            } else {
+                if (isGhostPass) {
+                    this._drawMotor(shaderProgram, drawMode, this.ghostMesh, pulse);
+                }
             }
         }
     }
@@ -197,6 +230,51 @@ export class RaftAssembly extends Entity {
     /**
      * Frees WebGL vertex buffer objects
      */
+    /**
+     * Renders the mast and the sail sheet
+     */
+    _drawSail(shaderProgram, drawMode, mastMesh, sailMesh, scaleMult) {
+        const baseMatrix = this.modelMatrix;
+
+        // 1. Vertical Mast Pole
+        Mat4.copy(this.tempMatrix, baseMatrix);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.25, 0.0]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.12 * scaleMult, 2.3 * scaleMult, 0.12 * scaleMult]);
+        shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
+        mastMesh.draw(drawMode);
+
+        // 2. Sail Sheet
+        Mat4.copy(this.tempMatrix, baseMatrix);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.5, 0.35]);
+        const billowAngle = 0.06 * Math.sin(this.time * 2.5);
+        Mat4.rotateY(this.tempMatrix, this.tempMatrix, billowAngle);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [1.4 * scaleMult, 1.5 * scaleMult, 0.04 * scaleMult]);
+        shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
+        sailMesh.draw(drawMode);
+    }
+
+    /**
+     * Renders the outboard motor at the rear
+     */
+    _drawMotor(shaderProgram, drawMode, motorMesh, scaleMult) {
+        const baseMatrix = this.modelMatrix;
+
+        // 1. Motor Block (mounted on rear crossbeam Z=-1.2)
+        Mat4.copy(this.tempMatrix, baseMatrix);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 0.45, -1.3]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.35 * scaleMult, 0.5 * scaleMult, 0.35 * scaleMult]);
+        shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
+        motorMesh.draw(drawMode);
+
+        // 2. Propeller Stick (extending into water)
+        Mat4.copy(this.tempMatrix, baseMatrix);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, -0.15, -1.55]);
+        Mat4.rotateX(this.tempMatrix, this.tempMatrix, 0.25);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.08 * scaleMult, 0.8 * scaleMult, 0.08 * scaleMult]);
+        shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
+        motorMesh.draw(drawMode);
+    }
+
     delete() {
         if (this.woodMesh) {
             this.woodMesh.delete();
@@ -213,6 +291,18 @@ export class RaftAssembly extends Entity {
         if (this.ghostMesh) {
             this.ghostMesh.delete();
             this.ghostMesh = null;
+        }
+        if (this.sailMesh) {
+            this.sailMesh.delete();
+            this.sailMesh = null;
+        }
+        if (this.mastMesh) {
+            this.mastMesh.delete();
+            this.mastMesh = null;
+        }
+        if (this.motorMesh) {
+            this.motorMesh.delete();
+            this.motorMesh = null;
         }
     }
 
