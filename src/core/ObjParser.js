@@ -3,6 +3,22 @@
  * and dynamically injects vertex colors based on material names (usemtl) to avoid huge textures.
  */
 export class ObjParser {
+    static _customColors = {};
+
+    /**
+     * Register exact material color from MTL Kd values
+     */
+    static registerColor(matName, color) {
+        ObjParser._customColors[matName.toLowerCase()] = color;
+    }
+
+    /**
+     * Clear all registered custom colors
+     */
+    static clearCustomColors() {
+        ObjParser._customColors = {};
+    }
+
     /**
      * Parse OBJ file text into WebGL-compatible mesh data
      * @param {string} text Raw OBJ content
@@ -112,7 +128,12 @@ export class ObjParser {
      */
     static getColorForMaterial(matName) {
         const name = matName.toLowerCase();
-        
+
+        // Check exact MTL-defined color first
+        if (ObjParser._customColors[name]) {
+            return ObjParser._customColors[name];
+        }
+
         // Wood, bark and trunks
         if (name.includes('bark') || name.includes('trunk') || name.includes('wood') || name.includes('branch')) {
             if (name.includes('birch')) return [0.78, 0.74, 0.70]; // White birch bark
