@@ -32,12 +32,14 @@ export class BiomeGenerator {
         const dz = z - this.island.center[1];
         const distance = Math.sqrt(dx * dx + dz * dz);
 
-        if (distance > this.island.radius || height <= 0.02) {
+        const outerBeach = this.island.outerBeachRadius || this.island.radius;
+
+        if (distance > outerBeach) {
             return BiomeType.OCEAN;
         }
 
-        // Beach check: outer sand ring or very low elevation
-        if (distance > this.island.innerRadius || height <= 0.15) {
+        // Beach (including the underwater sand shelf that dips below sea level)
+        if (distance > this.island.innerRadius || height <= 0.18) {
             return BiomeType.BEACH;
         }
 

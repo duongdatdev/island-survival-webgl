@@ -73,7 +73,9 @@ export class WorldGenerator {
             }
         }
 
-        // 5.3 Indices grid - only generate triangles near the island
+        // 5.3 Indices grid - only generate triangles near the island (incl. underwater sand shelf)
+        const outerBeach = island.outerBeachRadius || island.radius;
+        const outerBeachSq = outerBeach * outerBeach;
         for (let z = 0; z < this.size; z++) {
             for (let x = 0; x < this.size; x++) {
                 const row1 = z * (this.size + 1);
@@ -84,9 +86,17 @@ export class WorldGenerator {
                 const idx10 = row2 + x;
                 const idx11 = row2 + x + 1;
 
-                // Skip grid cells entirely in deep ocean
-                const maxH = Math.max(heights[idx00], heights[idx01], heights[idx10], heights[idx11]);
-                if (maxH <= 0.02) continue;
+                // Skip cells whose four corners all sit outside the sand-shelf ring
+                const px0 = x * step - halfWidth;
+                const pz0 = z * step - halfWidth;
+                const px1 = px0 + step;
+                const pz1 = pz0 + step;
+                const inRing =
+                    (px0 * px0 + pz0 * pz0) <= outerBeachSq ||
+                    (px1 * px1 + pz0 * pz0) <= outerBeachSq ||
+                    (px0 * px0 + pz1 * pz1) <= outerBeachSq ||
+                    (px1 * px1 + pz1 * pz1) <= outerBeachSq;
+                if (!inRing) continue;
 
                 // First triangle
                 indices.push(idx00);

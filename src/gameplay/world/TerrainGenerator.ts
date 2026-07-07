@@ -39,33 +39,52 @@ export class TerrainGenerator {
         const dz = z - this.island.center[1];
         const distance = Math.sqrt(dx * dx + dz * dz);
 
-        // Ocean boundary check
+        const beachHeight = 0.22;
+        const seaFloorDepth = -1.0;
+
+        // Underwater sand shelf — beach continues past the land radius, sloping
+        // gently down from the waterline before reaching ocean floor. Nothing is
+        // cut flat at the shoreline, so the beach looks like it wades into the sea.
+        const underwaterExtent = this.island.underwaterBeachExtent || 2.5;
         if (distance > this.island.radius) {
-            return 0.0;
+            const over = distance - this.island.radius;
+            if (over >= underwaterExtent) return seaFloorDepth;
+            const t = over / underwaterExtent;
+            const eased = t * t;
+            return beachHeight * (1.0 - t) + seaFloorDepth * eased;
         }
 
-        // Circular Gaussian bell curve peaking at center (height = 3.6)
+        const transitionWidth = this.island.radius - this.island.innerRadius;
+        const shoreDist = this.island.radius - distance;
+
+        // Beach plateau — flat sand ~0.22 above water so noise can't punch water
+        // holes through the sand. Blends into the inland bell curve.
+        if (shoreDist < transitionWidth) {
+            const t = Math.max(0.0, Math.min(1.0, shoreDist / transitionWidth));
+            const shoreLift = t * t * (3.0 - 2.0 * t);
+
+            let sand = beachHeight;
+
+            const baseHeight = 3.6 * Math.exp(-0.0015 * distance * distance) - 0.2;
+            const inlandBlend = shoreLift * shoreLift;
+            sand = Math.max(sand, baseHeight * inlandBlend);
+
+            return sand;
+        }
+
+        // Inland: bell curve + wave noise
         const baseHeight = 3.6 * Math.exp(-0.0015 * distance * distance) - 0.2;
         let height = Math.max(0.0, baseHeight);
 
-        // Apply noise inside the land mass
-        if (height > 0.05) {
+        if (height > 0.001) {
             let noise = 0.0;
             for (const wave of this.waves) {
                 noise += Math.sin(x * wave.freqX) * Math.cos(z * wave.freqZ) * wave.amp;
             }
             height += noise;
-
-            // Roll off heights smooth near the shore
-            const shoreDist = this.island.radius - distance;
-            const transitionWidth = this.island.radius - this.island.innerRadius;
-            if (shoreDist < transitionWidth) {
-                const factor = shoreDist / transitionWidth;
-                height = height * factor;
-            }
         }
 
-        return Math.max(0.0, height);
+        return height;
     }
 
     /**
