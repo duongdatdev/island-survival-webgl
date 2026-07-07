@@ -1,8 +1,8 @@
-import { PRNG } from './PRNG.js';
-import { IslandGenerator } from './IslandGenerator.js';
-import { TerrainGenerator } from './TerrainGenerator.js';
-import { BiomeGenerator } from './BiomeGenerator.js';
-import { EnvironmentBuilder } from './EnvironmentBuilder.js';
+import { PRNG } from './PRNG.js?v=6';
+import { IslandGenerator } from './IslandGenerator.js?v=6';
+import { TerrainGenerator } from './TerrainGenerator.js?v=6';
+import { BiomeGenerator } from './BiomeGenerator.js?v=6';
+import { EnvironmentBuilder } from './EnvironmentBuilder.js?v=6';
 
 export class WorldGenerator {
     constructor(size = 120, width = 100.0) {

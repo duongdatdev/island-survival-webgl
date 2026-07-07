@@ -1,8 +1,8 @@
-import { PRNG } from './PRNG.js';
-import { IslandGenerator } from './IslandGenerator.js';
-import { TerrainGenerator } from './TerrainGenerator.js';
-import { BiomeGenerator, BiomeType } from './BiomeGenerator.js';
-import { EnvironmentBuilder, PlacedObject, ResourceNode } from './EnvironmentBuilder.js';
+import { PRNG } from './PRNG.js?v=6';
+import { IslandGenerator } from './IslandGenerator.js?v=6';
+import { TerrainGenerator } from './TerrainGenerator.js?v=6';
+import { BiomeGenerator, BiomeType } from './BiomeGenerator.js?v=6';
+import { EnvironmentBuilder, PlacedObject, ResourceNode } from './EnvironmentBuilder.js?v=6';
 
 export interface WorldTerrainData {
     positions: Float32Array;

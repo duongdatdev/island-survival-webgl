@@ -1,7 +1,7 @@
-import { PRNG } from './PRNG.js';
-import { IslandGenerator } from './IslandGenerator.js';
-import { TerrainGenerator } from './TerrainGenerator.js';
-import { BiomeGenerator, BiomeType } from './BiomeGenerator.js';
+import { PRNG } from './PRNG.js?v=6';
+import { IslandGenerator } from './IslandGenerator.js?v=6';
+import { TerrainGenerator } from './TerrainGenerator.js?v=6';
+import { BiomeGenerator, BiomeType } from './BiomeGenerator.js?v=6';
 
 export interface PlacedObject {
     id: string;          // BirchTree_1, Rock_1, etc.

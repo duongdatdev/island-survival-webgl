@@ -1,4 +1,4 @@
-import { BiomeType } from './BiomeGenerator.js';
+import { BiomeType } from './BiomeGenerator.js?v=6';
 
 export class EnvironmentBuilder {
     constructor(prng, island, terrain, biomeGen, worldWidth = 100.0) {
