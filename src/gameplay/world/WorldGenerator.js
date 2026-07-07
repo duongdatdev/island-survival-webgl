@@ -30,8 +30,8 @@ export class WorldGenerator {
         const biomeGen = new BiomeGenerator(prng, island);
 
         // 4. Generate Environment Props, resources, and build site
-        const builder = new EnvironmentBuilder(prng, island, terrainGen, biomeGen);
-        const { placedObjects, resourceNodes, buildArea, navigationGrid } = builder.build(metadataMap);
+        const builder = new EnvironmentBuilder(prng, island, terrainGen, biomeGen, this.width);
+        const { placedObjects, resourceNodes, buildArea, navigationGrid, landmarks } = builder.build(metadataMap);
 
         // 5. Build geometry buffers for WebGL rendering
         const step = this.width / this.size;
@@ -117,6 +117,7 @@ export class WorldGenerator {
             resourceNodes,
             buildArea,
             navigationGrid,
+            landmarks,
             generationTimeMs,
             objectCount: placedObjects.length + resourceNodes.length
         };

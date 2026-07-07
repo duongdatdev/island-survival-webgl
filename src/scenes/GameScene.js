@@ -206,10 +206,12 @@ export class GameScene extends Scene {
         // Render initial world metrics in the debug HUD
         this._updateWorldDebugInfo();
         
-        // 13.5 Waterfall POI (v0.3)
-        this.waterfall = new Waterfall(gl, [25.0, 0.0, -20.5]);
-        const wfY = this.terrain.getHeight(25.0, -20.5);
-        this.waterfall.position[1] = wfY;
+        // 13.5 Waterfall POI (v0.3) — procedural placement from world.landmarks
+        const wfPos = this.world.landmarks && this.world.landmarks.waterfall
+            ? this.world.landmarks.waterfall
+            : [25.0, this.terrain.getHeight(25.0, -20.5), -20.5];
+        this.waterfall = new Waterfall(gl, [wfPos[0], 0.0, wfPos[2]]);
+        this.waterfall.position[1] = wfPos[1];
         this.waterfall.updateModelMatrix();
 
         // 13.6 Blueprints & Fishing tracking (v0.3)
@@ -217,11 +219,13 @@ export class GameScene extends Scene {
         this.isFishing = false;
         this.fishingTimer = 0.0;
 
-        // 13.7 Spawning Treasure Chests (v0.3)
-        this.resourceManager.spawnResource(gl, 'treasure_chest', -25.0, 25.0, this.terrain);
-        this.resourceManager.spawnResource(gl, 'treasure_chest', 22.0, -18.0, this.terrain);
-        this.resourceManager.spawnResource(gl, 'treasure_chest', 25.0, 25.0, this.terrain);
-        this.resourceManager.spawnResource(gl, 'treasure_chest', -35.0, -35.0, this.terrain);
+        // 13.7 Spawning Treasure Chests (v0.3) — procedural per-quadrant placement
+        const chestSpots = this.world.landmarks && this.world.landmarks.treasureChests
+            ? this.world.landmarks.treasureChests
+            : [];
+        for (const spot of chestSpots) {
+            this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
+        }
 
         this.escapeHud = document.getElementById('escape-hud');
         this.escapeBtn = document.getElementById('escape-btn');
@@ -1358,9 +1362,19 @@ export class GameScene extends Scene {
         const placeX = this.player.position[0] + Math.sin(yaw) * dist;
         const placeZ = this.player.position[2] + Math.cos(yaw) * dist;
 
-        const boundaryLimit = 22.0;
-        const clampedX = Math.max(-boundaryLimit, Math.min(placeX, boundaryLimit));
-        const clampedZ = Math.max(-boundaryLimit, Math.min(placeZ, boundaryLimit));
+        // Keep the structure inside the island (2m buffer from the shoreline)
+        const island = this.worldGenerator && this.world && this.world.terrainGenerator
+            ? this.world.terrainGenerator.island
+            : null;
+        const maxRadius = island ? Math.max(2.0, island.radius - 2.0) : 22.0;
+        const distFromCenter = Math.sqrt(placeX * placeX + placeZ * placeZ);
+        let clampedX = placeX;
+        let clampedZ = placeZ;
+        if (distFromCenter > maxRadius && distFromCenter > 0.0001) {
+            const scale = maxRadius / distFromCenter;
+            clampedX *= scale;
+            clampedZ *= scale;
+        }
         const placeY = this.terrain.getHeight(clampedX, clampedZ);
 
         const activeIdx = 20 + this.inventory.selectedHotbarIndex;
@@ -1882,10 +1896,23 @@ export class GameScene extends Scene {
             this.waterCollector.position[1] = wy;
             this.waterCollector.updateModelMatrix();
         }
-        if (this.waterfall) {
+        if (this.waterfall && this.world.landmarks && this.world.landmarks.waterfall) {
+            const wf = this.world.landmarks.waterfall;
+            this.waterfall.position[0] = wf[0];
+            this.waterfall.position[1] = wf[1];
+            this.waterfall.position[2] = wf[2];
+            this.waterfall.updateModelMatrix();
+        } else if (this.waterfall) {
             const wfy = this.terrain.getHeight(this.waterfall.position[0], this.waterfall.position[2]);
             this.waterfall.position[1] = wfy;
             this.waterfall.updateModelMatrix();
+        }
+
+        // Re-spawn treasure chests from new landmarks
+        if (this.resourceManager && this.world.landmarks && this.world.landmarks.treasureChests) {
+            for (const spot of this.world.landmarks.treasureChests) {
+                this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
+            }
         }
 
         // 6. Relocate Raft assembly to procedurally calculated buildArea
