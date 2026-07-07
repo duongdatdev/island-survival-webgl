@@ -6,6 +6,8 @@ import { Mesh } from '../renderer/Mesh.js';
 import { BasicShader } from '../shaders/BasicShader.js';
 import { WaterShader } from '../shaders/WaterShader.js';
 import { Player } from '../entities/Player.js';
+import { CharacterRenderer } from '../characters/CharacterRenderer.js';
+import { CharacterRegistry } from '../characters/CharacterRegistry.js';
 import { Terrain } from '../entities/Terrain.js';
 import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
@@ -46,7 +48,7 @@ export class GameScene extends Scene {
         this.camera = new Camera(45 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000.0);
 
         // 3. Lighting Setup
-        this.dirLight = new DirectionalLight([0.6, 1.0, 0.3], [1.0, 0.95, 0.85], 1.0);
+        this.dirLight = new DirectionalLight([0, 1.0, 0], [1.0, 0.95, 0.85], 1.0);
         this.ambientLight = new AmbientLight([0.22, 0.28, 0.38], 0.4);
         this.lightTime = 0.0;
 
@@ -89,15 +91,10 @@ export class GameScene extends Scene {
             }
         }
 
-        // 5. Build Player Meshes (Cube data)
-        const redBodyData = this._createCubeData(0.9, 0.25, 0.25); // Red body
-        this.bodyMesh = new Mesh(gl, redBodyData);
-
-        const skinHeadData = this._createCubeData(0.98, 0.80, 0.65); // Skin colored head
-        this.headMesh = new Mesh(gl, skinHeadData);
-
-        const blackVisorData = this._createCubeData(0.1, 0.12, 0.18); // Dark visor
-        this.visorMesh = new Mesh(gl, blackVisorData);
+        // 5. Build Character Renderer from OBJ
+        const characterDef = CharacterRegistry.get('casual_male');
+        this.characterRenderer = new CharacterRenderer(characterDef);
+        this.characterRenderer.load(gl, this.engine.assets);
 
         // 6. Resource System Initialization
         this.inventory = new Inventory(20);
@@ -893,30 +890,11 @@ export class GameScene extends Scene {
         // 1. Draw Terrain
         this.terrain.draw(this.basicShader);
 
-        // 2. Draw Player Body (using scaled modelMatrix)
-        // Set scale for body: [width, height, depth] -> [0.8, 1.2, 0.8]
-        // Offset Y so bottom of body sits at player.position.y
-        Mat4.copy(this.tempMatrix, this.player.modelMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 0.3, 0.0]); // Body offset
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.8, 1.2, 0.8]);
-        this.basicShader.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
-        this.bodyMesh.draw(drawMode);
-
-        // 3. Draw Player Head
-        // Placed on top of body (height offsets Y)
-        Mat4.copy(this.tempMatrix, this.player.modelMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.15, 0.0]); // Head offset
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.55, 0.55, 0.55]);
-        this.basicShader.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
-        this.headMesh.draw(drawMode);
-
-        // 4. Draw Player Visor (helps distinguish forward orientation)
-        // Local translation along Z axis forward [0, 1.2, 0.28] relative to player coordinate center
-        Mat4.copy(this.tempMatrix, this.player.modelMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.2, 0.28]); // Visor offset
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.4, 0.16, 0.1]);
-        this.basicShader.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
-        this.visorMesh.draw(drawMode);
+        Mat4.identity(this.tempMatrix);
+        const playerRenderPos = [this.player.position[0], this.player.position[1] - 0.9, this.player.position[2]];
+        Mat4.translate(this.tempMatrix, this.tempMatrix, playerRenderPos);
+        Mat4.rotateY(this.tempMatrix, this.tempMatrix, this.player.rotation[1]);
+        this.characterRenderer.draw(this.basicShader, this.tempMatrix, drawMode);
 
         // 5. Draw World Resources
         this.resourceManager.drawAll(this.basicShader, drawMode);
@@ -1697,9 +1675,7 @@ export class GameScene extends Scene {
         if (this.terrain) this.terrain.delete();
         if (this.water) this.water.delete();
 
-        if (this.bodyMesh) this.bodyMesh.delete();
-        if (this.headMesh) this.headMesh.delete();
-        if (this.visorMesh) this.visorMesh.delete();
+        if (this.characterRenderer) this.characterRenderer.delete();
 
         // Cleanup resource system
         if (this.raftAssembly) this.raftAssembly.delete();
@@ -1755,76 +1731,6 @@ export class GameScene extends Scene {
 
         // Stop ambient sounds
         this.engine.audio.stopAmbientWaves();
-    }
-
-    /**
-     * Helper to output standard 24-vertex cuboid arrays for flat surface normals
-     * BUG FIX: Corrected left face normal vector (was [-1, -1, 0] → [-1, 0, 0])
-     */
-    _createCubeData(r, g, b) {
-        const positions = new Float32Array([
-            // Front face
-            -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,  0.5, -0.5,  0.5,  0.5,
-            // Back face
-            -0.5, -0.5, -0.5, -0.5,  0.5, -0.5,  0.5,  0.5, -0.5,  0.5, -0.5, -0.5,
-            // Top face
-            -0.5,  0.5, -0.5, -0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5, -0.5,
-            // Bottom face
-            -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5, -0.5,  0.5, -0.5, -0.5,  0.5,
-            // Right face
-             0.5, -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,  0.5, -0.5,  0.5,
-            // Left face
-            -0.5, -0.5, -0.5, -0.5, -0.5,  0.5, -0.5,  0.5,  0.5, -0.5,  0.5, -0.5,
-        ]);
-
-        const normals = new Float32Array([
-            // Front
-             0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,
-            // Back
-             0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,
-            // Top
-             0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,
-            // Bottom
-             0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,
-            // Right
-             1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,
-            // Left (BUG FIX: was [-1, -1, 0] for second vertex)
-            -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0,
-        ]);
-
-        const colors = new Float32Array(24 * 4);
-        for (let i = 0; i < 24; i++) {
-            colors[i * 4] = r;
-            colors[i * 4 + 1] = g;
-            colors[i * 4 + 2] = b;
-            colors[i * 4 + 3] = 1.0;
-        }
-
-        const texCoords = new Float32Array([
-            // Front
-            0.0, 0.0,  1.0, 0.0,  1.0, 1.0,  0.0, 1.0,
-            // Back
-            1.0, 0.0,  1.0, 1.0,  0.0, 1.0,  0.0, 0.0,
-            // Top
-            0.0, 1.0,  0.0, 0.0,  1.0, 0.0,  1.0, 1.0,
-            // Bottom
-            1.0, 1.0,  0.0, 1.0,  0.0, 0.0,  1.0, 0.0,
-            // Right
-            1.0, 0.0,  1.0, 1.0,  0.0, 1.0,  0.0, 0.0,
-            // Left
-            0.0, 0.0,  1.0, 0.0,  1.0, 1.0,  0.0, 1.0,
-        ]);
-
-        const indices = new Uint16Array([
-            0, 1, 2,      0, 2, 3,    // Front
-            4, 5, 6,      4, 6, 7,    // Back
-            8, 9, 10,     8, 10, 11,  // Top
-            12, 13, 14,   12, 14, 15, // Bottom
-            16, 17, 18,   16, 18, 19, // Right
-            20, 21, 22,   20, 22, 23  // Left
-        ]);
-
-        return { positions, normals, colors, texCoords, indices };
     }
 
     /**

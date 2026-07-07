@@ -1,5 +1,8 @@
 import { Scene } from '../core/Scene.js';
 import { WorldGenerator } from '../gameplay/world/WorldGenerator.js?v=6';
+import { CharacterRegistry } from '../characters/CharacterRegistry.js';
+import { parseMtl } from '../characters/CharacterLoader.js';
+import { ObjParser } from '../core/ObjParser.js';
 
 /**
  * Loading screen scene that tracks AssetManager status and updates the UI.
@@ -77,6 +80,18 @@ export class LoadingScene extends Scene {
 
                 // Collect and compile unique meshes
                 const uniquePaths = Array.from(new Set(world.placedObjects.map(obj => obj.objPath)));
+                const characterDef = CharacterRegistry.get('casual_male');
+                if (characterDef) {
+                    uniquePaths.push(CharacterRegistry.getObjPath(characterDef));
+                    const mtlPath = CharacterRegistry.getMtlPath(characterDef);
+                    const mtlText = await this.engine.assets.loadText(mtlPath, mtlPath);
+                    if (mtlText) {
+                        const mtlColors = parseMtl(mtlText, characterDef.id);
+                        for (const [matName, color] of Object.entries(mtlColors)) {
+                            ObjParser.registerColor(matName, color);
+                        }
+                    }
+                }
                 console.log(`LoadingScene: Compiling ${uniquePaths.length} unique environment models...`);
                 await this.engine.assets.compileUniqueModels(uniquePaths);
 
