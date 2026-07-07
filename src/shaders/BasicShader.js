@@ -22,8 +22,8 @@ export const BasicShader = {
             vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
             vWorldPosition = worldPos.xyz;
             
-            // Transform normals using model orientation (assumes uniform scaling)
-            vNormal = normalize(mat3(uModelMatrix) * aNormal);
+            // Transform normals using inverse transpose of model matrix (correct for non-uniform scaling)
+            vNormal = transpose(inverse(mat3(uModelMatrix))) * aNormal;
             
             vColor = aColor;
             vTexCoord = aTexCoord;
