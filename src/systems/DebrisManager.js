@@ -19,13 +19,15 @@ export class DebrisManager {
      * @param {number} [config.spawnRadiusMin=28] - Minimum spawn distance from center
      * @param {number} [config.spawnRadiusMax=40] - Maximum spawn distance from center
      */
-    constructor(config = {}) {
+    constructor(assetManager = null, config = {}) {
         /** @type {DriftingDebris[]} Active debris entities */
         this.debris = [];
 
         /** @type {DriftingDebris|null} Nearest pickable debris to the player */
         this.nearestPickable = null;
 
+        // Reference to the shared AssetManager (for detailed OBJ debris meshes)
+        this._assetManager = assetManager;
         // Configuration
         this.maxDebris = config.maxDebris || 15;
         this.spawnInterval = config.spawnInterval || 2.0;
@@ -72,7 +74,16 @@ export class DebrisManager {
         if (!def) return null;
 
         const pos = this._getRandomOceanPosition();
-        const debris = new DriftingDebris(gl, def, pos);
+
+        // Supply a detailed OBJ mesh if this debris type references one
+        let mesh = null;
+        let meshScale = 1;
+        if (def.modelId && this._assetManager) {
+            mesh = this._assetManager.models[def.modelId];
+            meshScale = def.meshScale[1];
+        }
+
+        const debris = new DriftingDebris(gl, def, pos, mesh, meshScale);
 
         this.debris.push(debris);
         return debris;

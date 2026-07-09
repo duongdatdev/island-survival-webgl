@@ -99,7 +99,7 @@ export class GameScene extends Scene {
         // 6. Resource System Initialization
         this.inventory = new Inventory(20);
         this.resourceManager = new ResourceManager();
-        this.debrisManager = new DebrisManager();
+        this.debrisManager = new DebrisManager(this.engine.assets);
 
         // Spawn resources from procedural generator nodes list
         this.resourceManager.worldResources = [];
@@ -354,15 +354,15 @@ export class GameScene extends Scene {
 
             // Pin player character to raft frame
             this.player.position[0] = this.raftAssembly.position[0];
-            this.player.position[1] = this.raftAssembly.position[1] + 0.45;
+            this.player.position[1] = this.raftAssembly.position[1] + (0.20 * 0.45) + 0.9 * this.player.scaleFactor;
             this.player.position[2] = this.raftAssembly.position[2];
             this.player.rotation[1] = 0.0;
             this.player.updateModelMatrix();
 
             // Cinematic camera track
-            this.camera.target[0] = this.raftAssembly.position[0];
-            this.camera.target[1] = this.raftAssembly.position[1] + 0.8;
-            this.camera.target[2] = this.raftAssembly.position[2];
+            this.camera.target[0] = this.player.position[0];
+            this.camera.target[1] = this.player.position[1];
+            this.camera.target[2] = this.player.position[2];
 
             // 3/4 high side view camera panning
             this.camera.position[0] = -7.0 - this.escapeTime * 0.3;
@@ -515,7 +515,7 @@ export class GameScene extends Scene {
                 // Dust particles at player feet
                 const dustPos = [
                     this.player.position[0],
-                    this.player.position[1] - 0.8,
+                    this.player.position[1] - this.player.collider.height * 0.5 + 0.1,
                     this.player.position[2]
                 ];
                 this.particleSystem.emit(dustPos, ParticleSystem.PRESET.DUST);
@@ -563,7 +563,7 @@ export class GameScene extends Scene {
         if (this.engine.input.isKeyPressed('KeyK')) {
             // Teleport close to raft building site (Z = 38.5)
             this.player.position[0] = 0.0;
-            this.player.position[1] = 0.9;
+            this.player.position[1] = this.player.collider.height * 0.5;
             this.player.position[2] = 38.5;
             this.player.updateModelMatrix();
 
@@ -585,7 +585,7 @@ export class GameScene extends Scene {
 
 
         // Snap camera tracking around player
-        this.camera.update(this.engine.input, this.player.position);
+        this.camera.update(this.engine.input, this.player.position, 1.2 * this.player.scaleFactor);
 
         // ---- Campfire proximity (v0.2) ----
         let showCampfirePrompt = false;
@@ -711,7 +711,7 @@ export class GameScene extends Scene {
             // Sound + particle effects for raft building
             this.engine.audio.playRaftBuild();
             this.particleSystem.emit(
-                [this.raftAssembly.position[0], this.raftAssembly.position[1] + 0.5, this.raftAssembly.position[2]],
+                [this.raftAssembly.position[0], this.raftAssembly.position[1] + 0.5 * 0.45, this.raftAssembly.position[2]],
                 ParticleSystem.PRESET.BUILD
             );
         }
@@ -727,7 +727,7 @@ export class GameScene extends Scene {
                 this.engine.audio.playPickup();
                 
                 this.particleSystem.emit(
-                    [this.player.position[0], this.player.position[1] - 0.5, this.player.position[2]],
+                    [this.player.position[0], this.player.position[1] - 0.5 * this.player.scaleFactor, this.player.position[2]],
                     ParticleSystem.PRESET.SPLASH
                 );
             }
@@ -891,7 +891,7 @@ export class GameScene extends Scene {
         this.terrain.draw(this.basicShader);
 
         Mat4.identity(this.tempMatrix);
-        const playerRenderPos = [this.player.position[0], this.player.position[1] - 0.9, this.player.position[2]];
+        const playerRenderPos = [this.player.position[0], this.player.position[1] - this.player.collider.height * 0.5, this.player.position[2]];
         Mat4.translate(this.tempMatrix, this.tempMatrix, playerRenderPos);
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, this.player.rotation[1]);
         this.characterRenderer.draw(this.basicShader, this.tempMatrix, drawMode);
@@ -1536,7 +1536,7 @@ export class GameScene extends Scene {
 
             this.engine.audio.playCraft();
             this.particleSystem.emit(
-                [this.player.position[0], this.player.position[1] + 0.5, this.player.position[2]],
+                [this.player.position[0], this.player.position[1] + 0.5 * this.player.scaleFactor, this.player.position[2]],
                 ParticleSystem.PRESET.CRAFT
             );
             this.tutorial.notifyCrafted();
@@ -1831,7 +1831,7 @@ export class GameScene extends Scene {
 
         // 7. Snap player position to new terrain slope heights
         const py = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
-        this.player.position[1] = py + 0.9;
+        this.player.position[1] = py + this.player.collider.height * 0.5;
         this.player.updateModelMatrix();
 
         // 8. Update HUD Metrics

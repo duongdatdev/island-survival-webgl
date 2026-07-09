@@ -7,6 +7,8 @@ import { Mat4 } from '../math/Mat4.js';
  * RaftAssembly - Handles the raft building site on the beach.
  * Shows solid parts for built modules and holographic ghost outlines for unbuilt modules.
  */
+const RAFT_SCALE = 0.45;
+
 export class RaftAssembly extends Entity {
     /**
      * @param {WebGL2RenderingContext} gl
@@ -103,7 +105,7 @@ export class RaftAssembly extends Entity {
             }
         }
 
-        // --- 3. RENDER PADDLE ---
+        // --- 3. RENDER RAFT PADDLE ---
         if (this.paddlePlaced) {
             if (!isGhostPass) {
                 this._drawPaddle(shaderProgram, drawMode, this.paddleMesh, 1.0);
@@ -115,13 +117,13 @@ export class RaftAssembly extends Entity {
         }
 
         // --- 4. RENDER SAIL ---
-        // Only show sail ghost when basic raft is complete
-        if (this.framePlaced && this.floatsPlaced && this.paddlePlaced) {
-            if (this.sailPlaced) {
-                if (!isGhostPass) {
-                    this._drawSail(shaderProgram, drawMode, this.mastMesh, this.sailMesh, 1.0);
-                }
-            } else {
+        if (this.sailPlaced) {
+            if (!isGhostPass) {
+                this._drawSail(shaderProgram, drawMode, this.mastMesh, this.sailMesh, 1.0);
+            }
+        } else {
+            // Only show sail ghost when paddle is placed
+            if (this.framePlaced && this.floatsPlaced && this.paddlePlaced) {
                 if (isGhostPass) {
                     this._drawSail(shaderProgram, drawMode, this.ghostMesh, this.ghostMesh, pulse);
                 }
@@ -151,31 +153,31 @@ export class RaftAssembly extends Entity {
 
         // 4 longitudinal logs (aligned with Z-axis)
         const logOffsets = [
-            [-0.60, 0.10, 0.0],
-            [-0.20, 0.10, 0.0],
-            [ 0.20, 0.10, 0.0],
-            [ 0.60, 0.10, 0.0]
+            [-0.60 * RAFT_SCALE, 0.10 * RAFT_SCALE, 0.0],
+            [-0.20 * RAFT_SCALE, 0.10 * RAFT_SCALE, 0.0],
+            [ 0.20 * RAFT_SCALE, 0.10 * RAFT_SCALE, 0.0],
+            [ 0.60 * RAFT_SCALE, 0.10 * RAFT_SCALE, 0.0]
         ];
 
         for (const offset of logOffsets) {
             Mat4.copy(this.tempMatrix, baseMatrix);
             Mat4.translate(this.tempMatrix, this.tempMatrix, offset);
-            Mat4.scale(this.tempMatrix, this.tempMatrix, [0.20 * scaleMult, 0.20 * scaleMult, 2.60 * scaleMult]);
+            Mat4.scale(this.tempMatrix, this.tempMatrix, [0.20 * scaleMult * RAFT_SCALE, 0.20 * scaleMult * RAFT_SCALE, 2.60 * scaleMult * RAFT_SCALE]);
             shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
             mesh.draw(drawMode);
         }
 
         // 3 transverse crossing logs (aligned with X-axis)
         const crossOffsets = [
-            [0.0, 0.20, -1.00],
-            [0.0, 0.20,  0.00],
-            [0.0, 0.20,  1.00]
+            [0.0, 0.20 * RAFT_SCALE, -1.00 * RAFT_SCALE],
+            [0.0, 0.20 * RAFT_SCALE,  0.00 * RAFT_SCALE],
+            [0.0, 0.20 * RAFT_SCALE,  1.00 * RAFT_SCALE]
         ];
 
         for (const offset of crossOffsets) {
             Mat4.copy(this.tempMatrix, baseMatrix);
             Mat4.translate(this.tempMatrix, this.tempMatrix, offset);
-            Mat4.scale(this.tempMatrix, this.tempMatrix, [1.50 * scaleMult, 0.14 * scaleMult, 0.20 * scaleMult]);
+            Mat4.scale(this.tempMatrix, this.tempMatrix, [1.50 * scaleMult * RAFT_SCALE, 0.14 * scaleMult * RAFT_SCALE, 0.20 * scaleMult * RAFT_SCALE]);
             shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
             mesh.draw(drawMode);
         }
@@ -188,16 +190,16 @@ export class RaftAssembly extends Entity {
         const baseMatrix = this.modelMatrix;
 
         const barrelOffsets = [
-            [-0.45, -0.22, -0.70],
-            [-0.45, -0.22,  0.70],
-            [ 0.45, -0.22, -0.70],
-            [ 0.45, -0.22,  0.70]
+            [-0.45 * RAFT_SCALE, -0.22 * RAFT_SCALE, -0.70 * RAFT_SCALE],
+            [-0.45 * RAFT_SCALE, -0.22 * RAFT_SCALE,  0.70 * RAFT_SCALE],
+            [ 0.45 * RAFT_SCALE, -0.22 * RAFT_SCALE, -0.70 * RAFT_SCALE],
+            [ 0.45 * RAFT_SCALE, -0.22 * RAFT_SCALE,  0.70 * RAFT_SCALE]
         ];
 
         for (const offset of barrelOffsets) {
             Mat4.copy(this.tempMatrix, baseMatrix);
             Mat4.translate(this.tempMatrix, this.tempMatrix, offset);
-            Mat4.scale(this.tempMatrix, this.tempMatrix, [0.42 * scaleMult, 0.50 * scaleMult, 0.42 * scaleMult]);
+            Mat4.scale(this.tempMatrix, this.tempMatrix, [0.42 * scaleMult * RAFT_SCALE, 0.50 * scaleMult * RAFT_SCALE, 0.42 * scaleMult * RAFT_SCALE]);
             shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
             mesh.draw(drawMode);
         }
@@ -212,24 +214,21 @@ export class RaftAssembly extends Entity {
 
         // 1. Paddle Shaft
         Mat4.copy(this.tempMatrix, baseMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.15, 0.28, -0.10]);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.15 * RAFT_SCALE, 0.28 * RAFT_SCALE, -0.10 * RAFT_SCALE]);
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, rotY);
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.06 * scaleMult, 0.06 * scaleMult, 1.50 * scaleMult]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.06 * scaleMult * RAFT_SCALE, 0.06 * scaleMult * RAFT_SCALE, 1.50 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         mesh.draw(drawMode);
 
         // 2. Paddle Blade
         Mat4.copy(this.tempMatrix, baseMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.32, 0.28, 0.70]);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.32 * RAFT_SCALE, 0.28 * RAFT_SCALE, 0.70 * RAFT_SCALE]);
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, rotY);
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.20 * scaleMult, 0.03 * scaleMult, 0.40 * scaleMult]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.20 * scaleMult * RAFT_SCALE, 0.03 * scaleMult * RAFT_SCALE, 0.40 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         mesh.draw(drawMode);
     }
 
-    /**
-     * Frees WebGL vertex buffer objects
-     */
     /**
      * Renders the mast and the sail sheet
      */
@@ -238,17 +237,17 @@ export class RaftAssembly extends Entity {
 
         // 1. Vertical Mast Pole
         Mat4.copy(this.tempMatrix, baseMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.25, 0.0]);
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.12 * scaleMult, 2.3 * scaleMult, 0.12 * scaleMult]);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.25 * RAFT_SCALE, 0.0]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.12 * scaleMult * RAFT_SCALE, 2.3 * scaleMult * RAFT_SCALE, 0.12 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         mastMesh.draw(drawMode);
 
         // 2. Sail Sheet
         Mat4.copy(this.tempMatrix, baseMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.5, 0.35]);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.5 * RAFT_SCALE, 0.35 * RAFT_SCALE]);
         const billowAngle = 0.06 * Math.sin(this.time * 2.5);
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, billowAngle);
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [1.4 * scaleMult, 1.5 * scaleMult, 0.04 * scaleMult]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [1.4 * scaleMult * RAFT_SCALE, 1.5 * scaleMult * RAFT_SCALE, 0.04 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         sailMesh.draw(drawMode);
     }
@@ -261,16 +260,16 @@ export class RaftAssembly extends Entity {
 
         // 1. Motor Block (mounted on rear crossbeam Z=-1.2)
         Mat4.copy(this.tempMatrix, baseMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 0.45, -1.3]);
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.35 * scaleMult, 0.5 * scaleMult, 0.35 * scaleMult]);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 0.45 * RAFT_SCALE, -1.3 * RAFT_SCALE]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.35 * scaleMult * RAFT_SCALE, 0.5 * scaleMult * RAFT_SCALE, 0.35 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         motorMesh.draw(drawMode);
 
         // 2. Propeller Stick (extending into water)
         Mat4.copy(this.tempMatrix, baseMatrix);
-        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, -0.15, -1.55]);
+        Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, -0.15 * RAFT_SCALE, -1.55 * RAFT_SCALE]);
         Mat4.rotateX(this.tempMatrix, this.tempMatrix, 0.25);
-        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.08 * scaleMult, 0.8 * scaleMult, 0.08 * scaleMult]);
+        Mat4.scale(this.tempMatrix, this.tempMatrix, [0.08 * scaleMult * RAFT_SCALE, 0.8 * scaleMult * RAFT_SCALE, 0.08 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         motorMesh.draw(drawMode);
     }

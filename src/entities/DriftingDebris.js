@@ -20,7 +20,7 @@ export class DriftingDebris extends Entity {
      * @param {object} debrisDef - Definition from DebrisDatabase
      * @param {number[]} spawnPos - [x, y, z] initial ocean position
      */
-    constructor(gl, debrisDef, spawnPos) {
+    constructor(gl, debrisDef, spawnPos, mesh = null, meshScale = 1) {
         super();
         this.gl = gl;
         this.debrisDef = debrisDef;
@@ -29,12 +29,24 @@ export class DriftingDebris extends Entity {
         // Set initial position
         Vec3.set(this.position, spawnPos[0], spawnPos[1], spawnPos[2]);
 
-        // Set scale from definition
-        Vec3.set(this.scale,
-            debrisDef.meshScale[0],
-            debrisDef.meshScale[1],
-            debrisDef.meshScale[2]
-        );
+        // Use a detailed OBJ mesh when supplied, otherwise fall back to a colored cube
+        if (mesh) {
+            this.useModel = true;
+            this.mesh = mesh;
+            Vec3.set(this.scale, meshScale, meshScale, meshScale);
+        } else {
+            this.useModel = false;
+            // Set scale from definition
+            Vec3.set(this.scale,
+                debrisDef.meshScale[0],
+                debrisDef.meshScale[1],
+                debrisDef.meshScale[2]
+            );
+
+            // Build the colored cube fallback mesh
+            const [r, g, b] = debrisDef.color;
+            this.mesh = new Mesh(gl, this._createCubeData(r, g, b));
+        }
 
         // --- Drift movement ---
         // Direction toward island center (0, 0) with slight random offset for natural feel
@@ -75,10 +87,6 @@ export class DriftingDebris extends Entity {
         // Water surface Y level (slightly above 0 for visibility)
         this.waterY = 0.15;
 
-        // Build colored mesh
-        const [r, g, b] = debrisDef.color;
-        this.mesh = new Mesh(gl, this._createCubeData(r, g, b));
-
         this.updateModelMatrix();
     }
 
@@ -112,7 +120,8 @@ export class DriftingDebris extends Entity {
                 if (terrainHeight > 0.1) {
                     // Arrived at shore — stop drifting, rest on beach
                     this.isOnShore = true;
-                    this.position[1] = terrainHeight + this.debrisDef.meshScale[1] * 0.5 + 0.05;
+                    // OBJ models are normalized with their base at y=0
+                    this.position[1] = terrainHeight + (this.useModel ? 0.02 : this.debrisDef.meshScale[1] * 0.5 + 0.05);
                 }
             }
         }
@@ -192,7 +201,7 @@ export class DriftingDebris extends Entity {
      * @param {number} drawMode
      */
     draw(shaderProgram, drawMode) {
-        if (this.isCollected || this.isExpired) return;
+        if (!this.mesh || this.isCollected || this.isExpired) return;
 
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
         this.mesh.draw(drawMode);
@@ -202,10 +211,12 @@ export class DriftingDebris extends Entity {
      * Free GPU resources
      */
     delete() {
-        if (this.mesh) {
+        // Only free the mesh if it is a per-instance cube (OBJ meshes are
+        // shared and owned by AssetManager, so we must not delete them here)
+        if (this.mesh && !this.useModel) {
             this.mesh.delete();
-            this.mesh = null;
         }
+        this.mesh = null;
     }
 
     /**

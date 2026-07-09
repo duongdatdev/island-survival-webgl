@@ -69,7 +69,7 @@ export class CollisionSystem {
 
             if (terrain) {
                 const h = terrain.getHeight(playerPos[0], playerPos[2]);
-                playerPos[1] = h + 0.9;
+                playerPos[1] = h + (player.collider.height ? player.collider.height * 0.5 : 0.9);
             }
             player.updateModelMatrix();
         }

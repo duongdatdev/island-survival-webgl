@@ -3,6 +3,8 @@ import { WorldGenerator } from '../gameplay/world/WorldGenerator.js?v=6';
 import { CharacterRegistry } from '../characters/CharacterRegistry.js';
 import { parseMtl } from '../characters/CharacterLoader.js';
 import { ObjParser } from '../core/ObjParser.js';
+import { Mesh } from '../renderer/Mesh.js';
+import { DebrisDatabase } from '../systems/DebrisDatabase.js';
 
 /**
  * Loading screen scene that tracks AssetManager status and updates the UI.
@@ -95,6 +97,9 @@ export class LoadingScene extends Scene {
                 console.log(`LoadingScene: Compiling ${uniquePaths.length} unique environment models...`);
                 await this.engine.assets.compileUniqueModels(uniquePaths);
 
+                // Compile Survival Pack OBJ models and register them as drifting debris
+                await this._loadSurvivalPack(this.gl);
+
                 this._targetProgress = 1.0;
                 // Give a moment for progress bar to catch up
                 setTimeout(() => this._onLoadComplete(), 500);
@@ -177,5 +182,106 @@ export class LoadingScene extends Scene {
 
     destroy() {
         console.log('LoadingScene destroyed.');
+    }
+
+    /**
+     * Load the Survival Pack OBJ models, normalize + compile them into GPU meshes,
+     * then register each one as a drifting ocean debris type so they appear in-game.
+     */
+    async _loadSurvivalPack(gl) {
+        try {
+            const res = await fetch('assets/survival-pack/survival-items.json');
+            if (!res.ok) throw new Error(`HTTP status: ${res.status}`);
+            const data = await res.json();
+            const items = data.items || [];
+
+            for (const item of items) {
+                const objText = await this.engine.assets.loadText(item.objPath, item.objPath);
+
+                let mtlText = '';
+                try {
+                    mtlText = await this.engine.assets.loadText(item.mtlPath, item.mtlPath);
+                } catch (e) {
+                    mtlText = '';
+                }
+
+                // Register exact material colors from the MTL so models keep their look
+                if (mtlText) {
+                    const colors = parseMtl(mtlText, 'survival_' + item.id);
+                    for (const [matName, color] of Object.entries(colors)) {
+                        ObjParser.registerColor(matName, color);
+                    }
+                }
+
+                if (!objText) continue;
+
+                const parsed = ObjParser.parse(objText);
+                // Scale down survival pack models to match smaller player character
+                const adjustedScale = item.modelScale * 0.55;
+                this._normalizeMeshData(parsed, adjustedScale);
+
+                const mesh = new Mesh(gl, parsed);
+                const key = 'survival:' + item.id;
+                this.engine.assets.models[key] = mesh;
+
+                // Register as a drifting debris type (reuses full pickup → inventory pipeline)
+                DebrisDatabase[key] = {
+                    id: key,
+                    name: item.name,
+                    nameEn: item.nameEn,
+                    icon: item.icon,
+                    color: [0.6, 0.6, 0.6],
+                    meshScale: [item.modelScale, item.modelScale, item.modelScale],
+                    pickupRadius: item.pickupRadius,
+                    gives: item.gives,
+                    lifetime: item.lifetime,
+                    driftSpeed: item.driftSpeed,
+                    spawnWeight: item.spawnWeight,
+                    modelId: key
+                };
+            }
+
+            console.log(`LoadingScene: Loaded ${items.length} Survival Pack models.`);
+        } catch (err) {
+            console.error('LoadingScene: Failed to load Survival Pack', err);
+        }
+    }
+
+    /**
+     * Recenter a parsed OBJ mesh on the XZ origin, drop its base to y=0,
+     * and uniformly scale it to a target world height so it rests nicely on water.
+     */
+    _normalizeMeshData(data, targetHeight) {
+        const pos = data.positions;
+        if (!pos || pos.length === 0) return;
+
+        let minX = Infinity, minY = Infinity, minZ = Infinity;
+        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+        for (let i = 0; i < pos.length; i += 3) {
+            const x = pos[i], y = pos[i + 1], z = pos[i + 2];
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            if (z < minZ) minZ = z;
+            if (z > maxZ) maxZ = z;
+        }
+
+        const cx = (minX + maxX) / 2;
+        const cz = (minZ + maxZ) / 2;
+        // Scale by the LARGEST dimension so elongated items lying flat
+        // (e.g. paddles, pans) don't get wildly over-scaled on a small Y axis
+        const width = maxX - minX;
+        const depth = maxZ - minZ;
+        const height = maxY - minY;
+        const maxDim = Math.max(width, height, depth, 1e-4);
+        const s = targetHeight / maxDim;
+
+        for (let i = 0; i < pos.length; i += 3) {
+            pos[i] = (pos[i] - cx) * s;
+            pos[i + 1] = (pos[i + 1] - minY) * s;
+            pos[i + 2] = (pos[i + 2] - cz) * s;
+        }
     }
 }

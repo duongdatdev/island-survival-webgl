@@ -5,27 +5,27 @@ const COLLIDER_DEFS = {
         type: 'capsule',
         trigger: false,
         layer: CollisionLayers.Environment,
-        radius: 0.6,
-        height: 2.0,
+        radius: 0.42,   // 0.6 * 0.70
+        height: 1.4,     // 2.0 * 0.70
     },
     Palm: {
         type: 'capsule',
         trigger: false,
         layer: CollisionLayers.Environment,
-        radius: 0.5,
-        height: 2.5,
+        radius: 0.38,   // 0.5 * 0.75
+        height: 1.88,    // 2.5 * 0.75
     },
     Rock: {
         type: 'box',
         trigger: false,
         layer: CollisionLayers.Environment,
-        halfExtents: [0.9, 0.6, 0.9],
+        halfExtents: [0.54, 0.36, 0.54],  // [0.9, 0.6, 0.9] * 0.60
     },
     Bush: {
         type: 'sphere',
         trigger: true,
         layer: CollisionLayers.Trigger,
-        radius: 0.4,
+        radius: 0.18,   // 0.4 * 0.45
     },
     Grass: {
         type: 'none',

@@ -13,7 +13,7 @@ export class Camera {
 
         // Spherical coordinates around target
         this.target = Vec3.create(0, 1.0, 0); // Focus slightly above origin (e.g. player height)
-        this.distance = 8.0;
+        this.distance = 4.0;
         this.yaw = Math.PI; // Look straight down +z axis at player initially
         this.pitch = 20 * Math.PI / 180; // Tilt down slightly
 
@@ -42,17 +42,17 @@ export class Camera {
     /**
      * Updates the camera position and orientation matrix based on target and inputs
      */
-    update(inputManager, targetPos) {
+    update(inputManager, targetPos, heightOffset = 0.4) {
         // Track the target coordinate (e.g., character center)
-        // Add 1.5 units to focus around the head height of the player
+        // Add heightOffset to focus around the head height of the player
         Vec3.copy(this.target, targetPos);
-        this.target[1] += 1.2;
+        this.target[1] += heightOffset;
 
         // Handle Scroll Wheel Zoom (Only when holding Shift)
         const isShiftDown = inputManager.isKeyDown('ShiftLeft') || inputManager.isKeyDown('ShiftRight');
         if (inputManager.mouse.wheelDelta !== 0 && isShiftDown) {
             this.distance += inputManager.mouse.wheelDelta * 0.75;
-            this.distance = Math.max(2.5, Math.min(this.distance, 25.0)); // Zoom constraints
+            this.distance = Math.max(1.5, Math.min(this.distance, 20.0)); // Zoom constraints
         }
 
         // Handle Mouse Orbit drag or locked mouse rotations

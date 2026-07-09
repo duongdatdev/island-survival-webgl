@@ -34,7 +34,7 @@ export class CharacterRegistry {
                 displayName,
                 obj: filename,
                 mtl: filename.replace('.obj', '.mtl'),
-                scale: 1,
+                scale: 0.32,
                 rotation: [0, 0, 0],
                 offset: [0, 0, 0],
             });

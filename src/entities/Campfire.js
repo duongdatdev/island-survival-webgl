@@ -10,6 +10,8 @@ import { Mesh } from '../renderer/Mesh.js';
  * Visual: Ring of gray stone blocks with an orange/red fire glow center.
  * Procedural mesh — no external assets required.
  */
+const CAMPFIRE_SCALE = 0.4;
+
 export class Campfire extends Entity {
     /**
      * @param {WebGL2RenderingContext} gl
@@ -88,14 +90,14 @@ export class Campfire extends Entity {
         const stoneCount = 6;
         for (let i = 0; i < stoneCount; i++) {
             const angle = (i / stoneCount) * Math.PI * 2;
-            const radius = 0.6;
+            const radius = 0.6 * CAMPFIRE_SCALE;
             const sx = this.position[0] + Math.cos(angle) * radius;
             const sz = this.position[2] + Math.sin(angle) * radius;
 
             Mat4.identity(tempMatrix);
-            Mat4.translate(tempMatrix, tempMatrix, [sx, this.position[1] + 0.12, sz]);
+            Mat4.translate(tempMatrix, tempMatrix, [sx, this.position[1] + 0.12 * CAMPFIRE_SCALE, sz]);
             Mat4.rotateY(tempMatrix, tempMatrix, angle + 0.3);
-            Mat4.scale(tempMatrix, tempMatrix, [0.25, 0.2, 0.2]);
+            Mat4.scale(tempMatrix, tempMatrix, [0.25 * CAMPFIRE_SCALE, 0.2 * CAMPFIRE_SCALE, 0.2 * CAMPFIRE_SCALE]);
             shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
             this.stoneMesh.draw(drawMode);
         }
@@ -104,9 +106,9 @@ export class Campfire extends Entity {
         for (let i = 0; i < 3; i++) {
             const angle = (i / 3) * Math.PI;
             Mat4.identity(tempMatrix);
-            Mat4.translate(tempMatrix, tempMatrix, [this.position[0], this.position[1] + 0.08, this.position[2]]);
+            Mat4.translate(tempMatrix, tempMatrix, [this.position[0], this.position[1] + 0.08 * CAMPFIRE_SCALE, this.position[2]]);
             Mat4.rotateY(tempMatrix, tempMatrix, angle);
-            Mat4.scale(tempMatrix, tempMatrix, [0.8, 0.1, 0.1]);
+            Mat4.scale(tempMatrix, tempMatrix, [0.8 * CAMPFIRE_SCALE, 0.1 * CAMPFIRE_SCALE, 0.1 * CAMPFIRE_SCALE]);
             shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
             this.logMesh.draw(drawMode);
         }
@@ -115,10 +117,10 @@ export class Campfire extends Entity {
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
             this.position[0],
-            this.position[1] + 0.2 + Math.sin(this._fireTime * 6) * 0.04,
+            this.position[1] + (0.2 + Math.sin(this._fireTime * 6) * 0.04) * CAMPFIRE_SCALE,
             this.position[2]
         ]);
-        const fireScale = 0.2 * this._fireFlicker;
+        const fireScale = 0.2 * this._fireFlicker * CAMPFIRE_SCALE;
         Mat4.scale(tempMatrix, tempMatrix, [fireScale, fireScale * 1.5, fireScale]);
         shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
         this.fireMesh.draw(drawMode);
@@ -126,11 +128,11 @@ export class Campfire extends Entity {
         // Draw secondary smaller fire
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
-            this.position[0] + 0.1,
-            this.position[1] + 0.32 + Math.sin(this._fireTime * 9) * 0.03,
-            this.position[2] + 0.05
+            this.position[0] + 0.1 * CAMPFIRE_SCALE,
+            this.position[1] + (0.32 + Math.sin(this._fireTime * 9) * 0.03) * CAMPFIRE_SCALE,
+            this.position[2] + 0.05 * CAMPFIRE_SCALE
         ]);
-        const fire2Scale = 0.12 * this._fireFlicker;
+        const fire2Scale = 0.12 * this._fireFlicker * CAMPFIRE_SCALE;
         Mat4.scale(tempMatrix, tempMatrix, [fire2Scale, fire2Scale * 1.8, fire2Scale]);
         shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
         this.fireMesh.draw(drawMode);

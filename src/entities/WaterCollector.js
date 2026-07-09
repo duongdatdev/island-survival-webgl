@@ -10,6 +10,8 @@ import { Mesh } from '../renderer/Mesh.js';
  * Visual: Wooden frame with barrel underneath catching drips.
  * Procedural mesh — no external assets required.
  */
+const COLLECTOR_SCALE = 0.45;
+
 export class WaterCollector extends Entity {
     /**
      * @param {WebGL2RenderingContext} gl
@@ -108,17 +110,17 @@ export class WaterCollector extends Entity {
 
         // Draw 4 wooden support poles
         const polePositions = [
-            [-0.4, 0, -0.4], [0.4, 0, -0.4],
-            [-0.4, 0, 0.4], [0.4, 0, 0.4]
+            [-0.4 * COLLECTOR_SCALE, 0, -0.4 * COLLECTOR_SCALE], [0.4 * COLLECTOR_SCALE, 0, -0.4 * COLLECTOR_SCALE],
+            [-0.4 * COLLECTOR_SCALE, 0, 0.4 * COLLECTOR_SCALE], [0.4 * COLLECTOR_SCALE, 0, 0.4 * COLLECTOR_SCALE]
         ];
         for (const pp of polePositions) {
             Mat4.identity(tempMatrix);
             Mat4.translate(tempMatrix, tempMatrix, [
                 this.position[0] + pp[0],
-                this.position[1] + 0.5,
+                this.position[1] + 0.5 * COLLECTOR_SCALE,
                 this.position[2] + pp[2]
             ]);
-            Mat4.scale(tempMatrix, tempMatrix, [0.08, 1.0, 0.08]);
+            Mat4.scale(tempMatrix, tempMatrix, [0.08 * COLLECTOR_SCALE, 1.0 * COLLECTOR_SCALE, 0.08 * COLLECTOR_SCALE]);
             shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
             this.woodMesh.draw(drawMode);
         }
@@ -127,11 +129,11 @@ export class WaterCollector extends Entity {
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
             this.position[0],
-            this.position[1] + 1.0,
+            this.position[1] + 1.0 * COLLECTOR_SCALE,
             this.position[2]
         ]);
         Mat4.rotateZ(tempMatrix, tempMatrix, 0.15);
-        Mat4.scale(tempMatrix, tempMatrix, [0.9, 0.05, 0.7]);
+        Mat4.scale(tempMatrix, tempMatrix, [0.9 * COLLECTOR_SCALE, 0.05 * COLLECTOR_SCALE, 0.7 * COLLECTOR_SCALE]);
         shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
         this.leafMesh.draw(drawMode);
 
@@ -139,23 +141,23 @@ export class WaterCollector extends Entity {
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
             this.position[0],
-            this.position[1] + 0.2,
+            this.position[1] + 0.2 * COLLECTOR_SCALE,
             this.position[2]
         ]);
-        Mat4.scale(tempMatrix, tempMatrix, [0.5, 0.4, 0.5]);
+        Mat4.scale(tempMatrix, tempMatrix, [0.5 * COLLECTOR_SCALE, 0.4 * COLLECTOR_SCALE, 0.5 * COLLECTOR_SCALE]);
         shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
         this.barrelMesh.draw(drawMode);
 
         // Draw water level inside barrel (if water stored)
         if (this.waterStored > 0) {
-            const waterHeight = (this.waterStored / this.maxWater) * 0.3;
+            const waterHeight = (this.waterStored / this.maxWater) * 0.3 * COLLECTOR_SCALE;
             Mat4.identity(tempMatrix);
             Mat4.translate(tempMatrix, tempMatrix, [
                 this.position[0],
-                this.position[1] + 0.05 + waterHeight * 0.5,
+                this.position[1] + 0.05 * COLLECTOR_SCALE + waterHeight * 0.5,
                 this.position[2]
             ]);
-            Mat4.scale(tempMatrix, tempMatrix, [0.44, waterHeight, 0.44]);
+            Mat4.scale(tempMatrix, tempMatrix, [0.44 * COLLECTOR_SCALE, waterHeight, 0.44 * COLLECTOR_SCALE]);
             shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
             this.waterMesh.draw(drawMode);
         }
@@ -166,10 +168,10 @@ export class WaterCollector extends Entity {
             Mat4.identity(tempMatrix);
             Mat4.translate(tempMatrix, tempMatrix, [
                 this.position[0],
-                this.position[1] + 0.95 - dripPhase * 0.75,
+                this.position[1] + (0.95 - dripPhase * 0.75) * COLLECTOR_SCALE,
                 this.position[2]
             ]);
-            const dropScale = 0.04;
+            const dropScale = 0.04 * COLLECTOR_SCALE;
             Mat4.scale(tempMatrix, tempMatrix, [dropScale, dropScale * 2, dropScale]);
             shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
             this.waterMesh.draw(drawMode);

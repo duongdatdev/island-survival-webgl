@@ -38,7 +38,7 @@ export const ResourceDatabase = {
         nameEn: 'Wood',
         icon: '🪵',
         color: [0.55, 0.35, 0.18],       // Warm brown (log)
-        meshScale: [0.25, 0.6, 0.25],    // Tall narrow log shape
+        meshScale: [0.15, 0.35, 0.15],    // Tall narrow log shape
         pickupRadius: 2.5,
         stackSize: 99,
         spawnWeight: 4,                    // Higher = more common
@@ -51,7 +51,7 @@ export const ResourceDatabase = {
         nameEn: 'Stone',
         icon: '🪨',
         color: [0.55, 0.55, 0.52],       // Gray stone
-        meshScale: [0.5, 0.3, 0.45],     // Low flat rock shape
+        meshScale: [0.28, 0.17, 0.25],     // Low flat rock shape
         pickupRadius: 2.5,
         stackSize: 99,
         spawnWeight: 3,
@@ -64,7 +64,7 @@ export const ResourceDatabase = {
         nameEn: 'Rope',
         icon: '🪢',
         color: [0.82, 0.72, 0.45],       // Sandy rope color
-        meshScale: [0.4, 0.15, 0.4],     // Flat coiled disc shape
+        meshScale: [0.22, 0.08, 0.22],     // Flat coiled disc shape
         pickupRadius: 2.5,
         stackSize: 99,
         spawnWeight: 2,
@@ -77,7 +77,7 @@ export const ResourceDatabase = {
         nameEn: 'Barrel',
         icon: '🛢️',
         color: [0.45, 0.28, 0.15],       // Dark wood barrel
-        meshScale: [0.4, 0.55, 0.4],     // Cylindrical barrel shape
+        meshScale: [0.22, 0.3, 0.22],     // Cylindrical barrel shape
         pickupRadius: 2.8,
         stackSize: 99,
         spawnWeight: 1,                    // Rarer
@@ -90,7 +90,7 @@ export const ResourceDatabase = {
         nameEn: 'Coconut',
         icon: '🥥',
         color: [0.35, 0.55, 0.2],        // Green-brown coconut
-        meshScale: [0.3, 0.3, 0.3],      // Round shape
+        meshScale: [0.17, 0.17, 0.17],      // Round shape
         pickupRadius: 2.5,
         stackSize: 20,
         spawnWeight: 2,
@@ -103,7 +103,7 @@ export const ResourceDatabase = {
         nameEn: 'Raw Fish',
         icon: '🐟',
         color: [0.6, 0.65, 0.7],         // Silver fish
-        meshScale: [0.4, 0.15, 0.2],     // Flat fish shape
+        meshScale: [0.22, 0.08, 0.11],     // Flat fish shape
         pickupRadius: 2.8,
         stackSize: 20,
         spawnWeight: 1,                    // Rare — spawns as ocean debris

@@ -1,5 +1,22 @@
 import { BiomeType } from './BiomeGenerator.js?v=6';
 
+/**
+ * Category-based scale multipliers to keep environment objects proportional
+ * to the scaled-down player character (0.32x of original).
+ * Trees are naturally much larger than the player so they get a modest reduction.
+ * Small flora (flowers, grass, petals) get scaled down the most.
+ */
+const CATEGORY_SCALE_MULTIPLIERS = {
+    Tree:    0.70,   // Large trees — still tower over the player
+    Palm:    0.75,   // Palm trees — tall but slightly thinner
+    Rock:    0.60,   // Rocks — noticeable but reasonable
+    Bush:    0.45,   // Bushes — waist-to-chest height
+    Grass:   0.35,   // Grass clumps — knee height
+    Flower:  0.35,   // Flower patches — small ground cover
+    Plant:   0.45,   // Plants — similar to bushes
+    Unknown: 0.35,   // Petals and other decorative elements
+};
+
 export class EnvironmentBuilder {
     constructor(prng, island, terrain, biomeGen, worldWidth = 100.0) {
         this.prng = prng;
@@ -7,6 +24,13 @@ export class EnvironmentBuilder {
         this.terrain = terrain;
         this.biomeGen = biomeGen;
         this.worldWidth = worldWidth;
+    }
+
+    /**
+     * Get scale multiplier for a given asset category
+     */
+    _getCategoryScale(category) {
+        return CATEGORY_SCALE_MULTIPLIERS[category] || 0.5;
     }
 
     /**
@@ -184,7 +208,8 @@ export class EnvironmentBuilder {
                         if (cOverlap) continue;
 
                         // Place cluster member
-                        const scaleVal = this.prng.nextRange(selectedAsset.minScale || 0.8, selectedAsset.maxScale || 1.2);
+                        const catScale = this._getCategoryScale(selectedAsset.category);
+                        const scaleVal = this.prng.nextRange(selectedAsset.minScale || 0.8, selectedAsset.maxScale || 1.2) * catScale;
                         placedObjects.push({
                             id: selectedAsset.id,
                             modelName: `${selectedAsset.id}.obj`,
@@ -201,7 +226,8 @@ export class EnvironmentBuilder {
                     }
                 } else {
                     // Place single object
-                    const scaleVal = this.prng.nextRange(selectedAsset.minScale || 0.8, selectedAsset.maxScale || 1.2);
+                    const catScale = this._getCategoryScale(selectedAsset.category);
+                    const scaleVal = this.prng.nextRange(selectedAsset.minScale || 0.8, selectedAsset.maxScale || 1.2) * catScale;
                     placedObjects.push({
                         id: selectedAsset.id,
                         modelName: `${selectedAsset.id}.obj`,

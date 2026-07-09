@@ -11,17 +11,20 @@ export class Player extends Entity {
         this.speed = 5.0; // units/sec
         this.currentSpeed = 0.0;
 
+        const PLAYER_SCALE = 0.32;
+        this.scaleFactor = PLAYER_SCALE;
+
         // Origin at center, scale represent dimensions [width, height, depth]
-        Vec3.set(this.scale, 0.8, 1.8, 0.8);
-        Vec3.set(this.position, 0.0, 0.9, 0.0); // Stand on ground (height = 1.8, half = 0.9)
+        Vec3.set(this.scale, 0.8 * PLAYER_SCALE, 1.8 * PLAYER_SCALE, 0.8 * PLAYER_SCALE);
+        Vec3.set(this.position, 0.0, 0.9 * PLAYER_SCALE, 0.0); // Stand on ground (height = 1.8, half = 0.9)
 
         // Player capsule collider — data-driven
         this.collider = {
             type: 'capsule',
             trigger: false,
             layer: CollisionLayers.Player,
-            radius: 0.45,
-            height: 1.8,
+            radius: 0.45 * PLAYER_SCALE,
+            height: 1.8 * PLAYER_SCALE,
         };
     }
 
@@ -91,11 +94,12 @@ export class Player extends Entity {
         }
         
         // Let player stand on the terrain (adjust height based on terrain height dynamically)
+        const PLAYER_SCALE = 0.32;
         if (terrain) {
             const terrainHeight = terrain.getHeight(this.position[0], this.position[2]);
-            this.position[1] = terrainHeight + 0.9; // Y-Offset is half of player height (1.8 / 2)
+            this.position[1] = terrainHeight + 0.9 * PLAYER_SCALE; // Y-Offset is half of player height (1.8 / 2)
         } else {
-            this.position[1] = 0.9;
+            this.position[1] = 0.9 * PLAYER_SCALE;
         }
 
         // Recompute the local model matrix transform
