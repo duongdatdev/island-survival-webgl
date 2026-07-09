@@ -8,7 +8,7 @@ import { CollisionLayers } from '../systems/CollisionLayers.js';
 export class Player extends Entity {
     constructor() {
         super();
-        this.speed = 5.0; // units/sec
+        this.speed = 3.2; // units/sec
         this.currentSpeed = 0.0;
 
         const PLAYER_SCALE = 0.32;
@@ -46,37 +46,34 @@ export class Player extends Entity {
         Vec3.cross(right, forward, up);
         Vec3.normalize(right, right);
 
-        let isMoving = false;
+        let moveX = 0;
+        let moveZ = 0;
 
-        // Process WASD keyboard commands
-        if (inputManager.isKeyDown('KeyW') || inputManager.isKeyDown('ArrowUp')) {
-            Vec3.add(moveDir, moveDir, forward);
-            isMoving = true;
-        }
-        if (inputManager.isKeyDown('KeyS') || inputManager.isKeyDown('ArrowDown')) {
-            Vec3.subtract(moveDir, moveDir, forward);
-            isMoving = true;
-        }
-        if (inputManager.isKeyDown('KeyA') || inputManager.isKeyDown('ArrowLeft')) {
-            Vec3.subtract(moveDir, moveDir, right);
-            isMoving = true;
-        }
-        if (inputManager.isKeyDown('KeyD') || inputManager.isKeyDown('ArrowRight')) {
-            Vec3.add(moveDir, moveDir, right);
-            isMoving = true;
-        }
+        // Process WASD keyboard commands and Arrow keys
+        if (inputManager.isKeyDown('KeyW') || inputManager.isKeyDown('ArrowUp')) moveZ += 1;
+        if (inputManager.isKeyDown('KeyS') || inputManager.isKeyDown('ArrowDown')) moveZ -= 1;
+        if (inputManager.isKeyDown('KeyA') || inputManager.isKeyDown('ArrowLeft')) moveX -= 1;
+        if (inputManager.isKeyDown('KeyD') || inputManager.isKeyDown('ArrowRight')) moveX += 1;
 
-        if (isMoving) {
-            Vec3.normalize(moveDir, moveDir);
-            Vec3.scale(moveDir, moveDir, this.speed * deltaTime);
-            
+        if (moveX !== 0 || moveZ !== 0) {
+            const targetMoveDir = Vec3.create();
+            const tempF = Vec3.create();
+            const tempR = Vec3.create();
+
+            // Calculate movement vector on horizontal plane based on camera orientation
+            Vec3.scale(tempF, forward, moveZ);
+            Vec3.scale(tempR, right, moveX);
+            Vec3.add(targetMoveDir, tempF, tempR);
+            Vec3.normalize(targetMoveDir, targetMoveDir);
+
+            Vec3.scale(moveDir, targetMoveDir, this.speed * deltaTime);
+
             // Apply translation displacement
             Vec3.add(this.position, this.position, moveDir);
             this.currentSpeed = this.speed;
 
             // Turn player model to face the movement vector on the Y-Axis (Yaw)
-            // Mat4.rotateY expects the angle, computed with Math.atan2 on relative movement axes
-            const targetAngle = Math.atan2(moveDir[0], moveDir[2]);
+            const targetAngle = Math.atan2(targetMoveDir[0], targetMoveDir[2]);
             this.rotation[1] = targetAngle;
         } else {
             this.currentSpeed = 0.0;

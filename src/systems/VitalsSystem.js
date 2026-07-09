@@ -23,13 +23,13 @@ export class VitalsSystem {
         this._healthDrainTimer = 0;
 
         // Drain rates (seconds per 1 unit drain)
-        this.hungerDrainInterval = 30;
-        this.thirstDrainInterval = 20;
+        this.hungerDrainInterval = 25;
+        this.thirstDrainInterval = 18;
         this.healthDrainInterval = 5;
 
         // Stamina rates (units per second)
-        this.staminaDrainRate = 15;
-        this.staminaRegenRate = 8;
+        this.staminaDrainRate = 10;
+        this.staminaRegenRate = 15;
 
         /** @type {Function|null} Callback fired when any vital changes: (vitalId, newValue, maxValue) */
         this.onChange = null;

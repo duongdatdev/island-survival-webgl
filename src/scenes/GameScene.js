@@ -287,7 +287,7 @@ export class GameScene extends Scene {
 
         // Footstep timer
         this._footstepTimer = 0;
-        this._footstepInterval = 0.35; // Seconds between footstep sounds
+        this._footstepInterval = 0.4; // Seconds between footstep sounds
 
         // 16. Collision System
         this.collisionSystem = new CollisionSystem();
@@ -490,7 +490,7 @@ export class GameScene extends Scene {
         this.vitals.update(deltaTime, isPlayerMoving);
 
         // Apply stamina speed modifier to player
-        this.player.speed = this.isFishing ? 0.0 : 5.0 * this.vitals.getSpeedMultiplier();
+        this.player.speed = this.isFishing ? 0.0 : 3.2 * this.vitals.getSpeedMultiplier();
 
         const prevPlayerPos = [this.player.position[0], this.player.position[1], this.player.position[2]];
 
