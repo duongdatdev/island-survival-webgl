@@ -29,7 +29,7 @@ This document outlines the milestones and release plan for **Island Survival: Es
 
 ---
 
-## 🪵 Version 0.2 – Survival Systems ✅ (Current Version)
+## 🪵 Version 0.2 – Survival Systems ✅
 *Goal: Make survival meaningful and introduce survival pressures.*
 
 ### Implemented Features
@@ -49,7 +49,7 @@ This document outlines the milestones and release plan for **Island Survival: Es
 
 ---
 
-## 🏝️ Version 0.3 – Island Expansion ✅ (Current Version)
+## 🏝️ Version 0.3 – Island Expansion ✅
 *Goal: Encourage deep exploration and expand world scale.*
 
 ### Implemented Features
@@ -61,14 +61,15 @@ This document outlines the milestones and release plan for **Island Survival: Es
 
 ---
 
-## ⛈️ Version 0.4 – Dynamic World
+## ⛈️ Version 0.4 – Dynamic World ✅
 *Goal: Enhance atmospheric immersion and environment feedback.*
 
-### Planned Features
-- **Day/Night Cycle:** Dynamic sun progression changing lighting angles, colors, and shadows.
-- **Weather System:** Storms, heavy downpours, wind effects, and lightning.
-- **Dynamic Waves:** Weather-influenced wave heights that affect raft sailing and debris drift speed.
-- **Dynamic Audio:** Adaptive ambient soundscapes that change with time and weather.
+### Implemented Features
+- **Day/Night Cycle:** Dynamic sun progression changing lighting angles, colors, and shadows with smooth transitions through dawn, day, dusk, and night phases.
+- **Weather System:** Dynamic weather states (Clear → Cloudy → Rain → Storm) with smooth interpolation, cloud cover affecting sky color, and lightning flashes during storms.
+- **Dynamic Waves:** Weather-influenced wave amplitude and speed multipliers affecting the water shader's procedural vertex displacement.
+- **Rain Particles:** Procedural rain particle system spawning around the player during wet weather.
+- **Dynamic Audio:** Procedural wind (band-passed noise), rain (high-passed noise), and thunder (low-frequency burst) synthesized at runtime, with smooth gain transitions tied to weather intensity.
 
 ---
 

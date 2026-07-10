@@ -145,6 +145,36 @@ export class ParticleSystem {
             spread: 0.6,
             yBias: 1.5,
         },
+        /** Rain drops (v0.4) */
+        RAIN: {
+            count: 1,
+            color: [0.6, 0.75, 0.9],
+            colorVariance: 0.05,
+            size: 3,
+            sizeVariance: 1,
+            speed: 15.0,
+            speedVariance: 5.0,
+            lifetime: 0.6,
+            lifetimeVariance: 0.2,
+            gravity: -15.0,
+            spread: 0.05,
+            yBias: 10.0,
+        },
+        /** Lightning flash particles (v0.4) */
+        LIGHTNING: {
+            count: 5,
+            color: [1.0, 1.0, 0.95],
+            colorVariance: 0.05,
+            size: 12,
+            sizeVariance: 6,
+            speed: 0.5,
+            speedVariance: 0.3,
+            lifetime: 0.3,
+            lifetimeVariance: 0.1,
+            gravity: 0.0,
+            spread: 0.8,
+            yBias: 1.0,
+        },
     };
 
     /**

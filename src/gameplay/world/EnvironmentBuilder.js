@@ -63,151 +63,205 @@ export class EnvironmentBuilder {
         const halfWidth = this.worldWidth / 2.0;
         const sampleGridSize = 60;
         const cellWidth = this.worldWidth / sampleGridSize;
-        const attemptsPerCell = 2;
+        const attemptsPerCell = 4;
 
-        for (let sz = 0; sz < sampleGridSize; sz++) {
-            for (let sx = 0; sx < sampleGridSize; sx++) {
-                for (let attempt = 0; attempt < attemptsPerCell; attempt++) {
-                // Jittered coordinate inside the grid cell
-                const px = (sx + this.prng.nextRange(0.1, 0.9)) * cellWidth - halfWidth;
-                const pz = (sz + this.prng.nextRange(0.1, 0.9)) * cellWidth - halfWidth;
+        // Two-pass placement: Pass 0 for large features (Trees, Palms, Rocks), Pass 1 for small flora (Bushes, Grass, Flowers, Plants)
+        for (let pass = 0; pass < 2; pass++) {
+            for (let sz = 0; sz < sampleGridSize; sz++) {
+                for (let sx = 0; sx < sampleGridSize; sx++) {
+                    for (let attempt = 0; attempt < attemptsPerCell; attempt++) {
+                    // Jittered coordinate inside the grid cell
+                    const px = (sx + this.prng.nextRange(0.1, 0.9)) * cellWidth - halfWidth;
+                    const pz = (sz + this.prng.nextRange(0.1, 0.9)) * cellWidth - halfWidth;
 
-                const py = this.terrain.getHeight(px, pz);
+                    const py = this.terrain.getHeight(px, pz);
 
-                // Skip if below water
-                if (py < 0.05) continue;
+                    // Skip if below water
+                    if (py < 0.05) continue;
 
-                // Determine biome at this point
-                const biome = this.biomeGen.getBiome(px, pz, py);
-                if (biome === BiomeType.OCEAN) continue;
+                    // Determine biome at this point
+                    const biome = this.biomeGen.getBiome(px, pz, py);
+                    if (biome === BiomeType.OCEAN) continue;
 
-                // Map generator biome to a pool of candidate metadata biomes.
-                // Mountain overlays RockArea when elevation is high enough;
-                // Jungle overlays Forest as a denser sub-biome selected by noise.
-                let candidates;
-                if (biome === BiomeType.BEACH) {
-                    candidates = assetsByBiome['Beach'];
-                } else if (biome === BiomeType.FOREST) {
-                    // Jungle patches inside forest, deterministic per position
-                    const jungleNoise = Math.sin(px * 0.17) * Math.cos(pz * 0.19);
-                    if (jungleNoise > 0.35 && assetsByBiome['Jungle'].length > 0) {
-                        candidates = assetsByBiome['Jungle'];
-                    } else {
-                        candidates = assetsByBiome['Forest'];
-                    }
-                } else if (biome === BiomeType.ROCK_AREA) {
-                    // Mountain assets at high elevation, otherwise regular rock
-                    if (py > 2.0 && assetsByBiome['Mountain'].length > 0) {
-                        candidates = assetsByBiome['Mountain'];
-                    } else {
-                        candidates = assetsByBiome['RockArea'];
-                    }
-                } else {
-                    candidates = assetsByBiome['Grassland'];
-                }
-
-                if (!candidates || candidates.length === 0) continue;
-
-                // Track the target key so it is recorded on the placed object below
-                let targetBiomeKey;
-                if (candidates === assetsByBiome['Beach']) targetBiomeKey = 'Beach';
-                else if (candidates === assetsByBiome['Jungle']) targetBiomeKey = 'Jungle';
-                else if (candidates === assetsByBiome['Forest']) targetBiomeKey = 'Forest';
-                else if (candidates === assetsByBiome['Mountain']) targetBiomeKey = 'Mountain';
-                else if (candidates === assetsByBiome['RockArea']) targetBiomeKey = 'RockArea';
-                else targetBiomeKey = 'Grassland';
-
-                // Choose candidate based on spawn weight
-                const selectedAsset = this.weightedChoice(candidates);
-                if (!selectedAsset) continue;
-
-                // Roll spawn chance
-                const rules = selectedAsset.placementRules || {};
-                const spawnChance = rules.spawnChance !== undefined ? rules.spawnChance : 0.5;
-                if (this.prng.next() > spawnChance) continue;
-
-                // Verify placement constraints
-                const inferredTerrainType = selectedAsset.terrain; // "Grass", "Sand", "Rock"
-                
-                // Verify slope limit
-                const step = 0.5;
-                const normal = this.terrain.getNormal(px, pz, step);
-                const slope = Math.acos(normal[1]) * (180.0 / Math.PI);
-                const maxSlope = rules.maxSlope !== undefined ? rules.maxSlope : 30;
-                if (slope > maxSlope) continue;
-
-                // Verify height range
-                const heightRange = rules.heightRange || { min: 0.1, max: 10 };
-                if (py < heightRange.min || py > heightRange.max) continue;
-
-                // Verify distance to water & beach
-                const distToCenter = Math.sqrt(px * px + pz * pz);
-                const minDistanceToWater = rules.minDistanceToWater !== undefined ? rules.minDistanceToWater : 4.0;
-                const shoreDistance = this.island.radius - distToCenter;
-                if (distToCenter > (this.island.radius - minDistanceToWater)) continue; // Too close to water boundary
-
-                const minDistanceToBeach = rules.minDistanceToBeach !== undefined ? rules.minDistanceToBeach : 0.0;
-                if (minDistanceToBeach > 0.0 && this.island.isBeach(px, pz)) continue; // Cannot be on beach
-
-                // Prevent spawning too close to start zone (center [0, 0])
-                if (distToCenter < 5.0) continue;
-
-                // Prevent overlap with already placed objects
-                const minDistanceToAnother = rules.minDistanceToAnother !== undefined ? rules.minDistanceToAnother : 2.0;
-                let overlap = false;
-                for (const other of placedObjects) {
-                    const dx = other.position[0] - px;
-                    const dz = other.position[2] - pz;
-                    if (dx * dx + dz * dz < minDistanceToAnother * minDistanceToAnother) {
-                        overlap = true;
-                        break;
-                    }
-                }
-                if (overlap) continue;
-
-                // Place the object!
-                // Cluster check
-                const cluster = selectedAsset.clusterRules;
-                if (cluster && cluster.minSize > 1) {
-                    const clusterSize = this.prng.nextInt(cluster.minSize, cluster.maxSize + 1);
-                    const density = cluster.density || 0.3;
-                    const radius = (clusterSize * density) + 1.5;
-                    const minDistSq = minDistanceToAnother * minDistanceToAnother;
-
-                    for (let c = 0; c < clusterSize; c++) {
-                        // Offset coordinates
-                        const angle = this.prng.nextRange(0, Math.PI * 2);
-                        const dist = this.prng.nextRange(0.5, radius);
-                        const cX = px + Math.cos(angle) * dist;
-                        const cZ = pz + Math.sin(angle) * dist;
-                        const cY = this.terrain.getHeight(cX, cZ);
-
-                        if (cY < 0.05) continue;
-                        if (this.biomeGen.getBiome(cX, cZ, cY) !== biome) continue;
-
-                        // Cluster members must satisfy the same placement rules
-                        if (cY < heightRange.min || cY > heightRange.max) continue;
-
-                        const cDistToCenter = Math.sqrt(cX * cX + cZ * cZ);
-                        if (cDistToCenter > (this.island.radius - minDistanceToWater)) continue;
-                        if (minDistanceToBeach > 0.0 && this.island.isBeach(cX, cZ)) continue;
-
-                        const cNormal = this.terrain.getNormal(cX, cZ, step);
-                        const cSlope = Math.acos(cNormal[1]) * (180.0 / Math.PI);
-                        if (cSlope > maxSlope) continue;
-
-                        let cOverlap = false;
-                        for (const other of placedObjects) {
-                            const dx = other.position[0] - cX;
-                            const dz = other.position[2] - cZ;
-                            if (dx * dx + dz * dz < minDistSq) {
-                                cOverlap = true;
-                                break;
+                    // Map generator biome to a pool of candidate metadata biomes.
+                    // Mountain overlays RockArea when elevation is high enough;
+                    // Jungle overlays Forest as a denser sub-biome selected by noise.
+                    let candidates;
+                    if (biome === BiomeType.BEACH) {
+                        if (pass === 0) {
+                            candidates = assetsByBiome['Beach']; // Palm trees
+                        } else {
+                            candidates = [];
+                        }
+                    } else if (biome === BiomeType.FOREST) {
+                        if (pass === 0) {
+                            candidates = assetsByBiome['Forest']; // Forest trees
+                        } else {
+                            // Small flora pass: place jungle plants in jungle patches
+                            const jungleNoise = Math.sin(px * 0.17) * Math.cos(pz * 0.19);
+                            if (jungleNoise > 0.35 && assetsByBiome['Jungle'].length > 0) {
+                                candidates = assetsByBiome['Jungle'];
+                            } else {
+                                candidates = [];
                             }
                         }
-                        if (cOverlap) continue;
+                    } else if (biome === BiomeType.ROCK_AREA) {
+                        if (pass === 0) {
+                            // Mountain assets at high elevation, otherwise regular rock
+                            if (py > 2.0 && assetsByBiome['Mountain'].length > 0) {
+                                candidates = assetsByBiome['Mountain'];
+                            } else {
+                                candidates = assetsByBiome['RockArea'];
+                            }
+                        } else {
+                            candidates = [];
+                        }
+                    } else { // Grassland
+                        if (pass === 0) {
+                            // Grassland tree pass: 30% chance to spawn trees from Forest biome
+                            // This ensures the light green area has trees, while the dark green (Forest) biome has more trees
+                            if (this.prng.next() < 0.30 && assetsByBiome['Forest'].length > 0) {
+                                candidates = assetsByBiome['Forest'];
+                            } else {
+                                candidates = [];
+                            }
+                        } else {
+                            candidates = assetsByBiome['Grassland']; // Grass/Flowers/Bushes
+                        }
+                    }
 
-                        // Place cluster member
+                    if (!candidates || candidates.length === 0) continue;
+
+                    // Track the target key so it is recorded on the placed object below
+                    let targetBiomeKey;
+                    if (candidates === assetsByBiome['Beach']) targetBiomeKey = 'Beach';
+                    else if (candidates === assetsByBiome['Jungle']) targetBiomeKey = 'Jungle';
+                    else if (candidates === assetsByBiome['Forest']) targetBiomeKey = 'Forest';
+                    else if (candidates === assetsByBiome['Mountain']) targetBiomeKey = 'Mountain';
+                    else if (candidates === assetsByBiome['RockArea']) targetBiomeKey = 'RockArea';
+                    else targetBiomeKey = 'Grassland';
+
+                    // Choose candidate based on spawn weight
+                    const selectedAsset = this.weightedChoice(candidates);
+                    if (!selectedAsset) continue;
+
+                    // Filter by large feature category vs. small flora depending on pass
+                    const isLargeFeature = selectedAsset.category === 'Tree' || 
+                                           selectedAsset.category === 'Palm' || 
+                                           selectedAsset.category === 'Rock';
+                    if (pass === 0 && !isLargeFeature) continue;
+                    if (pass === 1 && isLargeFeature) continue;
+
+                    // Roll spawn chance
+                    const rules = selectedAsset.placementRules || {};
+                    let spawnChance = rules.spawnChance !== undefined ? rules.spawnChance : 0.5;
+                    // Boost spawn chance specifically for trees and palms to make the island more forested
+                    if (selectedAsset.category === 'Tree' || selectedAsset.category === 'Palm') {
+                        spawnChance = Math.min(0.98, spawnChance * 1.4);
+                    }
+                    if (this.prng.next() > spawnChance) continue;
+
+                    // Verify placement constraints
+                    const inferredTerrainType = selectedAsset.terrain; // "Grass", "Sand", "Rock"
+                    
+                    // Verify slope limit
+                    const step = 0.5;
+                    const normal = this.terrain.getNormal(px, pz, step);
+                    const slope = Math.acos(normal[1]) * (180.0 / Math.PI);
+                    const maxSlope = rules.maxSlope !== undefined ? rules.maxSlope : 30;
+                    if (slope > maxSlope) continue;
+
+                    // Verify height range
+                    const heightRange = rules.heightRange || { min: 0.1, max: 10 };
+                    if (py < heightRange.min || py > heightRange.max) continue;
+
+                    // Verify distance to water & beach
+                    const distToCenter = Math.sqrt(px * px + pz * pz);
+                    const minDistanceToWater = rules.minDistanceToWater !== undefined ? rules.minDistanceToWater : 4.0;
+                    const shoreDistance = this.island.radius - distToCenter;
+                    if (distToCenter > (this.island.radius - minDistanceToWater)) continue; // Too close to water boundary
+
+                    const minDistanceToBeach = rules.minDistanceToBeach !== undefined ? rules.minDistanceToBeach : 0.0;
+                    // Bypassed for BEACH biome because Palm Trees (cây dừa) spawn on the beach and have minDistanceToBeach: 1/0
+                    if (minDistanceToBeach > 0.0 && biome !== BiomeType.BEACH && this.island.isBeach(px, pz)) continue; // Cannot be on beach
+
+                    // Prevent spawning too close to start zone (center [0, 0])
+                    if (distToCenter < 5.0) continue;
+
+                    // Prevent overlap with already placed objects
+                    const minDistanceToAnother = rules.minDistanceToAnother !== undefined ? rules.minDistanceToAnother : 2.0;
+                    let overlap = false;
+                    for (const other of placedObjects) {
+                        const dx = other.position[0] - px;
+                        const dz = other.position[2] - pz;
+                        if (dx * dx + dz * dz < minDistanceToAnother * minDistanceToAnother) {
+                            overlap = true;
+                            break;
+                        }
+                    }
+                    if (overlap) continue;
+
+                    // Place the object!
+                    // Cluster check
+                    const cluster = selectedAsset.clusterRules;
+                    if (cluster && cluster.minSize > 1) {
+                        const clusterSize = this.prng.nextInt(cluster.minSize, cluster.maxSize + 1);
+                        const density = cluster.density || 0.3;
+                        const radius = (clusterSize * density) + 1.5;
+                        const minDistSq = minDistanceToAnother * minDistanceToAnother;
+
+                        for (let c = 0; c < clusterSize; c++) {
+                            // Offset coordinates
+                            const angle = this.prng.nextRange(0, Math.PI * 2);
+                            const dist = this.prng.nextRange(0.5, radius);
+                            const cX = px + Math.cos(angle) * dist;
+                            const cZ = pz + Math.sin(angle) * dist;
+                            const cY = this.terrain.getHeight(cX, cZ);
+
+                            if (cY < 0.05) continue;
+                            if (this.biomeGen.getBiome(cX, cZ, cY) !== biome) continue;
+
+                            // Cluster members must satisfy the same placement rules
+                            if (cY < heightRange.min || cY > heightRange.max) continue;
+
+                            const cDistToCenter = Math.sqrt(cX * cX + cZ * cZ);
+                            if (cDistToCenter > (this.island.radius - minDistanceToWater)) continue;
+                            if (minDistanceToBeach > 0.0 && biome !== BiomeType.BEACH && this.island.isBeach(cX, cZ)) continue;
+
+                            const cNormal = this.terrain.getNormal(cX, cZ, step);
+                            const cSlope = Math.acos(cNormal[1]) * (180.0 / Math.PI);
+                            if (cSlope > maxSlope) continue;
+
+                            let cOverlap = false;
+                            for (const other of placedObjects) {
+                                const dx = other.position[0] - cX;
+                                const dz = other.position[2] - cZ;
+                                if (dx * dx + dz * dz < minDistSq) {
+                                    cOverlap = true;
+                                    break;
+                                }
+                            }
+                            if (cOverlap) continue;
+
+                            // Place cluster member
+                            const catScale = this._getCategoryScale(selectedAsset.category);
+                            const scaleVal = this.prng.nextRange(selectedAsset.minScale || 0.8, selectedAsset.maxScale || 1.2) * catScale;
+                            placedObjects.push({
+                                id: selectedAsset.id,
+                                modelName: `${selectedAsset.id}.obj`,
+                                objPath: selectedAsset.objPath,
+                                category: selectedAsset.category || '',
+                                position: [cX, cY, cZ],
+                                rotation: [0, selectedAsset.randomRotation ? this.prng.nextRange(0, Math.PI * 2) : 0, 0],
+                                scale: [scaleVal, scaleVal, scaleVal],
+                                collision: selectedAsset.collision || false,
+                                navigationBlocker: selectedAsset.navigationBlocker || false,
+                                biome: targetBiomeKey,
+                                terrain: inferredTerrainType
+                            });
+                        }
+                    } else {
+                        // Place single object
                         const catScale = this._getCategoryScale(selectedAsset.category);
                         const scaleVal = this.prng.nextRange(selectedAsset.minScale || 0.8, selectedAsset.maxScale || 1.2) * catScale;
                         placedObjects.push({
@@ -215,7 +269,7 @@ export class EnvironmentBuilder {
                             modelName: `${selectedAsset.id}.obj`,
                             objPath: selectedAsset.objPath,
                             category: selectedAsset.category || '',
-                            position: [cX, cY, cZ],
+                            position: [px, py, pz],
                             rotation: [0, selectedAsset.randomRotation ? this.prng.nextRange(0, Math.PI * 2) : 0, 0],
                             scale: [scaleVal, scaleVal, scaleVal],
                             collision: selectedAsset.collision || false,
@@ -224,29 +278,12 @@ export class EnvironmentBuilder {
                             terrain: inferredTerrainType
                         });
                     }
-                } else {
-                    // Place single object
-                    const catScale = this._getCategoryScale(selectedAsset.category);
-                    const scaleVal = this.prng.nextRange(selectedAsset.minScale || 0.8, selectedAsset.maxScale || 1.2) * catScale;
-                    placedObjects.push({
-                        id: selectedAsset.id,
-                        modelName: `${selectedAsset.id}.obj`,
-                        objPath: selectedAsset.objPath,
-                        category: selectedAsset.category || '',
-                        position: [px, py, pz],
-                        rotation: [0, selectedAsset.randomRotation ? this.prng.nextRange(0, Math.PI * 2) : 0, 0],
-                        scale: [scaleVal, scaleVal, scaleVal],
-                        collision: selectedAsset.collision || false,
-                        navigationBlocker: selectedAsset.navigationBlocker || false,
-                        biome: targetBiomeKey,
-                        terrain: inferredTerrainType
-                    });
+                    // Stop retrying attempts once we successfully placed for this cell
+                    break;
+                    } // end attempt
                 }
-                // Stop retrying attempts once we successfully placed for this cell
-                break;
-                } // end attempt
             }
-        }
+        } // end pass
 
         // 3. Spawning collectible resource nodes inside biomes deterministically
         const resourceSpawnRules = [
@@ -390,6 +427,13 @@ export class EnvironmentBuilder {
 
         // 6. Procedural POI placement (waterfall + treasure chests)
         const landmarks = this._placeLandmarks(placedObjects, buildArea);
+
+        console.log("Placed objects count:", placedObjects.length);
+        console.log("Placed objects stats:", placedObjects.reduce((acc, obj) => {
+            const key = `${obj.biome}_${obj.category}`;
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {}));
 
         return {
             placedObjects,

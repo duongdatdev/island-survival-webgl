@@ -14,6 +14,20 @@ export class AudioManager {
         this._ambientSource = null;
         this._ambientGain = null;
 
+        // Dynamic weather audio nodes
+        this._windSource = null;
+        this._windGain = null;
+        this._windFilter = null;
+        this._rainSource = null;
+        this._rainGain = null;
+        this._thunderGain = null;
+
+        // Audio state
+        this._targetWindGain = 0.0;
+        this._targetRainGain = 0.0;
+        this._currentWindGain = 0.0;
+        this._currentRainGain = 0.0;
+
         // Load mute preference
         try {
             this.isMuted = localStorage.getItem('island_survival_muted') === 'true';
@@ -314,10 +328,177 @@ export class AudioManager {
         this._ambientGain = null;
     }
 
+    // ==========================================
+    //  DYNAMIC WEATHER AUDIO (v0.4)
+    // ==========================================
+
+    startWind() {
+        if (!this._ensureContext()) return;
+        if (this._windSource) return;
+
+        const ctx = this.ctx;
+        const bufferSize = ctx.sampleRate * 4;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        let lastOut = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            lastOut = (lastOut + (0.01 * white)) / 1.01;
+            data[i] = lastOut * 3.0;
+            const mod = Math.sin((i / ctx.sampleRate) * Math.PI * 2 * 0.08) * 0.4 + 0.6;
+            data[i] *= mod;
+        }
+
+        this._windSource = ctx.createBufferSource();
+        this._windSource.buffer = buffer;
+        this._windSource.loop = true;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 180;
+        filter.Q.value = 0.7;
+
+        this._windGain = ctx.createGain();
+        this._windGain.gain.value = 0;
+        this._currentWindGain = 0;
+
+        this._windFilter = filter;
+        this._windSource.connect(filter);
+        filter.connect(this._windGain);
+        this._windGain.connect(this.masterGain);
+        this._windSource.start();
+    }
+
+    startRain() {
+        if (!this._ensureContext()) return;
+        if (this._rainSource) return;
+
+        const ctx = this.ctx;
+        const bufferSize = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            const mod = Math.sin((i / ctx.sampleRate) * Math.PI * 2 * 0.3 + Math.sin((i / ctx.sampleRate) * Math.PI * 2 * 0.7) * 0.5);
+            data[i] = white * (0.3 + mod * 0.7);
+        }
+
+        this._rainSource = ctx.createBufferSource();
+        this._rainSource.buffer = buffer;
+        this._rainSource.loop = true;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 2000;
+
+        this._rainGain = ctx.createGain();
+        this._rainGain.gain.value = 0;
+        this._currentRainGain = 0;
+
+        this._rainSource.connect(filter);
+        filter.connect(this._rainGain);
+        this._rainGain.connect(this.masterGain);
+        this._rainSource.start();
+    }
+
+    stopWind() {
+        if (this._windSource) {
+            try { this._windSource.stop(); } catch (e) { }
+            this._windSource = null;
+        }
+        this._windGain = null;
+        this._windFilter = null;
+        this._currentWindGain = 0;
+    }
+
+    stopRain() {
+        if (this._rainSource) {
+            try { this._rainSource.stop(); } catch (e) { }
+            this._rainSource = null;
+        }
+        this._rainGain = null;
+        this._currentRainGain = 0;
+    }
+
+    setWindIntensity(intensity, smooth = true) {
+        this._targetWindGain = Math.max(0, Math.min(1, intensity * 0.25));
+        if (!smooth) {
+            this._currentWindGain = this._targetWindGain;
+            if (this._windGain) this._windGain.gain.value = this._targetWindGain;
+        }
+    }
+
+    setRainIntensity(intensity, smooth = true) {
+        this._targetRainGain = Math.max(0, Math.min(1, intensity * 0.2));
+        if (!smooth) {
+            this._currentRainGain = this._targetRainGain;
+            if (this._rainGain) this._rainGain.gain.value = this._targetRainGain;
+        }
+    }
+
+    updateWeatherAudio(deltaTime) {
+        if (this._windGain) {
+            this._currentWindGain += (this._targetWindGain - this._currentWindGain) * deltaTime * 2.0;
+            this._windGain.gain.value = this._currentWindGain;
+
+            const targetFreq = 120 + this._targetWindGain * 120;
+            if (this._windFilter) {
+                this._windFilter.frequency.value += (targetFreq - this._windFilter.frequency.value) * deltaTime * 2;
+            }
+        }
+
+        if (this._rainGain) {
+            this._currentRainGain += (this._targetRainGain - this._currentRainGain) * deltaTime * 2.0;
+            this._rainGain.gain.value = this._currentRainGain;
+        }
+    }
+
+    /**
+     * Play a thunder clap
+     */
+    playThunder() {
+        if (!this._ensureContext()) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        const bufferSize = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        let lastOut = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            const t = i / ctx.sampleRate;
+            const envelope = Math.exp(-t * 1.5) * (1 + Math.sin(t * 30) * 0.3);
+            lastOut = (lastOut + (0.005 * white)) / 1.005;
+            data[i] = lastOut * envelope * 5.0;
+        }
+
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(80, now);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        source.start(now);
+    }
+
     /**
      * Clean up all audio resources
      */
     destroy() {
+        this.stopWind();
+        this.stopRain();
         this.stopAmbientWaves();
         if (this.ctx) {
             this.ctx.close();

@@ -30,7 +30,7 @@
   },
   "placementRules": {
     "minDistanceToAnother": 3,
-    "minDistanceToBeach": 1,
+    "minDistanceToBeach": 0,
     "minDistanceToWater": 2,
     "maxSlope": 15,
     "heightRange": {

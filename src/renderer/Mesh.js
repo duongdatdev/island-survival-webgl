@@ -91,6 +91,15 @@ export class Mesh {
         gl.bindVertexArray(null);
     }
 
+    updateColors(colors) {
+        const gl = this.gl;
+        if (this.colorsBuffer) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer);
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, colors);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        }
+    }
+
     delete() {
         const gl = this.gl;
         for (const buffer of this.buffers) {

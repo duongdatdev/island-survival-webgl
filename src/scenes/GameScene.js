@@ -5,6 +5,7 @@ import { ShaderProgram } from '../renderer/ShaderProgram.js';
 import { Mesh } from '../renderer/Mesh.js';
 import { BasicShader } from '../shaders/BasicShader.js';
 import { WaterShader } from '../shaders/WaterShader.js';
+import { UnlitShader } from '../shaders/UnlitShader.js';
 import { Player } from '../entities/Player.js';
 import { CharacterRenderer } from '../characters/CharacterRenderer.js';
 import { CharacterRegistry } from '../characters/CharacterRegistry.js';
@@ -30,6 +31,9 @@ import { EnvironmentObject } from '../entities/EnvironmentObject.js?v=6';
 import { WorldResource } from '../entities/WorldResource.js?v=6';
 import { CollisionSystem } from '../systems/CollisionSystem.js';
 import { CollisionDebug } from '../systems/CollisionDebug.js';
+import { BillboardSprite } from '../renderer/BillboardSprite.js';
+import { DayNightCycle } from '../systems/DayNightCycle.js';
+import { WeatherSystem } from '../systems/WeatherSystem.js';
 
 
 /**
@@ -43,6 +47,7 @@ export class GameScene extends Scene {
         // 1. Shaders Initialisation
         this.basicShader = new ShaderProgram(gl, BasicShader.vertex, BasicShader.fragment);
         this.waterShader = new ShaderProgram(gl, WaterShader.vertex, WaterShader.fragment);
+        this.unlitShader = new ShaderProgram(gl, UnlitShader.vertex, UnlitShader.fragment);
 
         // 2. Camera Setup
         this.camera = new Camera(45 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000.0);
@@ -51,6 +56,19 @@ export class GameScene extends Scene {
         this.dirLight = new DirectionalLight([0, 1.0, 0], [1.0, 0.95, 0.85], 1.0);
         this.ambientLight = new AmbientLight([0.22, 0.28, 0.38], 0.4);
         this.lightTime = 0.0;
+
+        // 3.5 v0.4 - Day/Night Cycle & Weather System
+        this.dayNight = new DayNightCycle();
+        this.weather = new WeatherSystem();
+        this._rainParticleTimer = 0;
+
+        // Rain particle buffer for pooled rain drops
+        this._rainDrops = [];
+        this._maxRainDrops = 200;
+
+        // 3.6 v0.4 - Sun & Moon billboard sprites
+        this.sunSprite = new BillboardSprite(gl, [1.0, 0.9, 0.5], 4.0, [1.0, 0.7, 0.15]);
+        this.moonSprite = new BillboardSprite(gl, [0.85, 0.85, 0.95], 3.5, [0.5, 0.5, 0.7]);
 
         // 4. Entities Setup
         this.player = new Player();
@@ -307,17 +325,19 @@ export class GameScene extends Scene {
             });
         }
 
-        // Configure depth states
-        gl.clearColor(0.53, 0.74, 0.90, 1.0); // Nice sky blue clear color
+        // v0.4: sky color set dynamically each frame — initial placeholder
+        gl.clearColor(0.53, 0.74, 0.90, 1.0);
 
         // Show HUD
         const hud = document.getElementById('resource-hud');
         if (hud) hud.style.display = '';
 
-        // Start ambient audio
+        // Start ambient audio (v0.4: also start weather audio)
         this.engine.audio._ensureContext();
         this.engine.audio.resume();
         this.engine.audio.startAmbientWaves();
+        this.engine.audio.startWind();
+        this.engine.audio.startRain();
     }
 
     update(deltaTime) {
@@ -840,22 +860,122 @@ export class GameScene extends Scene {
         // Update tutorial
         this.tutorial.update(deltaTime, this.engine.input, this.player);
 
-        // Manage light rotation from Debug UI checkbox
+        // ── v0.4: Day/Night Cycle & Weather System ──
+        this.weather.update(deltaTime);
+
         const rotLightEl = document.getElementById('toggle-light-rot');
         const rotateLight = rotLightEl ? rotLightEl.checked : true;
         if (rotateLight) {
-            this.lightTime += deltaTime * 0.15;
-            const lx = Math.cos(this.lightTime) * 0.6;
-            const lz = Math.sin(this.lightTime) * 0.6;
-            this.dirLight.setDirection(lx, 1.0, lz);
+            this.dayNight.update(deltaTime);
         }
 
-        // Push light direction to Debug panel
+        const sunDir = this.dayNight.getSunDirection();
+        const sunColor = this.dayNight.getSunColor();
+        const sunIntensity = this.dayNight.getSunIntensity();
+
+        // ── Sun/Moon position update (relative to camera to keep them in the sky) ──
+        const sunAngle = this.dayNight.timeOfDay * Math.PI * 2;
+        const celestialDist = 80.0;
+        
+        // Calculate raw direction of the sun without horizon clamping
+        const sunDirRaw = [
+            Math.cos(sunAngle) * 0.6,
+            Math.sin(sunAngle),
+            Math.sin(sunAngle) * 0.6
+        ];
+        const len = Math.sqrt(sunDirRaw[0]*sunDirRaw[0] + sunDirRaw[1]*sunDirRaw[1] + sunDirRaw[2]*sunDirRaw[2]);
+        const sunDirNorm = len > 0.001 ? [sunDirRaw[0]/len, sunDirRaw[1]/len, sunDirRaw[2]/len] : [0, 1, 0];
+
+        // Sun position relative to camera
+        this.sunSprite.position[0] = this.camera.position[0] + sunDirNorm[0] * celestialDist;
+        this.sunSprite.position[1] = this.camera.position[1] + sunDirNorm[1] * celestialDist;
+        this.sunSprite.position[2] = this.camera.position[2] + sunDirNorm[2] * celestialDist;
+        this.sunSprite.visible = sunDirNorm[1] > -0.1 && sunIntensity > 0.15;
+
+        // Moon is opposite to the sun
+        this.moonSprite.position[0] = this.camera.position[0] - sunDirNorm[0] * celestialDist;
+        this.moonSprite.position[1] = this.camera.position[1] - sunDirNorm[1] * celestialDist;
+        this.moonSprite.position[2] = this.camera.position[2] - sunDirNorm[2] * celestialDist;
+        this.moonSprite.visible = -sunDirNorm[1] > -0.1 && sunIntensity < 0.8;
+
+        // Tint sun color based on time of day
+        const sunCol = this.dayNight.getSunColor();
+        this.sunSprite.setColor(
+            sunCol[0] * 0.9 + 0.1,
+            sunCol[1] * 0.8 + 0.2,
+            sunCol[2] * 0.6 + 0.1,
+            sunCol[0] * 0.6,
+            sunCol[1] * 0.4,
+            sunCol[2] * 0.15
+        );
+
+        const lightningMod = this.weather.getLightningModulation();
+        const lightningBoost = 1.0 + lightningMod * 3.0;
+
+        this.dirLight.setDirection(sunDir[0], sunDir[1], sunDir[2]);
+        this.dirLight.color[0] = sunColor[0];
+        this.dirLight.color[1] = sunColor[1] * (0.8 + lightningMod * 0.2);
+        this.dirLight.color[2] = sunColor[2] * (0.7 + lightningMod * 0.3);
+        this.dirLight.intensity = sunIntensity * lightningBoost;
+
+        const ambColor = this.dayNight.getAmbientColor();
+        this.ambientLight.color[0] = ambColor[0] * (1.0 + lightningMod * 0.5);
+        this.ambientLight.color[1] = ambColor[1] * (1.0 + lightningMod * 0.5);
+        this.ambientLight.color[2] = ambColor[2] * (1.0 + lightningMod * 0.5);
+        this.ambientLight.intensity = this.dayNight.getAmbientIntensity() * (1.0 + lightningMod * 0.3);
+
+        // ── Rain Particles ──
+        if (this.weather.rainIntensity > 0.05) {
+            this._rainParticleTimer += deltaTime;
+            const spawnRate = this.weather.rainIntensity * 15;
+            while (this._rainParticleTimer >= 1.0 / spawnRate && this._rainDrops.length < this._maxRainDrops) {
+                this._rainParticleTimer -= 1.0 / spawnRate;
+                const playerX = this.player.position[0];
+                const playerZ = this.player.position[2];
+                const spawnX = playerX + (Math.random() - 0.5) * 30;
+                const spawnZ = playerZ + (Math.random() - 0.5) * 30;
+                const spawnY = 12 + Math.random() * 8;
+                this.particleSystem.emit(
+                    [spawnX, spawnY, spawnZ],
+                    ParticleSystem.PRESET.RAIN
+                );
+                this._rainDrops.push({ timer: 0.5 });
+            }
+        }
+        for (let i = this._rainDrops.length - 1; i >= 0; i--) {
+            this._rainDrops[i].timer -= deltaTime;
+            if (this._rainDrops[i].timer <= 0) this._rainDrops.splice(i, 1);
+        }
+
+        // ── Lightning Flash Particles ──
+        if (lightningMod > 0.3) {
+            const flashPos = [
+                this.player.position[0] + (Math.random() - 0.5) * 20,
+                10 + Math.random() * 10,
+                this.player.position[2] + (Math.random() - 0.5) * 20
+            ];
+            this.particleSystem.emit(flashPos, ParticleSystem.PRESET.LIGHTNING);
+            this.engine.audio.playThunder();
+        }
+
+        // ── Weather Audio Update ──
+        this.engine.audio.setWindIntensity(this.weather.windSpeed / 5.0);
+        this.engine.audio.setRainIntensity(this.weather.rainIntensity);
+        this.engine.audio.updateWeatherAudio(deltaTime);
+
+        // Push debug info
         const lightDirEl = document.getElementById('debug-light-dir');
         if (lightDirEl) {
             const dir = this.dirLight.direction;
             lightDirEl.textContent = `X: ${dir[0].toFixed(2)}, Y: ${dir[1].toFixed(2)}, Z: ${dir[2].toFixed(2)}`;
         }
+        // v0.4 frame-rate debug update
+        const timeLabel = document.getElementById('debug-time-label');
+        if (timeLabel) timeLabel.textContent = this.dayNight.getTimeLabel();
+        const timeOfDay = document.getElementById('debug-time-of-day');
+        if (timeOfDay) timeOfDay.textContent = (this.dayNight.timeOfDay * 24).toFixed(1) + 'h';
+        const weatherLabel = document.getElementById('debug-weather-label');
+        if (weatherLabel) weatherLabel.textContent = this.weather.getWeatherLabel();
     }
 
     render() {
@@ -869,7 +989,17 @@ export class GameScene extends Scene {
         const waterAnimEl = document.getElementById('toggle-water');
         const animateWater = waterAnimEl ? waterAnimEl.checked : true;
 
-        // Clear Color and Depth Buffers
+        // v0.4: Dynamic sky color based on day/night and weather
+        const skyColors = this.dayNight.getSkyColors();
+        const cloudCover = this.weather.cloudCover;
+        const skyTop = skyColors.top;
+        const weatherDim = 1.0 - cloudCover * 0.3;
+        gl.clearColor(
+            skyTop[0] * weatherDim,
+            skyTop[1] * weatherDim,
+            skyTop[2] * weatherDim,
+            1.0
+        );
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         // --- DRAW TERRAIN & PLAYER & RESOURCES (Solid Geometry, BasicShader) ---
@@ -956,6 +1086,15 @@ export class GameScene extends Scene {
         // Load Time & Animation Control Uniforms
         this.waterShader.setUniform1f('uTime', this.time);
         this.waterShader.setUniform1f('uWaveEnable', animateWater ? 1.0 : 0.0);
+        // v0.4: Dynamic wave amplitude/speed from weather
+        this.waterShader.setUniform1f('uWaveAmplitude', this.weather.getWaveAmplitudeMultiplier());
+        this.waterShader.setUniform1f('uWaveSpeed', this.weather.getWaveSpeedMultiplier());
+        // v0.4: Wave attenuation near island shoreline
+        const islandData = this.world.terrainGenerator.island;
+        this.waterShader.setUniform1f('uWaveAttenStart', islandData.innerRadius - 2);
+        this.waterShader.setUniform1f('uWaveAttenEnd', islandData.radius + 5);
+        // v0.4: Lightning flash for water reflections
+        this.waterShader.setUniform1f('uLightningFlash', this.weather.getLightningModulation());
 
         // Draw Water Grid
         this.water.draw(this.waterShader);
@@ -966,6 +1105,11 @@ export class GameScene extends Scene {
 
         // 10. Draw Particles (additive blending, on top)
         this.particleSystem.draw(this.camera);
+
+        // 10.5 v0.4: Sun & Moon billboard sprites (using unlit shader)
+        this.unlitShader.use();
+        this.sunSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
+        this.moonSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
 
         // 11. Collision Debug Overlay
         if (this.collisionDebug && this.collisionDebug.isEnabled()) {
@@ -1671,6 +1815,7 @@ export class GameScene extends Scene {
         
         if (this.basicShader) this.basicShader.delete();
         if (this.waterShader) this.waterShader.delete();
+        if (this.unlitShader) this.unlitShader.delete();
 
         if (this.terrain) this.terrain.delete();
         if (this.water) this.water.delete();
@@ -1689,6 +1834,10 @@ export class GameScene extends Scene {
 
         // Cleanup particle system
         if (this.particleSystem) this.particleSystem.delete();
+
+        // Cleanup sun/moon sprites
+        if (this.sunSprite) this.sunSprite.delete();
+        if (this.moonSprite) this.moonSprite.delete();
 
         // Cleanup tutorial
         if (this.tutorial) this.tutorial.destroy();
@@ -1729,8 +1878,10 @@ export class GameScene extends Scene {
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');
 
-        // Stop ambient sounds
+        // Stop ambient and weather sounds
         this.engine.audio.stopAmbientWaves();
+        this.engine.audio.stopWind();
+        this.engine.audio.stopRain();
     }
 
     /**
@@ -1850,5 +2001,15 @@ export class GameScene extends Scene {
 
         const objcountEl = document.getElementById('debug-world-objcount');
         if (objcountEl) objcountEl.textContent = this.world.objectCount.toString();
+
+        // v0.4 debug info
+        const timeLabel = document.getElementById('debug-time-label');
+        if (timeLabel) timeLabel.textContent = this.dayNight.getTimeLabel();
+
+        const timeOfDay = document.getElementById('debug-time-of-day');
+        if (timeOfDay) timeOfDay.textContent = (this.dayNight.timeOfDay * 24).toFixed(1) + 'h';
+
+        const weatherLabel = document.getElementById('debug-weather-label');
+        if (weatherLabel) weatherLabel.textContent = this.weather.getWeatherLabel();
     }
 }
