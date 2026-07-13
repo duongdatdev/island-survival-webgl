@@ -76,18 +76,21 @@ export class DayNightCycle {
 
     getSunIntensity() {
         const t = this.timeOfDay;
-        if (t < 0.10 || t > 0.92) return 0.05;
-        if (t < 0.20) return 0.05 + ((t - 0.10) / 0.10) * 0.95;
+        // Ban đêm giữ mức ánh trăng (0.22) thay vì gần như tắt hẳn
+        if (t < 0.10 || t > 0.92) return 0.22;
+        if (t < 0.20) return 0.22 + ((t - 0.10) / 0.10) * 0.78;
         if (t < 0.75) return 1.0;
-        if (t < 0.85) return 1.0 - ((t - 0.75) / 0.10) * 0.95;
-        return 0.05;
+        if (t < 0.85) return 1.0 - ((t - 0.75) / 0.10) * 0.78;
+        return 0.22;
     }
 
     getAmbientColor() {
         const t = this.timeOfDay;
+        // Màu ambient ban đêm: xanh ánh trăng, sáng hơn màu gần-đen cũ
+        const night = [0.16, 0.20, 0.30];
         if (t < 0.12) {
             const p = t / 0.12;
-            return [0.04 + 0.18 * p, 0.05 + 0.23 * p, 0.10 + 0.28 * p];
+            return [night[0] + 0.06 * p, night[1] + 0.08 * p, night[2] + 0.08 * p];
         }
         if (t < 0.22) {
             const p = (t - 0.12) / 0.10;
@@ -98,23 +101,23 @@ export class DayNightCycle {
         }
         if (t < 0.82) {
             const p = (t - 0.70) / 0.12;
-            return [0.22 - 0.12 * p, 0.28 - 0.18 * p, 0.38 - 0.23 * p];
+            return [0.22 - 0.06 * p, 0.28 - 0.08 * p, 0.38 - 0.08 * p];
         }
         if (t < 0.92) {
             const p = (t - 0.82) / 0.1;
-            return [0.10 - 0.06 * p, 0.10 - 0.05 * p, 0.15 - 0.05 * p];
+            return [0.16 + 0.00 * p, 0.20 + 0.00 * p, 0.30 + 0.00 * p];
         }
-        const p = (t - 0.92) / 0.08;
-        return [0.04 + 0.04 * p, 0.05 + 0.05 * p, 0.10 + 0.10 * p];
+        return night;
     }
 
     getAmbientIntensity() {
         const t = this.timeOfDay;
-        if (t < 0.10 || t > 0.92) return 0.06;
-        if (t < 0.20) return 0.06 + ((t - 0.10) / 0.10) * 0.34;
+        // Ban đêm giữ ambient đủ để nhìn rõ (0.28) thay vì 0.06
+        if (t < 0.10 || t > 0.92) return 0.28;
+        if (t < 0.20) return 0.28 + ((t - 0.10) / 0.10) * 0.12;
         if (t < 0.75) return 0.40;
-        if (t < 0.85) return 0.40 - ((t - 0.75) / 0.10) * 0.34;
-        return 0.06;
+        if (t < 0.85) return 0.40 - ((t - 0.75) / 0.10) * 0.12;
+        return 0.28;
     }
 
     getSkyColors() {

@@ -20,7 +20,7 @@ import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js?v=6';
 import { getResourceDef } from '../systems/ResourceDatabase.js?v=6';
 import { CraftingSystem } from '../systems/CraftingSystem.js?v=6';
 import { RaftAssembly } from '../entities/RaftAssembly.js?v=6';
-import { ParticleSystem } from '../systems/ParticleSystem.js?v=6';
+import { ParticleSystem } from '../systems/ParticleSystem.js?v=7';
 import { TutorialSystem } from '../systems/TutorialSystem.js?v=6';
 import { VitalsSystem } from '../systems/VitalsSystem.js?v=6';
 import { Campfire } from '../entities/Campfire.js';
@@ -34,6 +34,7 @@ import { CollisionDebug } from '../systems/CollisionDebug.js';
 import { BillboardSprite } from '../renderer/BillboardSprite.js';
 import { DayNightCycle } from '../systems/DayNightCycle.js';
 import { WeatherSystem } from '../systems/WeatherSystem.js';
+import { RainSystem } from '../systems/RainSystem.js';
 
 
 /**
@@ -61,10 +62,6 @@ export class GameScene extends Scene {
         this.dayNight = new DayNightCycle();
         this.weather = new WeatherSystem();
         this._rainParticleTimer = 0;
-
-        // Rain particle buffer for pooled rain drops
-        this._rainDrops = [];
-        this._maxRainDrops = 200;
 
         // 3.6 v0.4 - Sun & Moon billboard sprites
         this.sunSprite = new BillboardSprite(gl, [1.0, 0.9, 0.5], 4.0, [1.0, 0.7, 0.15]);
@@ -140,6 +137,7 @@ export class GameScene extends Scene {
 
         // 7. Particle System
         this.particleSystem = new ParticleSystem(gl);
+        this.rainSystem = new RainSystem(gl);
 
         // 8. Tutorial System
         this.tutorial = new TutorialSystem();
@@ -315,6 +313,33 @@ export class GameScene extends Scene {
         for (const entity of this.environmentEntities) {
             this.collisionSystem.register(entity);
         }
+
+        // Camera dependency injection — providers are adapter wrappers
+        this.camera.setCollisionProvider({
+            sphereCast: (origin, direction, radius, maxDist) => {
+                const result = this.collisionSystem.raycast(origin, direction, maxDist + radius, null);
+                if (result) {
+                    const coll = result.entity.collider;
+                    const collY = result.entity.position[1];
+                    const halfH = (coll.height || 2.0) * 0.5 + radius;
+                    if (result.point[1] >= collY - halfH && result.point[1] <= collY + halfH) {
+                        const toCenterX = result.entity.position[0] - result.point[0];
+                        const toCenterZ = result.entity.position[2] - result.point[2];
+                        const nLen = Math.sqrt(toCenterX * toCenterX + toCenterZ * toCenterZ);
+                        return {
+                            hit: true,
+                            distance: Math.max(0, result.distance - radius),
+                            normal: nLen > 0.001 ? [toCenterX / nLen, 0, toCenterZ / nLen] : [0, 0, 0],
+                            collider: coll,
+                        };
+                    }
+                }
+                return { hit: false, distance: maxDist, normal: null, collider: null };
+            },
+        });
+        this.camera.setTerrainProvider({
+            getHeight: (x, z) => this.terrain.getHeight(x, z),
+        });
 
         // 17. Debug Collision toggle
         const debugCollisionEl = document.getElementById('toggle-collision-debug');
@@ -605,7 +630,7 @@ export class GameScene extends Scene {
 
 
         // Snap camera tracking around player
-        this.camera.update(this.engine.input, this.player.position, 1.2 * this.player.scaleFactor);
+        this.camera.update(this.engine.input, this.player.position, 1.2 * this.player.scaleFactor, deltaTime);
 
         // ---- Campfire proximity (v0.2) ----
         let showCampfirePrompt = false;
@@ -924,31 +949,21 @@ export class GameScene extends Scene {
         this.ambientLight.color[2] = ambColor[2] * (1.0 + lightningMod * 0.5);
         this.ambientLight.intensity = this.dayNight.getAmbientIntensity() * (1.0 + lightningMod * 0.3);
 
-        // ── Rain Particles ──
-        if (this.weather.rainIntensity > 0.05) {
-            this._rainParticleTimer += deltaTime;
-            const spawnRate = this.weather.rainIntensity * 15;
-            while (this._rainParticleTimer >= 1.0 / spawnRate && this._rainDrops.length < this._maxRainDrops) {
-                this._rainParticleTimer -= 1.0 / spawnRate;
-                const playerX = this.player.position[0];
-                const playerZ = this.player.position[2];
-                const spawnX = playerX + (Math.random() - 0.5) * 30;
-                const spawnZ = playerZ + (Math.random() - 0.5) * 30;
-                const spawnY = 12 + Math.random() * 8;
-                this.particleSystem.emit(
-                    [spawnX, spawnY, spawnZ],
-                    ParticleSystem.PRESET.RAIN
-                );
-                this._rainDrops.push({ timer: 0.5 });
-            }
-        }
-        for (let i = this._rainDrops.length - 1; i >= 0; i--) {
-            this._rainDrops[i].timer -= deltaTime;
-            if (this._rainDrops[i].timer <= 0) this._rainDrops.splice(i, 1);
+        // ── Rain ──
+        // Rain is drawn by the dedicated RainSystem as thin falling streaks
+        // (GL_LINES) rather than round particle sprites, so it reads like the
+        // rain in most survival/open-world games instead of floating dots.
+        this.rainSystem.intensity = this.weather.rainIntensity;
+        if (this.weather.rainIntensity > 0.01) {
+            const windX = this.weather.windDirection[0] * this.weather.windSpeed;
+            const windZ = this.weather.windDirection[2] * this.weather.windSpeed;
+            this.rainSystem.update(deltaTime, this.player.position, [windX, 0, windZ]);
         }
 
         // ── Lightning Flash Particles ──
-        if (lightningMod > 0.3) {
+        // Fire exactly once per strike (rising edge) — otherwise the flash
+        // stays above threshold for several frames and stacks thunder claps.
+        if (this.weather.thunderPending) {
             const flashPos = [
                 this.player.position[0] + (Math.random() - 0.5) * 20,
                 10 + Math.random() * 10,
@@ -1105,6 +1120,9 @@ export class GameScene extends Scene {
 
         // 10. Draw Particles (additive blending, on top)
         this.particleSystem.draw(this.camera);
+
+        // 10.1 Draw Rain streaks (GL_LINES, alpha-blended)
+        this.rainSystem.draw(this.camera);
 
         // 10.5 v0.4: Sun & Moon billboard sprites (using unlit shader)
         this.unlitShader.use();
@@ -1834,6 +1852,7 @@ export class GameScene extends Scene {
 
         // Cleanup particle system
         if (this.particleSystem) this.particleSystem.delete();
+        if (this.rainSystem) this.rainSystem.delete();
 
         // Cleanup sun/moon sprites
         if (this.sunSprite) this.sunSprite.delete();

@@ -95,8 +95,8 @@ export class MainMenuScene extends Scene {
         
         const camX = Math.sin(this.time * 0.08) * 3.0;
         const camY = 5.0 + Math.sin(this.time * 0.15) * 0.5;
-        this.camera.position = Vec3.create(camX, camY, -12.0);
-        this.camera.target = Vec3.create(camX * 0.3, 0.5, 8.0);
+        Vec3.set(this.camera.position, camX, camY, -12.0);
+        Vec3.set(this.camera.target, camX * 0.3, 0.5, 8.0);
         
         const up = Vec3.create(0, 1, 0);
         Mat4.lookAt(this.camera.viewMatrix, this.camera.position, this.camera.target, up);

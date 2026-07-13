@@ -13,6 +13,17 @@ export class WeatherSystem {
         this.rainIntensity = 0.0;
         this.lightningFlash = 0.0;
         this.lightningTimer = 0;
+        // Smoothed modulation value read by the renderer/lighting. Computed
+        // once per frame in update() so read paths stay side-effect free.
+        this.lightningModulation = 0.0;
+        // Rising-edge signal: set true on the single frame a new strike fires,
+        // so the scene plays one thunder clap / particle burst per strike.
+        this.thunderPending = false;
+
+        // Transition endpoints are sampled ONCE when a transition starts
+        // (see _pickNextWeather) so per-frame lerp targets stay stable.
+        this._fromValues = { cloudCover: 0.0, windSpeed: 1.0, rainIntensity: 0.0 };
+        this._toValues = { cloudCover: 0.0, windSpeed: 1.0, rainIntensity: 0.0 };
 
         this.debugOverride = null;
     }
@@ -34,10 +45,12 @@ export class WeatherSystem {
             }
         }
 
+        this.thunderPending = false;
         if (this.currentWeather === 'storm' || this.currentWeather === 'rain') {
             this.lightningTimer -= deltaTime;
             if (this.lightningTimer <= 0) {
                 this.lightningFlash = 1.0;
+                this.thunderPending = true; // rising edge: one strike
                 this.lightningTimer = (this.currentWeather === 'storm')
                     ? 3.0 + Math.random() * 8.0
                     : 8.0 + Math.random() * 15.0;
@@ -45,6 +58,18 @@ export class WeatherSystem {
         } else {
             this.lightningFlash = 0.0;
             this.lightningTimer = 5.0;
+        }
+
+        // Decay + jitter the flash exactly once per frame (frame-rate aware),
+        // then cache the result. Read paths use this.lightningModulation.
+        if (this.lightningFlash > 0.01) {
+            const decay = Math.pow(0.85, deltaTime * 60);
+            this.lightningFlash *= decay;
+            const flash = this.lightningFlash + (Math.random() - 0.5) * 0.3;
+            this.lightningModulation = Math.max(0, flash);
+        } else {
+            this.lightningFlash = 0.0;
+            this.lightningModulation = 0.0;
         }
     }
 
@@ -64,11 +89,15 @@ export class WeatherSystem {
         }
         this.weatherDuration = 20.0 + Math.random() * 30.0;
         this.weatherTimer = this.weatherDuration;
+
+        // Sample randomized endpoints ONCE so the per-frame lerp is stable.
+        this._fromValues = this._getWeatherValues(this.currentWeather);
+        this._toValues = this._getWeatherValues(this.nextWeather);
     }
 
     _lerpWeather(p) {
-        const from = this._getWeatherValues(this.currentWeather);
-        const to = this._getWeatherValues(this.nextWeather);
+        const from = this._fromValues;
+        const to = this._toValues;
         this.cloudCover = from.cloudCover + (to.cloudCover - from.cloudCover) * p;
         this.windSpeed = from.windSpeed + (to.windSpeed - from.windSpeed) * p;
         this.rainIntensity = from.rainIntensity + (to.rainIntensity - from.rainIntensity) * p;
@@ -89,13 +118,13 @@ export class WeatherSystem {
         }
     }
 
+    /**
+     * Current lightning flash intensity (0..1+). Pure read — the value is
+     * computed once per frame in update(), so this can be called any number
+     * of times per frame (lighting + water reflection) without desyncing.
+     */
     getLightningModulation() {
-        if (this.lightningFlash > 0.1) {
-            this.lightningFlash *= 0.85;
-            const flash = this.lightningFlash + (Math.random() - 0.5) * 0.3;
-            return Math.max(0, flash);
-        }
-        return 0;
+        return this.lightningModulation;
     }
 
     getWeatherLabel() {

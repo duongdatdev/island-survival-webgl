@@ -7,6 +7,7 @@ export class AudioManager {
         /** @type {AudioContext|null} */
         this.ctx = null;
         this.masterGain = null;
+        this._limiter = null;
         this.isMuted = false;
         this._initialized = false;
 
@@ -20,6 +21,7 @@ export class AudioManager {
         this._windFilter = null;
         this._rainSource = null;
         this._rainGain = null;
+        this._rainLowpass = null;
         this._thunderGain = null;
 
         // Audio state
@@ -43,7 +45,19 @@ export class AudioManager {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.ctx.createGain();
             this.masterGain.gain.value = this.isMuted ? 0 : 1;
-            this.masterGain.connect(this.ctx.destination);
+
+            // Master limiter: tames harsh peaks / clipping so synthesized
+            // sounds stay smooth instead of buzzy and distorted.
+            const limiter = this.ctx.createDynamicsCompressor();
+            limiter.threshold.value = -6;
+            limiter.knee.value = 12;
+            limiter.ratio.value = 6;
+            limiter.attack.value = 0.003;
+            limiter.release.value = 0.2;
+
+            this.masterGain.connect(limiter);
+            limiter.connect(this.ctx.destination);
+            this._limiter = limiter;
             this._initialized = true;
             return true;
         } catch (e) {
@@ -101,22 +115,39 @@ export class AudioManager {
         const ctx = this.ctx;
         const now = ctx.currentTime;
 
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        // Soft two-note "ping" (a fifth apart) — pleasant, not a shrill beep.
+        const notes = [
+            { freq: 784, start: 0.0 },   // G5
+            { freq: 1175, start: 0.07 }, // D6
+        ];
+        notes.forEach(({ freq, start }) => {
+            const t = now + start;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, t);
 
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, now);
-        osc.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
+            // Add a gentle overtone for a bell-like body
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(freq * 2, t);
+            const gain2 = ctx.createGain();
+            gain2.gain.setValueAtTime(0.04, t);
+            gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
 
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
 
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-
-        osc.start(now);
-        osc.stop(now + 0.35);
+            osc.connect(gain);
+            osc2.connect(gain2);
+            gain.connect(this.masterGain);
+            gain2.connect(this.masterGain);
+            osc.start(t);
+            osc.stop(t + 0.3);
+            osc2.start(t);
+            osc2.stop(t + 0.22);
+        });
     }
 
     /**
@@ -127,31 +158,41 @@ export class AudioManager {
         const ctx = this.ctx;
         const now = ctx.currentTime;
 
-        // Impact hit
-        const osc1 = ctx.createOscillator();
+        // Impact: short filtered noise burst — reads as a real "thock",
+        // not a buzzy square-wave tone.
+        const impactBuf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+        const impactData = impactBuf.getChannelData(0);
+        for (let i = 0; i < impactData.length; i++) {
+            const t = i / impactData.length;
+            impactData[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.5);
+        }
+        const impact = ctx.createBufferSource();
+        impact.buffer = impactBuf;
+        const impactFilter = ctx.createBiquadFilter();
+        impactFilter.type = 'lowpass';
+        impactFilter.frequency.value = 900;
         const gain1 = ctx.createGain();
-        osc1.type = 'square';
-        osc1.frequency.setValueAtTime(220, now);
-        osc1.frequency.exponentialRampToValueAtTime(110, now + 0.1);
-        gain1.gain.setValueAtTime(0.15, now);
-        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-        osc1.connect(gain1);
+        gain1.gain.value = 0.35;
+        impact.connect(impactFilter);
+        impactFilter.connect(gain1);
         gain1.connect(this.masterGain);
-        osc1.start(now);
-        osc1.stop(now + 0.2);
+        impact.start(now);
 
-        // Metallic ring
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(1480, now);
-        osc2.frequency.exponentialRampToValueAtTime(600, now + 0.25);
-        gain2.gain.setValueAtTime(0.1, now + 0.02);
-        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-        osc2.connect(gain2);
-        gain2.connect(this.masterGain);
-        osc2.start(now);
-        osc2.stop(now + 0.45);
+        // Metallic ring — softer sine partials instead of a bright triangle sweep.
+        [1568, 2350].forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + 0.01);
+            const amp = idx === 0 ? 0.07 : 0.03;
+            gain.gain.setValueAtTime(0.0001, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(amp, now + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(now + 0.01);
+            osc.stop(now + 0.4);
+        });
     }
 
     /**
@@ -162,30 +203,44 @@ export class AudioManager {
         const ctx = this.ctx;
         const now = ctx.currentTime;
 
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(160, now);
-        osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(now);
-        osc.stop(now + 0.35);
+        // Two wooden knocks: a filtered-noise attack + a low triangle "body"
+        // give a hollow-wood thunk rather than a synthetic creak.
+        const knock = (t, bodyFreq, level) => {
+            // Attack transient
+            const nBuf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+            const nData = nBuf.getChannelData(0);
+            for (let i = 0; i < nData.length; i++) {
+                const p = i / nData.length;
+                nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - p, 3);
+            }
+            const src = ctx.createBufferSource();
+            src.buffer = nBuf;
+            const nFilter = ctx.createBiquadFilter();
+            nFilter.type = 'lowpass';
+            nFilter.frequency.value = 1200;
+            const nGain = ctx.createGain();
+            nGain.gain.value = level * 0.5;
+            src.connect(nFilter);
+            nFilter.connect(nGain);
+            nGain.connect(this.masterGain);
+            src.start(t);
 
-        // Secondary creak
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'sawtooth';
-        osc2.frequency.setValueAtTime(300, now + 0.05);
-        osc2.frequency.exponentialRampToValueAtTime(180, now + 0.2);
-        gain2.gain.setValueAtTime(0.06, now + 0.05);
-        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-        osc2.connect(gain2);
-        gain2.connect(this.masterGain);
-        osc2.start(now + 0.05);
-        osc2.stop(now + 0.4);
+            // Hollow body
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(bodyFreq, t);
+            osc.frequency.exponentialRampToValueAtTime(bodyFreq * 0.6, t + 0.1);
+            gain.gain.setValueAtTime(level, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(t);
+            osc.stop(t + 0.26);
+        };
+
+        knock(now, 150, 0.18);
+        knock(now + 0.11, 120, 0.14);
     }
 
     /**
@@ -200,22 +255,37 @@ export class AudioManager {
         const noteDuration = 0.25;
 
         notes.forEach((freq, i) => {
+            const startTime = now + i * noteDuration;
+            // Sustain the final note longer for a satisfying resolve.
+            const dur = i === notes.length - 1 ? noteDuration * 2.5 : noteDuration;
+
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-
-            osc.type = 'sine';
-            const startTime = now + i * noteDuration;
+            osc.type = 'triangle';
             osc.frequency.setValueAtTime(freq, startTime);
 
+            // A soft sine fifth adds warmth without harshness.
+            const harm = ctx.createOscillator();
+            const harmGain = ctx.createGain();
+            harm.type = 'sine';
+            harm.frequency.setValueAtTime(freq * 1.5, startTime);
+            harmGain.gain.setValueAtTime(0, startTime);
+            harmGain.gain.linearRampToValueAtTime(0.04, startTime + 0.05);
+            harmGain.gain.exponentialRampToValueAtTime(0.001, startTime + dur + 0.2);
+
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.15, startTime + 0.04);
-            gain.gain.setValueAtTime(0.15, startTime + noteDuration * 0.7);
-            gain.gain.exponentialRampToValueAtTime(0.01, startTime + noteDuration + 0.2);
+            gain.gain.linearRampToValueAtTime(0.13, startTime + 0.04);
+            gain.gain.setValueAtTime(0.13, startTime + dur * 0.7);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + dur + 0.25);
 
             osc.connect(gain);
+            harm.connect(harmGain);
             gain.connect(this.masterGain);
+            harmGain.connect(this.masterGain);
             osc.start(startTime);
-            osc.stop(startTime + noteDuration + 0.3);
+            osc.stop(startTime + dur + 0.35);
+            harm.start(startTime);
+            harm.stop(startTime + dur + 0.35);
         });
     }
 
@@ -231,16 +301,18 @@ export class AudioManager {
         const gain = ctx.createGain();
 
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(1000, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.06);
+        osc.frequency.setValueAtTime(660, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.05);
 
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        // Quick fade-in avoids the hard "tick" of an instant gain jump.
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
 
         osc.connect(gain);
         gain.connect(this.masterGain);
         osc.start(now);
-        osc.stop(now + 0.12);
+        osc.stop(now + 0.11);
     }
 
     /**
@@ -251,22 +323,32 @@ export class AudioManager {
         const ctx = this.ctx;
         const now = ctx.currentTime;
 
-        const osc = ctx.createOscillator();
+        // Footsteps are soft filtered-noise thumps, not a pure tone.
+        const dur = 0.09;
+        const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / data.length;
+            // Fast attack, quick decay — the shape of a foot landing.
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.2);
+        }
+
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+
+        // Low-pass with slight random cutoff = subtle step-to-step variety.
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 220 + Math.random() * 120;
+        filter.Q.value = 0.8;
+
         const gain = ctx.createGain();
+        gain.gain.value = 0.12;
 
-        osc.type = 'triangle';
-        // Randomize pitch slightly for variety
-        const baseFreq = 80 + Math.random() * 40;
-        osc.frequency.setValueAtTime(baseFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.06);
-
-        gain.gain.setValueAtTime(0.08, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
-        osc.connect(gain);
+        src.connect(filter);
+        filter.connect(gain);
         gain.connect(this.masterGain);
-        osc.start(now);
-        osc.stop(now + 0.1);
+        src.start(now);
     }
 
     /**
@@ -283,17 +365,26 @@ export class AudioManager {
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
 
-        // Generate brown noise (random walk)
+        // Generate brown noise (random walk). Lower gain avoids clipping/distortion.
         let lastOut = 0;
         for (let i = 0; i < bufferSize; i++) {
             const white = Math.random() * 2 - 1;
             lastOut = (lastOut + (0.02 * white)) / 1.02;
-            data[i] = lastOut * 3.5;
+            data[i] = lastOut * 2.2;
 
-            // Add slow wave modulation
-            const waveFreq = 0.15; // ~0.15 Hz wave cycle
-            const modulation = Math.sin((i / ctx.sampleRate) * Math.PI * 2 * waveFreq) * 0.5 + 0.5;
-            data[i] *= modulation;
+            // Two overlapping slow swells = a more natural, less mechanical surf.
+            const t = i / ctx.sampleRate;
+            const swell1 = Math.sin(t * Math.PI * 2 * 0.13) * 0.5 + 0.5;
+            const swell2 = Math.sin(t * Math.PI * 2 * 0.071 + 1.3) * 0.5 + 0.5;
+            data[i] *= 0.35 + 0.65 * (swell1 * 0.6 + swell2 * 0.4);
+        }
+
+        // Crossfade the loop seam so there's no click every 4 seconds.
+        const fade = Math.floor(ctx.sampleRate * 0.25);
+        for (let i = 0; i < fade; i++) {
+            const g = i / fade;
+            const tail = data[bufferSize - fade + i];
+            data[i] = data[i] * g + tail * (1 - g);
         }
 
         this._ambientSource = ctx.createBufferSource();
@@ -345,9 +436,20 @@ export class AudioManager {
         for (let i = 0; i < bufferSize; i++) {
             const white = Math.random() * 2 - 1;
             lastOut = (lastOut + (0.01 * white)) / 1.01;
-            data[i] = lastOut * 3.0;
-            const mod = Math.sin((i / ctx.sampleRate) * Math.PI * 2 * 0.08) * 0.4 + 0.6;
+            data[i] = lastOut * 2.4;
+            const t = i / ctx.sampleRate;
+            // Gentle gusting from two slow LFOs.
+            const mod = (Math.sin(t * Math.PI * 2 * 0.08) * 0.3
+                + Math.sin(t * Math.PI * 2 * 0.037 + 0.7) * 0.2) + 0.6;
             data[i] *= mod;
+        }
+
+        // Crossfade loop seam to remove periodic clicking.
+        const wFade = Math.floor(ctx.sampleRate * 0.25);
+        for (let i = 0; i < wFade; i++) {
+            const g = i / wFade;
+            const tail = data[bufferSize - wFade + i];
+            data[i] = data[i] * g + tail * (1 - g);
         }
 
         this._windSource = ctx.createBufferSource();
@@ -381,24 +483,41 @@ export class AudioManager {
 
         for (let i = 0; i < bufferSize; i++) {
             const white = Math.random() * 2 - 1;
-            const mod = Math.sin((i / ctx.sampleRate) * Math.PI * 2 * 0.3 + Math.sin((i / ctx.sampleRate) * Math.PI * 2 * 0.7) * 0.5);
-            data[i] = white * (0.3 + mod * 0.7);
+            const t = i / ctx.sampleRate;
+            const mod = Math.sin(t * Math.PI * 2 * 0.3 + Math.sin(t * Math.PI * 2 * 0.7) * 0.5);
+            data[i] = white * (0.4 + mod * 0.5);
+        }
+
+        // Crossfade loop seam.
+        const rFade = Math.floor(ctx.sampleRate * 0.15);
+        for (let i = 0; i < rFade; i++) {
+            const g = i / rFade;
+            const tail = data[bufferSize - rFade + i];
+            data[i] = data[i] * g + tail * (1 - g);
         }
 
         this._rainSource = ctx.createBufferSource();
         this._rainSource.buffer = buffer;
         this._rainSource.loop = true;
 
+        // Band-limit: highpass removes rumble, a companion lowpass tames the
+        // shrill hiss so it sounds like rain rather than static.
         const filter = ctx.createBiquadFilter();
         filter.type = 'highpass';
-        filter.frequency.value = 2000;
+        filter.frequency.value = 1000;
+
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 6000;
+        this._rainLowpass = lp;
 
         this._rainGain = ctx.createGain();
         this._rainGain.gain.value = 0;
         this._currentRainGain = 0;
 
         this._rainSource.connect(filter);
-        filter.connect(this._rainGain);
+        filter.connect(lp);
+        lp.connect(this._rainGain);
         this._rainGain.connect(this.masterGain);
         this._rainSource.start();
     }
@@ -419,6 +538,7 @@ export class AudioManager {
             this._rainSource = null;
         }
         this._rainGain = null;
+        this._rainLowpass = null;
         this._currentRainGain = 0;
     }
 
@@ -463,29 +583,35 @@ export class AudioManager {
         const ctx = this.ctx;
         const now = ctx.currentTime;
 
-        const bufferSize = ctx.sampleRate * 2;
+        const bufferSize = ctx.sampleRate * 2.5;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
 
+        // Sharp crack up front, then a long rumbling tail.
         let lastOut = 0;
         for (let i = 0; i < bufferSize; i++) {
             const white = Math.random() * 2 - 1;
             const t = i / ctx.sampleRate;
-            const envelope = Math.exp(-t * 1.5) * (1 + Math.sin(t * 30) * 0.3);
-            lastOut = (lastOut + (0.005 * white)) / 1.005;
-            data[i] = lastOut * envelope * 5.0;
+            const crack = Math.exp(-t * 6.0) * 1.2;   // initial clap
+            const rumble = Math.exp(-t * 1.1);          // rolling thunder
+            lastOut = (lastOut + (0.008 * white)) / 1.008;
+            data[i] = lastOut * (crack + rumble) * 4.0;
         }
 
         const source = ctx.createBufferSource();
         source.buffer = buffer;
 
+        // Sweep the cutoff open→closed so the clap is bright then darkens as
+        // it rolls away — much more natural than a static 80 Hz muffle.
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(80, now);
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(120, now + 1.8);
 
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.4, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.45, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 2.2);
 
         source.connect(filter);
         filter.connect(gain);

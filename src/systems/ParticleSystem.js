@@ -219,6 +219,36 @@ export class ParticleSystem {
     }
 
     /**
+     * Spawn a single particle with an explicit velocity (no burst spread).
+     * Use this for directional effects like rain, where drops must fall
+     * straight down instead of exploding outward like emit().
+     *
+     * @param {number[]} position [x, y, z] spawn point
+     * @param {number[]} velocity [vx, vy, vz] initial velocity (units/sec)
+     * @param {object} opts { color:[r,g,b], size, lifetime, gravity }
+     */
+    emitDirected(position, velocity, opts) {
+        if (this.particles.length >= this.maxParticles) return;
+
+        const lt = opts.lifetime;
+        this.particles.push({
+            x: position[0],
+            y: position[1],
+            z: position[2],
+            vx: velocity[0],
+            vy: velocity[1],
+            vz: velocity[2],
+            r: opts.color[0],
+            g: opts.color[1],
+            b: opts.color[2],
+            size: opts.size,
+            life: lt,
+            maxLife: lt,
+            gravity: opts.gravity ?? 0,
+        });
+    }
+
+    /**
      * Advance particle physics
      * @param {number} deltaTime
      */
