@@ -1065,6 +1065,11 @@ export class GameScene extends Scene {
         // 9. Draw Water Collector (v0.2)
         this.waterCollector.draw(this.basicShader, drawMode);
 
+        // 9.5 Draw Waterfall rock cliff (opaque, solid pass)
+        if (this.waterfall) {
+            this.waterfall.drawSolid(this.basicShader, drawMode);
+        }
+
         // --- DRAW WATER (Translucent Geometry, WaterShader) ---
         // Enable blending for transparency
         gl.enable(gl.BLEND);

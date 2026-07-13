@@ -426,7 +426,7 @@ export class EnvironmentBuilder {
         }
 
         // 6. Procedural POI placement (waterfall + treasure chests)
-        const landmarks = this._placeLandmarks(placedObjects, buildArea);
+        const landmarks = this._placeLandmarks(placedObjects, buildArea, resourceNodes);
 
         console.log("Placed objects count:", placedObjects.length);
         console.log("Placed objects stats:", placedObjects.reduce((acc, obj) => {
@@ -450,7 +450,7 @@ export class EnvironmentBuilder {
      *  - waterfall: [x, y, z] preferring high RockArea terrain
      *  - treasureChests: array of { position, quadrant } across the 4 quadrants
      */
-    _placeLandmarks(placedObjects, buildArea) {
+    _placeLandmarks(placedObjects, buildArea, resourceNodes = []) {
         const landmarks = { waterfall: null, treasureChests: [] };
 
         // -- Waterfall: search for the highest RockArea/Mountain point --
@@ -477,6 +477,23 @@ export class EnvironmentBuilder {
             // Fallback: elevated point along +X axis
             const fx = this.island.innerRadius * 0.55;
             landmarks.waterfall = [fx, this.terrain.getHeight(fx, -fx * 0.4), -fx * 0.4];
+        }
+
+        // Clear trees/rocks/props AND resource nodes (barrels, stones) that overlap
+        // the waterfall footprint so nothing grows through the cliff or floats in
+        // the pond. The structure spans ~6 units around its base.
+        if (landmarks.waterfall) {
+            const [wfx, , wfz] = landmarks.waterfall;
+            const clearRadiusSq = 6.5 * 6.5;
+            const clearOverlapping = (arr) => {
+                for (let i = arr.length - 1; i >= 0; i--) {
+                    const dx = arr[i].position[0] - wfx;
+                    const dz = arr[i].position[2] - wfz;
+                    if (dx * dx + dz * dz < clearRadiusSq) arr.splice(i, 1);
+                }
+            };
+            clearOverlapping(placedObjects);
+            clearOverlapping(resourceNodes);
         }
 
         // -- Treasure chests: one per quadrant, on land, away from build area --
