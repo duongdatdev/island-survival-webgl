@@ -2,6 +2,12 @@ import { WorldResource } from '../entities/WorldResource.js';
 import { ResourceDatabase, getResourceDef, getWeightedRandomType, getAllResources } from './ResourceDatabase.js';
 
 /**
+ * Minimum terrain height considered dry land for spawning. Below this is
+ * water/beach. Kept as a single constant so land checks stay consistent.
+ */
+const SHORE_HEIGHT = 0.15;
+
+/**
  * ResourceManager - Orchestrates world resource spawning, pickup detection, and UI feedback.
  */
 export class ResourceManager {
@@ -39,7 +45,7 @@ export class ResourceManager {
         }
 
         // Only spawn on land (above water level)
-        if (y < 0.1) return null;
+        if (y < SHORE_HEIGHT) return null;
 
         // Offset Y so the resource floats slightly above ground
         y += def.meshScale[1] * 0.5 + 0.3;
@@ -73,7 +79,7 @@ export class ResourceManager {
             // Check terrain height - only spawn on elevated land
             if (terrain) {
                 const h = terrain.getHeight(x, z);
-                if (h < 0.15) continue; // Skip water/beach areas
+                if (h < SHORE_HEIGHT) continue; // Skip water/beach areas
             }
 
             // Avoid spawning too close to player start position [0, 0]
@@ -162,8 +168,14 @@ export class ResourceManager {
         const hasAxe = equipped && equipped.id === 'stone_axe';
         const amount = hasAxe ? 2 : 1;
 
-        // Add to inventory
-        inventory.addItem(resource.resourceId, amount);
+        // Refuse the pickup when the bag can't hold it, so the resource stays in
+        // the world instead of being silently destroyed. addItem returns true
+        // only when every unit was stored.
+        const added = inventory.addItem(resource.resourceId, amount);
+        if (!added) {
+            this._showInventoryFull();
+            return;
+        }
 
         // Mark as collected (will be cleaned up next frame)
         resource.collect();
@@ -205,6 +217,22 @@ export class ResourceManager {
         el.classList.remove('animate-out');
 
         // Force reflow for animation restart
+        void el.offsetWidth;
+        el.classList.add('animate-in');
+
+        this._notificationTimer = this._notificationDuration;
+    }
+
+    /**
+     * Toast shown when a pickup is refused because the inventory is full.
+     */
+    _showInventoryFull() {
+        const el = document.getElementById('pickup-notification');
+        if (!el) return;
+
+        el.innerHTML = '❌ Túi đồ đã đầy!';
+        el.classList.remove('hidden');
+        el.classList.remove('animate-out');
         void el.offsetWidth;
         el.classList.add('animate-in');
 

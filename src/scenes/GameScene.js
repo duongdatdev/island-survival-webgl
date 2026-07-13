@@ -237,7 +237,11 @@ export class GameScene extends Scene {
             ? this.world.landmarks.treasureChests
             : [];
         for (const spot of chestSpots) {
-            this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
+            const chest = this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
+            // Tag the chest with its reward type up-front, based on the quadrant
+            // it was placed in. This is robust even when a chest lands close to
+            // an axis (where the old cx/cz sign classification broke).
+            if (chest) chest.rewardType = this._quadrantRewardType(spot.quadrant);
         }
 
         this.escapeHud = document.getElementById('escape-hud');
@@ -921,7 +925,10 @@ export class GameScene extends Scene {
         this.moonSprite.position[0] = this.camera.position[0] - sunDirNorm[0] * celestialDist;
         this.moonSprite.position[1] = this.camera.position[1] - sunDirNorm[1] * celestialDist;
         this.moonSprite.position[2] = this.camera.position[2] - sunDirNorm[2] * celestialDist;
-        this.moonSprite.visible = -sunDirNorm[1] > -0.1 && sunIntensity < 0.8;
+        // Moon is only visible once the sun has dropped below the horizon
+        // (sun direction points downward). The previous check simplified to
+        // sunDirNorm[1] < 0.1, which left the moon showing during the day.
+        this.moonSprite.visible = sunDirNorm[1] < -0.1 && sunIntensity < 0.5;
 
         // Tint sun color based on time of day
         const sunCol = this.dayNight.getSunColor();
@@ -1502,6 +1509,18 @@ export class GameScene extends Scene {
     }
 
     _placeStructure(type) {
+        // Guard: only one instance of each structure exists. Re-placing an
+        // already-built structure would silently relocate it and consume the
+        // crafted item, so refuse and tell the player.
+        if (type === 'campfire' && this.campfire && this.campfire.isBuilt) {
+            this._showNotification('🔥 Đã có Lửa Trại rồi! Không thể đặt thêm.');
+            return;
+        }
+        if (type === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) {
+            this._showNotification('💧 Đã có Bẫy Nước rồi! Không thể đặt thêm.');
+            return;
+        }
+
         const dist = 2.0;
         const yaw = this.player.rotation[1];
         const placeX = this.player.position[0] + Math.sin(yaw) * dist;
@@ -1722,20 +1741,24 @@ export class GameScene extends Scene {
             ParticleSystem.PRESET.CRAFT
         );
 
-        const cx = chest.position[0];
-        const cz = chest.position[2];
+        // Reward type is tagged at spawn from the chest's quadrant. Fall back to
+        // classifying by position only if the tag is missing.
+        const rewardType = chest.rewardType || this._quadrantRewardType({
+            sx: chest.position[0] >= 0 ? 1 : -1,
+            sz: chest.position[2] >= 0 ? 1 : -1,
+        });
 
         let msg = '';
-        if (cx < 0 && cz > 0) {
+        if (rewardType === 'fishing') {
             this.unlockedBlueprints.add('fishing_rod_blueprint');
             this.inventory.addItem('rope', 4);
             msg = 'Bản Thiết Kế Cần Câu 🎣 + 4 Dây Thừng!';
-        } else if (cx > 0 && cz < 0) {
+        } else if (rewardType === 'sail') {
             this.unlockedBlueprints.add('sail_raft_blueprint');
             this.inventory.addItem('wood', 5);
             this.inventory.addItem('rope', 5);
             msg = 'Bản Thiết Kế Cánh Buồm ⛵ + 5 Gỗ & 5 Dây!';
-        } else if (cx > 0 && cz > 0) {
+        } else if (rewardType === 'motor') {
             this.unlockedBlueprints.add('motor_raft_blueprint');
             this.inventory.addItem('barrel', 2);
             msg = 'Bản Thiết Kế Động Cơ Bè 🚀 + 2 Thùng Gỗ!';
@@ -1747,6 +1770,24 @@ export class GameScene extends Scene {
 
         this._showNotification(`🎉 Mở Rương: ${msg}`);
         this._renderCraftingPanel();
+    }
+
+    /**
+     * Map a placement quadrant { sx, sz } to a chest reward type. Mirrors the
+     * quadrant list in EnvironmentBuilder._placeLandmarks so each quadrant
+     * grants a distinct, deterministic reward.
+     *   (-x, +z) → fishing   (+x, -z) → sail
+     *   (+x, +z) → motor     (-x, -z) → materials (default)
+     * @param {{sx:number, sz:number}|null} quadrant
+     * @returns {'fishing'|'sail'|'motor'|'materials'}
+     */
+    _quadrantRewardType(quadrant) {
+        if (!quadrant) return 'materials';
+        const { sx, sz } = quadrant;
+        if (sx < 0 && sz > 0) return 'fishing';
+        if (sx > 0 && sz < 0) return 'sail';
+        if (sx > 0 && sz > 0) return 'motor';
+        return 'materials';
     }
 
     /**
@@ -1992,7 +2033,8 @@ export class GameScene extends Scene {
         // Re-spawn treasure chests from new landmarks
         if (this.resourceManager && this.world.landmarks && this.world.landmarks.treasureChests) {
             for (const spot of this.world.landmarks.treasureChests) {
-                this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
+                const chest = this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
+                if (chest) chest.rewardType = this._quadrantRewardType(spot.quadrant);
             }
         }
 

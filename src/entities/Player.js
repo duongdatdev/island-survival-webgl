@@ -79,8 +79,17 @@ export class Player extends Entity {
             this.currentSpeed = 0.0;
         }
 
-        // Keep player bounded within the circular island
-        const boundaryLimit = 46.0;
+        // Keep the player within the walkable world. The island is procedural,
+        // so derive the limit from the generated island radius (+ the underwater
+        // beach shelf, so the player can wade a little) instead of a hardcoded
+        // constant that only matched one seed. Falls back to a safe default when
+        // no terrain/generator is available.
+        let boundaryLimit = 46.0;
+        const island = terrain && terrain.generator ? terrain.generator.island : null;
+        if (island) {
+            const shelf = island.underwaterBeachExtent || 2.5;
+            boundaryLimit = island.radius + shelf;
+        }
         const px = this.position[0];
         const pz = this.position[2];
         const dist = Math.sqrt(px * px + pz * pz);

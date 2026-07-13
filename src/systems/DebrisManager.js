@@ -193,8 +193,13 @@ export class DebrisManager {
         const hasAxe = equipped && equipped.id === 'stone_axe';
         const finalAmount = gives.amount * (hasAxe ? 2 : 1);
 
-        // Add the mapped resource to inventory
-        inventory.addItem(gives.resourceId, finalAmount);
+        // Refuse the pickup when the bag can't hold it, so the debris keeps
+        // drifting instead of being silently destroyed.
+        const added = inventory.addItem(gives.resourceId, finalAmount);
+        if (!added) {
+            this._showInventoryFull();
+            return;
+        }
 
         // Mark as collected (will be cleaned up next frame)
         debris.collect();
@@ -250,6 +255,22 @@ export class DebrisManager {
         el.classList.remove('animate-out');
 
         // Force reflow for animation restart
+        void el.offsetWidth;
+        el.classList.add('animate-in');
+
+        this._notificationTimer = this._notificationDuration;
+    }
+
+    /**
+     * Toast shown when a pickup is refused because the inventory is full.
+     */
+    _showInventoryFull() {
+        const el = document.getElementById('pickup-notification');
+        if (!el) return;
+
+        el.innerHTML = '❌ Túi đồ đã đầy!';
+        el.classList.remove('hidden');
+        el.classList.remove('animate-out');
         void el.offsetWidth;
         el.classList.add('animate-in');
 

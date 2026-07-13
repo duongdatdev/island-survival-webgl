@@ -22,9 +22,9 @@ export class VitalsSystem {
         this._thirstTimer = 0;
         this._healthDrainTimer = 0;
 
-        // Drain rates (seconds per 1 unit drain)
-        this.hungerDrainInterval = 25;
-        this.thirstDrainInterval = 18;
+        // Drain rates (seconds per 1 unit drain) — matches ROADMAP spec
+        this.hungerDrainInterval = 30;
+        this.thirstDrainInterval = 20;
         this.healthDrainInterval = 5;
 
         // Stamina rates (units per second)

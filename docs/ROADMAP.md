@@ -33,7 +33,7 @@ This document outlines the milestones and release plan for **Island Survival: Es
 *Goal: Make survival meaningful and introduce survival pressures.*
 
 ### Implemented Features
-- **Vitals HUD:** Hunger, Thirst, Stamina, and Health indicators with drain mechanics.
+- **Vitals HUD:** Hunger, Thirst, Stamina, and Health indicators with drain mechanics. Hunger drains 1/30s, Thirst 1/20s; Health drains 1/5s when starving or dehydrated.
 - **Campfire:** Placeable structure crafted from 5 Stone + 3 Wood. Allows cooking raw food into Cooked Meals.
 - **Water Collector:** Placeable structure crafted from 4 Wood + 2 Barrel. Captures rainwater over time.
 - **Cooking:** Process Coconuts and Raw Fish into Cooked Meals at the Campfire to restore Hunger.
