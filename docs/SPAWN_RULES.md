@@ -2,6 +2,11 @@
 
 This document details the procedural spawn parameters, constraints, and behaviors grouped by asset category.
 
+> [!NOTE]
+> Scope: **environment props only**, derived from the `.asset.json` metadata.
+> - Wildlife spawn placement (crabs, seagulls, boars, sharks) → [SYSTEMS.md §12](SYSTEMS.md#12-wildlife-system-v05)
+> - Biome-placed resource nodes and creature loot → [RESOURCE_DISTRIBUTION.md](RESOURCE_DISTRIBUTION.md#addendum-non-asset-resources)
+
 ## Category: Tree
 
 

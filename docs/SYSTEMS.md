@@ -14,10 +14,11 @@ The **Island Survival: Escape** codebase is built around modular, decoupled syst
 ---
 
 ## 2. Inventory System
-*Class:* [Inventory](file:///d:/Project/webgl/island-survival/src/systems/Inventory.js)
-* Uses a standard JavaScript `Map` to store item IDs paired with numerical quantities.
-* Exposes core functions: `addItem`, `removeItem`, `getCount`, and `hasItem`.
-* Employs an event-driven `onChange` callback pattern that automatically alerts UI overlays (HUD, crafting panel) to redraw whenever inventory contents change.
+*Class:* [Inventory](file:///d:/Project/webgl/island-survival/src/systems/InventoryV2.js)
+* Slot-based since v0.2: a flat 28-entry array — indices `0–19` are the backpack grid, `20–27` the hotbar. Each slot holds `{ id, count }` or `null`.
+* `addItem` fills the hotbar first, then the grid, respecting each resource's `stackSize`. It returns `false` when the bag can't take the whole amount, which is what lets `ResourceManager` refuse a pickup instead of destroying it.
+* Exposes `addItem`, `removeItem`, `removeItemAt`, `getCount`, `hasItem` and `getEquippedItem`.
+* Consumption is data-driven: `GameScene._consumeItemAt` reads the `vitalEffect` off the ResourceDatabase entry, so adding an edible item needs no new branch in the input handlers.
 
 ---
 
@@ -89,3 +90,65 @@ The **Island Survival: Escape** codebase is built around modular, decoupled syst
   3. Prompt player to craft a Stone Axe and raft components.
   4. Direct player to the southern beach build site.
   5. Instruct player to click the Escape button to win.
+
+---
+
+## 11. Environment System (v0.4)
+*Classes:* [DayNightCycle](file:///d:/Project/webgl/island-survival/src/systems/DayNightCycle.js), [WeatherSystem](file:///d:/Project/webgl/island-survival/src/systems/WeatherSystem.js) & [RainSystem](file:///d:/Project/webgl/island-survival/src/systems/RainSystem.js)
+* **DayNightCycle:** advances a normalised `timeOfDay` in `[0, 1)` and derives the sun direction, light colour/intensity and a two-stop sky gradient from it.
+* **WeatherSystem:** a state machine over Clear → Cloudy → Rain → Storm, interpolating `cloudCover`, `windSpeed` and `rainIntensity` between states. Storms also emit lightning flashes, which drive the post-processing exposure spike.
+* **RainSystem:** spawns rain particles in a volume that follows the player, so density stays constant regardless of where they are.
+* Weather feeds the water shader's wave amplitude/speed and the AudioManager's wind/rain/thunder gains.
+
+---
+
+## 12. Wildlife System (v0.5)
+*Classes:* [Creature](file:///d:/Project/webgl/island-survival/src/entities/Creature.js) and its subclasses [Crab](file:///d:/Project/webgl/island-survival/src/entities/Crab.js), [Seagull](file:///d:/Project/webgl/island-survival/src/entities/Seagull.js), [Boar](file:///d:/Project/webgl/island-survival/src/entities/Boar.js), [Shark](file:///d:/Project/webgl/island-survival/src/entities/Shark.js)
+* Shared state machine: `IDLE → PATROL → CHASE → ATTACK → FLEE → DEAD`. Subclasses override individual handlers rather than the whole loop — the Boar replaces `_updateChase` with a rate-limited charge, the Seagull and Shark replace `update` outright because they move in 3D / at a fixed water plane.
+* Damage to the player is applied by `GameScene`, not by the creature: the creature only reports readiness via `canDamagePlayer()`, which is also what arms its attack cooldown. Arming the cooldown inside `_updateAttack` made every swing self-cancel.
+* Corpses set `collider.type = 'none'` so they stop shoving things while they fade out, then are unregistered and deleted once `deadDuration` elapses.
+* **Spawn placement** (all counts are targets; the loops retry and may fall short on a hostile seed):
+
+| Species | Count | Placement |
+| :--- | :---: | :--- |
+| Crab | 12 | Beach ring between `innerRadius` and `radius`, terrain height `0 < y ≤ 0.35` |
+| Seagull | 4 | Anywhere inside `innerRadius × 0.6`, at altitude 10–15 |
+| Boar | 5 | Forest biome only (real `BiomeGenerator.getBiome` lookup), height `> 0.3`, min 10 units apart |
+| Shark | 3 | Open water ring `island.radius + 5` to `+ 13`, at the water surface |
+
+---
+
+## 13. Combat System (v0.5)
+*Class:* [CombatSystem](file:///d:/Project/webgl/island-survival/src/systems/CombatSystem.js)
+* Weapon stats come from the equipped item's ResourceDatabase entry (`weaponType`, `weaponDamage`, `weaponRange`, `weaponCooldown`). Anything without those fields swings as a fist, which is the one set of numbers hardcoded here.
+* **Melee:** picks the closest living creature inside a ±63° cone, rejecting targets whose vertical offset exceeds the weapon range — this is why only the bow can reach a circling seagull.
+* **Ranged:** projects each creature onto the aim heading and accepts the nearest whose perpendicular distance falls inside its collider radius. Consumes one arrow per shot and reports `no_ammo` rather than firing dry.
+* A single global cooldown is shared across weapons; a swing that misses still pays it, so whiffing has a cost.
+* Aim uses the **camera heading**, not `player.rotation`, because the player model only turns while walking.
+
+---
+
+## 14. Persistence & Settings (v1.0)
+*Classes:* [SaveSystem](file:///d:/Project/webgl/island-survival/src/systems/SaveSystem.js), [SettingsManager](file:///d:/Project/webgl/island-survival/src/systems/SettingsManager.js), [AchievementSystem](file:///d:/Project/webgl/island-survival/src/systems/AchievementSystem.js) & [MenuUI](file:///d:/Project/webgl/island-survival/src/systems/MenuUI.js)
+* **SaveSystem:** stores the **world seed** instead of terrain geometry — generation is deterministic, so the island rebuilds exactly for a fraction of the storage cost. Only divergence from a fresh world is written: surviving pickups, inventory, vitals, structures, blueprints, weather and run stats. Transient things (debris, particles, creatures) respawn on load. A save whose `version` doesn't match is treated as absent rather than half-applied.
+* **SettingsManager:** single source of truth for every user preference, clamped on load so a hand-edited value can't push the renderer into an invalid state. Publishes changes through `onChange`, which `Engine` and `GameScene` both subscribe to.
+* **AchievementSystem:** each milestone is a `check(stats)` predicate evaluated once a second against the running stat block. Unlocks persist at the **profile** level, so wiping a save keeps the trophy case.
+* **MenuUI:** binds the shared settings/achievements/credits overlays once. Both the main menu and the pause menu construct one and `dispose()` it on teardown — the overlays are shared DOM, so a leaked listener would fire every action twice.
+* Storage keys: `island_survival_save_v1`, `island_survival_settings_v1`, `island_survival_achievements_v1`.
+
+---
+
+## 15. Rendering Optimisation (v1.0)
+*Classes:* [Frustum](file:///d:/Project/webgl/island-survival/src/renderer/Frustum.js) & [PostProcessing](file:///d:/Project/webgl/island-survival/src/renderer/PostProcessing.js)
+* **Frustum:** extracts the six clip planes straight out of `projection × view` (Gribb/Hartmann), costing one matrix multiply per frame. Combined with a draw-distance test, it typically rejects ~90% of the ~1,900 placed props before they reach the GPU. Disabling culling in settings disables the distance check too — players who ask for "no culling" mean nothing should pop.
+* **PostProcessing:** the scene renders into a half-float framebuffer, then a soft-knee bright pass, a two-iteration separable Gaussian blur at half resolution, and a composite with bloom, time-of-day grade tint, lightning-driven exposure and vignette. If the driver reports the float extension but can't actually render to `RGBA16F`, it retries once at `RGBA8` before disabling itself and falling back to direct rendering.
+* **Render scale:** `Engine._resize` sizes the drawing buffer by the `renderScale` setting while CSS still fills the window, trading sharpness for fill rate without touching layout.
+
+---
+
+## 16. Collision System
+*Classes:* [CollisionSystem](file:///d:/Project/webgl/island-survival/src/systems/CollisionSystem.js), [CollisionLayers](file:///d:/Project/webgl/island-survival/src/systems/CollisionLayers.js) & [CollisionMatrix](file:///d:/Project/webgl/island-survival/src/systems/CollisionMatrix.js)
+* Layers are a bitmask (`Player`, `Environment`, `Terrain`, `Debris`, `BuildArea`, `Trigger`, `UI`, `Creature`); the matrix decides which pairs interact.
+* `resolvePlayerCollisions` handles any moving actor, not just the player. It takes an `ignoreLayerMask` so the player can be resolved while ignoring the `Creature` layer — creatures get pushed out of the player, never the reverse, which stopped wildlife from shoving the player around.
+* Overlap is tested on XZ **and** Y: without the vertical test a seagull orbiting 12 units overhead still collided with everything below it.
+* Colliders may set `snapToTerrain: false` so flying and swimming creatures aren't dragged down to the ground plane.

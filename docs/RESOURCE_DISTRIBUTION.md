@@ -2,6 +2,11 @@
 
 This document identifies which environmental assets yield collectible gameplay resources (like Wood and Stone) and details their distribution across biomes.
 
+> [!NOTE]
+> The asset tables below are derived from the environment `.asset.json` metadata
+> and cover **props only**. Resources that don't come from a prop — biome-placed
+> nodes and creature loot — are listed in the [addendum](#addendum-non-asset-resources) at the end.
+
 ## Yield Mappings
 
 | Inferred Category | In-Game Resource | Harvest Action | Associated Tool | Resource ID |
@@ -71,4 +76,44 @@ The following assets yield **stone** when harvested:
 | [Rock 3](file:///d:/Project/webgl/island-survival/assets/environment/OBJ/Rock_3.obj) | RockArea | Rock | 8 | `80%` | `0.15` | `45°` |
 | [Rock 4](file:///d:/Project/webgl/island-survival/assets/environment/OBJ/Rock_4.obj) | RockArea | Rock | 8 | `80%` | `0.15` | `45°` |
 | [Rock 5](file:///d:/Project/webgl/island-survival/assets/environment/OBJ/Rock_5.obj) | RockArea | Rock | 8 | `80%` | `0.15` | `45°` |
+
+---
+
+## Addendum: Non-Asset Resources
+
+These don't originate from an environment prop, so they have no row in the tables above.
+
+### Biome-Placed Nodes
+
+Placed by [EnvironmentBuilder](file:///d:/Project/webgl/island-survival/src/gameplay/world/EnvironmentBuilder.js) from explicit biome rules, independent of prop placement.
+
+| Biome | Resource IDs | Target Count |
+| :--- | :--- | :---: |
+| Beach | `wood`, `barrel`, `rope`, `coconut` | 20 |
+| Grassland | `stone` | 25 |
+| Forest | `wood` | 25 |
+| RockArea | `stone` | 20 |
+| Forest | `herb` *(v0.5)* | 15 |
+
+Each rule retries up to `count × 8` times, so a crowded biome may come up short.
+Herbs also carry `spawnWeight: 2`, which lets `ResourceManager.spawnRandomResources` seed a few more anywhere on dry land.
+
+### Creature Loot (v0.5)
+
+Dropped as ordinary world pickups when a creature dies. Sea creatures drop with `allowWater: true`, so the loot floats at the surface instead of failing the shore-height check.
+
+| Creature | Drops | Resource ID | Count | Cookable |
+| :--- | :--- | :--- | :---: | :---: |
+| Crab | Raw Crab Meat | `raw_crab_meat` | 1 | Yes |
+| Seagull | Raw Seagull Meat | `raw_seagull_meat` | 1 | Yes |
+| Boar | Raw Boar Meat | `raw_boar_meat` | 2 | Yes |
+| Shark | Raw Fish | `raw_fish` | 2 | Yes |
+
+All raw meats cook into `cooked_meal` at the Campfire.
+
+### Crafted-Only Items
+
+Carry `spawnWeight: 0`, so they never enter the random spawn pool — they exist only as crafting output, cooking output, chest loot or creature drops:
+
+`stone_axe`, `spear`, `bow`, `arrow`, `bandage`, `campfire`, `water_collector`, `fishing_rod`, `raft_frame`, `barrel_floats`, `paddle`, `raft_sail`, `raft_motor`, `sail_cloth`, `engine_parts`, `cooked_meal`, `fresh_water`, `treasure_chest`, and the three raw meats.
 
