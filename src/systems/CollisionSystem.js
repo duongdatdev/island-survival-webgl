@@ -33,45 +33,73 @@ export class CollisionSystem {
         return this.colliders;
     }
 
-    resolvePlayerCollisions(player, terrain) {
-        if (!player.collider || player.collider.type === 'none') return;
+    /**
+     * Vertical half-extent of a collider, used for the Y-overlap test.
+     * Falls back to the radius so old colliders keep behaving like spheres.
+     */
+    static _halfHeight(collider) {
+        if (collider.height) return collider.height * 0.5;
+        return collider.radius || 0.45;
+    }
 
-        const playerLayer = player.collider.layer;
-        const playerRadius = player.collider.radius || 0.45;
-        const playerPos = player.position;
+    /**
+     * Push `entity` out of every solid collider it overlaps.
+     *
+     * Despite the name this is used for any moving actor (player, creatures).
+     * @param {object} entity
+     * @param {object} terrain
+     * @param {number} [ignoreLayerMask] - bitmask of layers that must never push
+     *        this entity. Used so wildlife cannot shove the player around
+     *        (v0.5: two-way pushing made the player drift on its own).
+     */
+    resolvePlayerCollisions(entity, terrain, ignoreLayerMask = 0) {
+        if (!entity.collider || entity.collider.type === 'none') return;
 
-        for (const { entity, collider } of this.colliders) {
-            if (entity === player) continue;
+        const selfLayer = entity.collider.layer;
+        const selfRadius = entity.collider.radius || 0.45;
+        const selfHalfH = CollisionSystem._halfHeight(entity.collider);
+        const selfPos = entity.position;
+        // Flying / swimming actors must not be snapped onto the terrain surface.
+        const snapToTerrain = entity.collider.snapToTerrain !== false;
+
+        for (const { entity: other, collider } of this.colliders) {
+            if (other === entity) continue;
             if (collider.type === 'none') continue;
             if (collider.trigger) continue;
+            if (ignoreLayerMask && (collider.layer & ignoreLayerMask)) continue;
 
-            if (!CollisionMatrix.check(playerLayer, collider.layer)) continue;
+            if (!CollisionMatrix.check(selfLayer, collider.layer)) continue;
 
-            const dx = playerPos[0] - entity.position[0];
-            const dz = playerPos[2] - entity.position[2];
-            const minDist = playerRadius + collider.radius;
+            const dx = selfPos[0] - other.position[0];
+            const dz = selfPos[2] - other.position[2];
+            const minDist = selfRadius + collider.radius;
 
             if (minDist <= 0) continue;
 
             const distSq = dx * dx + dz * dz;
             if (distSq >= minDist * minDist) continue;
 
+            // Vertical overlap test — without this a seagull orbiting 12 units
+            // overhead still collided with (and shoved) everything below it.
+            const dy = Math.abs(selfPos[1] - other.position[1]);
+            if (dy >= selfHalfH + CollisionSystem._halfHeight(collider)) continue;
+
             const dist = Math.sqrt(distSq);
             if (dist > 0.001) {
                 const nx = dx / dist;
                 const nz = dz / dist;
                 const overlap = minDist - dist;
-                playerPos[0] += nx * overlap;
-                playerPos[2] += nz * overlap;
+                selfPos[0] += nx * overlap;
+                selfPos[2] += nz * overlap;
             } else {
-                playerPos[0] += 0.01;
+                selfPos[0] += 0.01;
             }
 
-            if (terrain) {
-                const h = terrain.getHeight(playerPos[0], playerPos[2]);
-                playerPos[1] = h + (player.collider.height ? player.collider.height * 0.5 : 0.9);
+            if (terrain && snapToTerrain) {
+                const h = terrain.getHeight(selfPos[0], selfPos[2]);
+                selfPos[1] = h + (entity.collider.height ? entity.collider.height * 0.5 : 0.9);
             }
-            player.updateModelMatrix();
+            entity.updateModelMatrix();
         }
     }
 

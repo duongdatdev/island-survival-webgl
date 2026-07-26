@@ -1,7 +1,8 @@
 /**
  * Recipe Database - Registry of all craftable items in the game.
- * 
+ *
  * v0.2: Added Campfire and Water Collector recipes
+ * v0.5: Added Spear, Bow, Arrow, Bandage recipes
  */
 
 export const RecipeType = {
@@ -13,7 +14,13 @@ export const RecipeType = {
     WATER_COLLECTOR:  'water_collector',
     FISHING_ROD:      'fishing_rod',
     RAFT_SAIL:        'raft_sail',
-    RAFT_MOTOR:       'raft_motor'
+    RAFT_MOTOR:       'raft_motor',
+
+    // v0.5: Wildlife & Combat
+    SPEAR:    'spear',
+    BOW:      'bow',
+    ARROW:    'arrow',
+    BANDAGE:  'bandage'
 };
 
 export const RecipeDatabase = {
@@ -144,6 +151,64 @@ export const RecipeDatabase = {
             wood: 5,
             rope: 2,
             engine_parts: 2
+        }
+    },
+
+    // ── v0.5: Weapons & Healing ──
+
+    [RecipeType.SPEAR]: {
+        id: RecipeType.SPEAR,
+        name: 'Giáo',
+        nameEn: 'Spear',
+        icon: '🔱',
+        description: 'Cây giáo sắc nhọn bằng gỗ và dây thừng, dùng để tấn công tầm gần.',
+        descriptionEn: 'A sharp wooden spear bound with rope, used for melee attacks.',
+        category: 'tool',
+        ingredients: {
+            wood: 3,
+            rope: 1
+        }
+    },
+
+    [RecipeType.BOW]: {
+        id: RecipeType.BOW,
+        name: 'Cung',
+        nameEn: 'Bow',
+        icon: '🏹',
+        description: 'Cây cung bắn tên tầm xa, giúp săn sinh vật từ khoảng cách an toàn.',
+        descriptionEn: 'A ranged bow for hunting creatures from a safe distance.',
+        category: 'tool',
+        ingredients: {
+            wood: 3,
+            rope: 2
+        }
+    },
+
+    [RecipeType.ARROW]: {
+        id: RecipeType.ARROW,
+        name: 'Tên (x3)',
+        nameEn: 'Arrows x3',
+        icon: '➵',
+        description: 'Mũi tên gỗ vót nhọn ghép đá. Chế tạo 3 cây một lần.',
+        descriptionEn: 'Sharp wooden arrows tipped with stone. Craft 3 at a time.',
+        category: 'tool',
+        yield: 3, // Crafts a batch of 3 arrows
+        ingredients: {
+            wood: 1,
+            stone: 1
+        }
+    },
+
+    [RecipeType.BANDAGE]: {
+        id: RecipeType.BANDAGE,
+        name: 'Băng Gạc',
+        nameEn: 'Bandage',
+        icon: '🩹',
+        description: 'Băng gạc thảo dược giúp cầm máu và hồi phục vết thương.',
+        descriptionEn: 'Herbal bandage to stop bleeding and heal wounds.',
+        category: 'structure', // survival category
+        ingredients: {
+            herb: 3
         }
     }
 };

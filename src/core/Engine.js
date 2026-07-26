@@ -3,6 +3,8 @@ import { SceneManager } from './SceneManager.js';
 import { InputManager } from './InputManager.js';
 import { AssetManager } from './AssetManager.js';
 import { AudioManager } from './AudioManager.js';
+import { SettingsManager } from '../systems/SettingsManager.js';
+import { AchievementSystem } from '../systems/AchievementSystem.js';
 
 /**
  * Core game engine orchestrating WebGL contexts and manager instances
@@ -47,6 +49,18 @@ export class Engine {
         this.scenes = new SceneManager(this);
         this.loop = new GameLoop();
 
+        // v1.0 profile-level managers — these outlive individual scenes, so
+        // settings and unlocked achievements survive a return to the menu.
+        this.settings = new SettingsManager();
+        this.achievements = new AchievementSystem();
+
+        // Audio levels come straight from the stored settings; the AudioContext
+        // itself is created lazily on the first user gesture.
+        this.audio.applySettings(this.settings);
+
+        /** @type {object|null} Save payload staged for the next GameScene. */
+        this.pendingLoad = null;
+
         // Pause state
         this.isPaused = false;
 
@@ -54,9 +68,21 @@ export class Engine {
         this.loop.onUpdate = (deltaTime) => this._update(deltaTime);
         this.loop.onRender = () => this._render();
 
-        // Hook Window Resize Events
+        // Hook Window Resize Events. The listener is a wrapper rather than the
+        // bound method itself so the DOM Event object can't land in `force`.
         this._resize = this._resize.bind(this);
-        window.addEventListener('resize', this._resize);
+        this._onWindowResize = () => this._resize();
+        window.addEventListener('resize', this._onWindowResize);
+
+        // Render scale is a graphics setting, so re-run the sizing logic
+        // whenever it changes rather than waiting for the next window resize.
+        this._unsubscribeSettings = this.settings.onChange((key) => {
+            if (key === 'renderScale' || key === '*') this._resize(true);
+            if (key === 'masterVolume' || key === 'sfxVolume' || key === 'ambientVolume' || key === '*') {
+                this.audio.applySettings(this.settings);
+            }
+        });
+
         this._resize(); // Trigger immediate scale check
     }
 
@@ -76,11 +102,19 @@ export class Engine {
         this.isPaused = false;
     }
 
-    _resize() {
-        const displayWidth = window.innerWidth;
-        const displayHeight = window.innerHeight;
+    /**
+     * Match the drawing buffer to the window, scaled by the `renderScale`
+     * graphics setting. The CSS size always fills the window — only the
+     * backing store shrinks — so lowering the scale trades sharpness for fill
+     * rate without changing the layout.
+     * @param {boolean} [force] Recompute even if the window size is unchanged.
+     */
+    _resize(force = false) {
+        const scale = this.settings ? this.settings.get('renderScale') : 1.0;
+        const displayWidth = Math.max(1, Math.floor(window.innerWidth * scale));
+        const displayHeight = Math.max(1, Math.floor(window.innerHeight * scale));
 
-        if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
+        if (force || this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
             this.canvas.width = displayWidth;
             this.canvas.height = displayHeight;
             this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -107,7 +141,11 @@ export class Engine {
 
     destroy() {
         this.stop();
-        window.removeEventListener('resize', this._resize);
+        window.removeEventListener('resize', this._onWindowResize);
+        if (this._unsubscribeSettings) {
+            this._unsubscribeSettings();
+            this._unsubscribeSettings = null;
+        }
         this.input = null;
         this.assets.clear();
         this.assets = null;

@@ -38,8 +38,8 @@ export class CraftingSystem {
             inventory.removeItem(ingredientId, requiredCount);
         }
 
-        // Add crafted item to inventory
-        inventory.addItem(recipeId, 1);
+        // Add crafted item to inventory (recipes may produce a batch, e.g. arrows)
+        inventory.addItem(recipeId, recipe.yield || 1);
         return true;
     }
 }

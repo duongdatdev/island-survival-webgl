@@ -123,6 +123,7 @@ export class WorldGenerator {
                 heights
             },
             terrainGenerator: terrainGen,
+            biomeGenerator: biomeGen,
             placedObjects,
             resourceNodes,
             buildArea,

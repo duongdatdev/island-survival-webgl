@@ -30,8 +30,12 @@ export class ResourceManager {
      * @param {number} x - World X position
      * @param {number} z - World Z position
      * @param {object} terrain - Terrain entity for height sampling
+     * @param {object} [options]
+     * @param {boolean} [options.allowWater=false] - Spawn even below the shore
+     *        line, floating at water level. Used for creature loot, since
+     *        crabs die on the beach and sharks die at sea.
      */
-    spawnResource(gl, resourceId, x, z, terrain) {
+    spawnResource(gl, resourceId, x, z, terrain, options = {}) {
         const def = getResourceDef(resourceId);
         if (!def) {
             console.warn(`ResourceManager: Unknown resource type '${resourceId}'`);
@@ -45,7 +49,10 @@ export class ResourceManager {
         }
 
         // Only spawn on land (above water level)
-        if (y < SHORE_HEIGHT) return null;
+        if (y < SHORE_HEIGHT) {
+            if (!options.allowWater) return null;
+            y = SHORE_HEIGHT; // Float the drop at the surface so it stays pickable
+        }
 
         // Offset Y so the resource floats slightly above ground
         y += def.meshScale[1] * 0.5 + 0.3;
@@ -62,7 +69,11 @@ export class ResourceManager {
      * @param {number} count - Target number of resources to spawn
      */
     spawnRandomResources(gl, terrain, count = 30) {
-        const islandRadius = 42.0; // Match player boundary limit from Player.js
+        // Spawn inside the island proper. The radius is procedural (44–47), so
+        // read it off the generator instead of assuming one seed's value; the
+        // old hardcoded 42 left an unpopulated ring on larger islands.
+        const island = terrain && terrain.generator ? terrain.generator.island : null;
+        const islandRadius = island ? island.radius : 46.0;
         let spawned = 0;
         let attempts = 0;
         const maxAttempts = count * 5; // Prevent infinite loops

@@ -65,6 +65,13 @@ export class ShaderProgram {
         }
     }
 
+    setUniform2f(name, x, y) {
+        const loc = this.getUniformLocation(name);
+        if (loc) {
+            this.gl.uniform2f(loc, x, y);
+        }
+    }
+
     setUniform1f(name, val) {
         const loc = this.getUniformLocation(name);
         if (loc) {

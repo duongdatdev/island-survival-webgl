@@ -9,6 +9,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Almendra:wght@400;700&display=swap" rel="stylesheet">
+    <!--
+        Cache-busting lives ONLY on these two entry points. ES modules are keyed
+        by URL, so a `?v=` on a deep import makes that module a *different*
+        module from the same file imported without one — v0.5 shipped with
+        ResourceDatabase, RecipeDatabase, WorldResource and BiomeGenerator each
+        instantiated twice for exactly that reason. Deep imports stay bare; the
+        static host revalidates them by ETag.
+    -->
     <link rel="stylesheet" href="index.css?v=8">
 </head>
 <body>
@@ -39,6 +47,11 @@
             </div>
             <div class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Sinh tồn. Thoát khỏi đảo hoang.</div>
             <div class="menu-buttons">
+                <button id="menu-continue-btn" class="menu-btn primary hidden">
+                    <span class="btn-icon">💾</span>
+                    <span class="btn-text">CHƠI TIẾP</span>
+                    <span id="menu-continue-meta" class="btn-meta"></span>
+                </button>
                 <button id="menu-start-btn" class="menu-btn primary">
                     <span class="btn-icon">⛵</span>
                     <span class="btn-text">BẮT ĐẦU</span>
@@ -47,12 +60,206 @@
                     <span class="btn-icon">📖</span>
                     <span class="btn-text">HƯỚNG DẪN + CHƠI</span>
                 </button>
+                <button id="menu-settings-btn" class="menu-btn secondary">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">CÀI ĐẶT</span>
+                </button>
+                <button id="menu-achievements-btn" class="menu-btn tertiary">
+                    <span class="btn-icon">🏅</span>
+                    <span class="btn-text">THÀNH TỰU</span>
+                    <span id="menu-achievements-meta" class="btn-meta"></span>
+                </button>
+                <button id="menu-credits-btn" class="menu-btn tertiary">
+                    <span class="btn-icon">📜</span>
+                    <span class="btn-text">GIỚI THIỆU</span>
+                </button>
                 <button id="menu-sound-btn" class="menu-btn tertiary">
                     <span class="btn-icon">🔊</span>
                     <span class="btn-text">ÂM THANH: BẬT</span>
                 </button>
             </div>
-            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • v0.4</div>
+            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • v1.0</div>
+        </div>
+    </div>
+
+    <!-- UI Overlay: Settings Menu (v1.0) -->
+    <div id="settings-menu" class="overlay panel-overlay hidden">
+        <div class="panel-content settings-content">
+            <div class="panel-header">
+                <div class="panel-title"><span class="panel-icon">⚙️</span> CÀI ĐẶT</div>
+                <button id="settings-close-btn" class="panel-close">&times;</button>
+            </div>
+
+            <div class="panel-body">
+                <div class="settings-section">
+                    <div class="settings-section-title">🔊 ÂM THANH</div>
+                    <div class="setting-row">
+                        <label for="set-master-volume">Âm lượng tổng</label>
+                        <input type="range" id="set-master-volume" min="0" max="100" step="1">
+                        <span id="val-master-volume" class="setting-value">80%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-sfx-volume">Hiệu ứng (SFX)</label>
+                        <input type="range" id="set-sfx-volume" min="0" max="100" step="1">
+                        <span id="val-sfx-volume" class="setting-value">90%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-ambient-volume">Môi trường</label>
+                        <input type="range" id="set-ambient-volume" min="0" max="100" step="1">
+                        <span id="val-ambient-volume" class="setting-value">70%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-muted">Tắt tiếng</label>
+                        <label class="switch"><input type="checkbox" id="set-muted"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">🖱️ ĐIỀU KHIỂN</div>
+                    <div class="setting-row">
+                        <label for="set-sensitivity">Độ nhạy chuột</label>
+                        <input type="range" id="set-sensitivity" min="20" max="300" step="5">
+                        <span id="val-sensitivity" class="setting-value">1.00x</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-invert-y">Đảo trục dọc</label>
+                        <label class="switch"><input type="checkbox" id="set-invert-y"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-fov">Góc nhìn (FOV)</label>
+                        <input type="range" id="set-fov" min="40" max="90" step="1">
+                        <span id="val-fov" class="setting-value">45°</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">🎨 ĐỒ HỌA</div>
+                    <div class="setting-row">
+                        <label>Chất lượng</label>
+                        <div class="quality-buttons">
+                            <button class="quality-btn" data-quality="low">Thấp</button>
+                            <button class="quality-btn" data-quality="medium">Trung Bình</button>
+                            <button class="quality-btn" data-quality="high">Cao</button>
+                            <button class="quality-btn" data-quality="ultra">Siêu Cao</button>
+                        </div>
+                        <span id="val-quality" class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-render-scale">Độ phân giải</label>
+                        <input type="range" id="set-render-scale" min="50" max="100" step="5">
+                        <span id="val-render-scale" class="setting-value">100%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-view-distance">Tầm nhìn xa</label>
+                        <input type="range" id="set-view-distance" min="40" max="250" step="10">
+                        <span id="val-view-distance" class="setting-value">130m</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-post">Hậu kỳ (Post-FX)</label>
+                        <label class="switch"><input type="checkbox" id="set-post"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-bloom">Ánh sáng nở (Bloom)</label>
+                        <label class="switch"><input type="checkbox" id="set-bloom"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-bloom-intensity">Cường độ Bloom</label>
+                        <input type="range" id="set-bloom-intensity" min="0" max="200" step="5">
+                        <span id="val-bloom-intensity" class="setting-value">0.75</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-vignette">Tối viền (Vignette)</label>
+                        <label class="switch"><input type="checkbox" id="set-vignette"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-particles">Mật độ hạt</label>
+                        <input type="range" id="set-particles" min="10" max="200" step="10">
+                        <span id="val-particles" class="setting-value">100%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-culling">Cắt khung nhìn</label>
+                        <label class="switch"><input type="checkbox" id="set-culling"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-show-fps">Hiện FPS</label>
+                        <label class="switch"><input type="checkbox" id="set-show-fps"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-footer">
+                <button id="settings-reset-btn" class="menu-btn danger small">
+                    <span class="btn-text">KHÔI PHỤC MẶC ĐỊNH</span>
+                </button>
+                <button id="settings-done-btn" class="menu-btn primary small">
+                    <span class="btn-text">XONG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Overlay: Achievements (v1.0) -->
+    <div id="achievements-menu" class="overlay panel-overlay hidden">
+        <div class="panel-content">
+            <div class="panel-header">
+                <div class="panel-title"><span class="panel-icon">🏅</span> THÀNH TỰU</div>
+                <button id="achievements-close-btn" class="panel-close">&times;</button>
+            </div>
+            <div class="panel-body">
+                <div id="achievements-progress" class="achievements-progress"></div>
+                <div id="achievements-list" class="achievements-list"></div>
+            </div>
+            <div class="panel-footer">
+                <button id="achievements-done-btn" class="menu-btn primary small">
+                    <span class="btn-text">ĐÓNG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Overlay: Credits (v1.0) -->
+    <div id="credits-menu" class="overlay panel-overlay hidden">
+        <div class="panel-content">
+            <div class="panel-header">
+                <div class="panel-title"><span class="panel-icon">📜</span> GIỚI THIỆU</div>
+                <button id="credits-close-btn" class="panel-close">&times;</button>
+            </div>
+            <div class="panel-body credits-body">
+                <div class="credits-logo">🏝️ ISLAND SURVIVAL: ESCAPE</div>
+                <div class="credits-version">Phiên bản 1.0 — Release</div>
+
+                <div class="credits-block">
+                    <div class="credits-role">CÔNG NGHỆ</div>
+                    <div class="credits-name">WebGL 2.0 (GLSL 3.00 es) — không dùng thư viện đồ họa</div>
+                    <div class="credits-name">JavaScript ES Modules thuần</div>
+                    <div class="credits-name">Web Audio API — toàn bộ âm thanh tổng hợp thời gian thực</div>
+                </div>
+
+                <div class="credits-block">
+                    <div class="credits-role">HỆ THỐNG</div>
+                    <div class="credits-name">Sinh thế giới thủ tục theo seed</div>
+                    <div class="credits-name">Chu kỳ ngày/đêm &amp; thời tiết động</div>
+                    <div class="credits-name">AI sinh vật hoang dã &amp; chiến đấu</div>
+                    <div class="credits-name">Hậu kỳ Bloom / Vignette, cắt khung nhìn</div>
+                </div>
+
+                <div class="credits-block">
+                    <div class="credits-role">CẢM ƠN</div>
+                    <div class="credits-name">Cảm ơn bạn đã chơi — chúc bạn thoát đảo an toàn! ⛵</div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button id="credits-done-btn" class="menu-btn primary small">
+                    <span class="btn-text">ĐÓNG</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -65,6 +272,18 @@
                     <span class="btn-icon">▶️</span>
                     <span class="btn-text">TIẾP TỤC</span>
                 </button>
+                <button id="pause-save-btn" class="menu-btn secondary">
+                    <span class="btn-icon">💾</span>
+                    <span class="btn-text">LƯU GAME</span>
+                </button>
+                <button id="pause-settings-btn" class="menu-btn secondary">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">CÀI ĐẶT</span>
+                </button>
+                <button id="pause-achievements-btn" class="menu-btn tertiary">
+                    <span class="btn-icon">🏅</span>
+                    <span class="btn-text">THÀNH TỰU</span>
+                </button>
                 <button id="pause-sound-btn" class="menu-btn tertiary">
                     <span class="btn-icon">🔊</span>
                     <span class="btn-text">ÂM THANH: BẬT</span>
@@ -74,6 +293,7 @@
                     <span class="btn-text">VỀ MENU CHÍNH</span>
                 </button>
             </div>
+            <div id="pause-save-status" class="pause-save-status"></div>
         </div>
     </div>
 
@@ -90,6 +310,12 @@
 
     <!-- Pickup Notification - Top Center Toast -->
     <div id="pickup-notification" class="pickup-notification hidden"></div>
+
+    <!-- Achievement Unlock Toast - Top Right (v1.0) -->
+    <div id="achievement-toast" class="achievement-toast hidden"></div>
+
+    <!-- Standalone FPS Counter - Top Right (v1.0, toggled in Settings) -->
+    <div id="fps-counter" class="fps-counter hidden">60 FPS</div>
 
     <!-- Vitals HUD - Top Left -->
     <div id="vitals-hud" class="vitals-hud hidden">
@@ -148,6 +374,14 @@
             <div class="debug-row"><span class="label">Seed:</span><span id="debug-world-seed" class="value">--</span></div>
             <div class="debug-row"><span class="label">Thời Gian Tạo:</span><span id="debug-world-gentime" class="value">--</span></div>
             <div class="debug-row"><span class="label">Tổng Số Vật Thể:</span><span id="debug-world-objcount" class="value">--</span></div>
+        </div>
+
+        <div class="debug-section">
+            <div class="section-title">HIỆU NĂNG (v1.0)</div>
+            <div class="debug-row"><span class="label">Draw Calls:</span><span id="debug-draw-calls" class="value">--</span></div>
+            <div class="debug-row"><span class="label">Đã Cắt (Culled):</span><span id="debug-culled" class="value">--</span></div>
+            <div class="debug-row"><span class="label">Độ Phân Giải:</span><span id="debug-resolution" class="value">--</span></div>
+            <div class="debug-row"><span class="label">Post-FX:</span><span id="debug-postfx" class="value">--</span></div>
         </div>
 
         <div class="debug-section">
@@ -241,7 +475,8 @@
             <div class="mouse-tip highlighted">Bấm phím 'L' để khóa/mở khóa con trỏ chuột.</div>
             <div class="mouse-tip highlighted">Bấm phím 'Tab' để ẩn/hiện Kho đồ (HUD).</div>
             <div class="mouse-tip highlighted">Bấm phím 'E' để nhặt tài nguyên gần đó.</div>
-            <div class="mouse-tip highlighted">Bấm phím 'Q' để sử dụng thức ăn/nước.</div>
+            <div class="mouse-tip highlighted">Bấm phím 'Q' để sử dụng thức ăn/nước/băng gạc.</div>
+            <div class="mouse-tip highlighted">Chuột Trái để tấn công (trang bị Giáo/Cung).</div>
             <div class="mouse-tip highlighted">Bấm phím 'F3' để bật/tắt Debug Panel.</div>
         </div>
     </div>

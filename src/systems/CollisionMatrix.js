@@ -29,5 +29,12 @@ export const CollisionMatrix = (() => {
     set(L.Debris, L.Terrain, true);
     set(L.Debris, L.Debris, true);
 
+    // v0.5: Creature collisions. Creature-vs-Creature keeps a herd of boars
+    // from stacking into a single silhouette.
+    set(L.Player, L.Creature, true);
+    set(L.Creature, L.Environment, true);
+    set(L.Creature, L.Terrain, true);
+    set(L.Creature, L.Creature, true);
+
     return { check, set, matrix };
 })();

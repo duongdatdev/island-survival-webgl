@@ -6,6 +6,7 @@ export class InputManager {
         this.canvas = canvas;
         this.keys = {};
         this._prevKeys = {}; // Previous frame key states for one-shot detection
+        this._prevMouseButtons = {}; // Previous frame mouse button states
         this.mouse = {
             x: 0,
             y: 0,
@@ -39,6 +40,15 @@ export class InputManager {
         return !!this.keys[key] && !this._prevKeys[key];
     }
 
+    /**
+     * Returns true only on the first frame a mouse button is pressed.
+     * @param {number} button - 0 = left, 1 = middle, 2 = right
+     * @returns {boolean}
+     */
+    isMousePressed(button = 0) {
+        return !!this.mouse.buttons[button] && !this._prevMouseButtons[button];
+    }
+
     resetDeltas() {
         this.mouse.deltaX = 0;
         this.mouse.deltaY = 0;
@@ -46,6 +56,9 @@ export class InputManager {
 
         // Snapshot current key states for next frame's one-shot detection
         this._prevKeys = { ...this.keys };
+
+        // Snapshot mouse button states for one-shot click detection (v0.5 combat)
+        this._prevMouseButtons = { ...this.mouse.buttons };
     }
 
     _setupListeners() {

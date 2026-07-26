@@ -35,10 +35,41 @@ import { BillboardSprite } from '../renderer/BillboardSprite.js';
 import { DayNightCycle } from '../systems/DayNightCycle.js';
 import { WeatherSystem } from '../systems/WeatherSystem.js';
 import { RainSystem } from '../systems/RainSystem.js';
+import { CombatSystem } from '../systems/CombatSystem.js';
+import { Crab } from '../entities/Crab.js';
+import { Seagull } from '../entities/Seagull.js';
+import { Boar } from '../entities/Boar.js';
+import { Shark } from '../entities/Shark.js';
+import { CreatureState } from '../entities/Creature.js';
+import { BiomeType } from '../gameplay/world/BiomeGenerator.js';
+import { CollisionLayers } from '../systems/CollisionLayers.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
+import { MenuUI } from '../systems/MenuUI.js';
+import { createStats } from '../systems/AchievementSystem.js';
+import { PostProcessing } from '../renderer/PostProcessing.js';
+import { Frustum } from '../renderer/Frustum.js';
+
+/** How long between background autosaves, in seconds. */
+const AUTOSAVE_INTERVAL = 60.0;
+
+/** How often achievement predicates are re-evaluated, in seconds. */
+const ACHIEVEMENT_CHECK_INTERVAL = 1.0;
+
+/**
+ * Maps a resource's `vitalEffect.type` onto the VitalsSystem call and the
+ * Vietnamese copy used in the pickup toast. Adding a consumable is then a
+ * ResourceDatabase entry only — no new branch in the consume handlers.
+ */
+const VITAL_ACTIONS = {
+    hunger: { method: 'eat',   verb: 'Đã ăn',  label: 'Đói' },
+    thirst: { method: 'drink', verb: 'Đã uống', label: 'Khát' },
+    health: { method: 'heal',  verb: 'Đã dùng', label: 'HP' },
+};
 
 
 /**
- * Main active gameplay scene — v0.2 with Survival Systems
+ * Main active gameplay scene — v1.0 (wildlife & combat, save/load,
+ * achievements, post-processing and culling).
  */
 export class GameScene extends Scene {
     init() {
@@ -69,13 +100,26 @@ export class GameScene extends Scene {
 
         // 4. Entities Setup
         this.player = new Player();
-        
+
+        // v1.0 — a save staged by the menu is consumed here so a reload of the
+        // scene (e.g. returning from the main menu) starts fresh.
+        /** @type {object|null} */
+        this._pendingSave = this.engine.pendingLoad || null;
+        this.engine.pendingLoad = null;
+
         // Procedural World Generation Setup
         this.worldSeed = this.engine.worldSeed || Math.floor(Math.random() * 1000000).toString();
         this.debugBiomeColors = false;
         this.worldGenerator = new WorldGenerator(120, 100.0);
-        
-        if (this.engine.generatedWorld) {
+
+        if (this._pendingSave) {
+            // Generation is deterministic in the seed, so re-running it here
+            // reproduces exactly the island the save was made on — far cheaper
+            // than serializing terrain and prop placement.
+            this.worldSeed = this._pendingSave.worldSeed;
+            console.log(`GameScene: Restoring world from save seed: ${this.worldSeed}`);
+            this.world = this.worldGenerator.generate(this.worldSeed, this.engine.assets.environmentMetadata, this.debugBiomeColors);
+        } else if (this.engine.generatedWorld) {
             this.world = this.engine.generatedWorld;
             this.worldSeed = this.world.seed;
         } else {
@@ -277,6 +321,9 @@ export class GameScene extends Scene {
         this._pauseResumeBtn = document.getElementById('pause-resume-btn');
         this._pauseSoundBtn = document.getElementById('pause-sound-btn');
         this._pauseMenuBtn = document.getElementById('pause-menu-btn');
+        this._pauseSaveBtn = document.getElementById('pause-save-btn');
+        this._pauseSettingsBtn = document.getElementById('pause-settings-btn');
+        this._pauseAchievementsBtn = document.getElementById('pause-achievements-btn');
 
         this._onPauseResume = () => {
             this.engine.audio.playClick();
@@ -285,21 +332,40 @@ export class GameScene extends Scene {
         this._onPauseSound = () => {
             this.engine.audio._ensureContext();
             const muted = this.engine.audio.toggleMute();
+            this.engine.settings.set('muted', muted);
             this._updatePauseSoundButton(muted);
             if (!muted) this.engine.audio.playClick();
         };
         this._onPauseMenu = () => {
             this.engine.audio.playClick();
+            // Leaving to the menu would otherwise throw away progress since the
+            // last autosave, so commit one on the way out.
+            this._saveGame(true);
             this._resumeGame();
             // Small delay for transition
             setTimeout(() => {
                 this.engine.scenes.switchScene('MainMenu');
             }, 100);
         };
+        this._onPauseSave = () => {
+            this.engine.audio.playClick();
+            this._saveGame(false);
+        };
+        this._onPauseSettings = () => {
+            this.engine.audio.playClick();
+            this.menuUI.openSettings();
+        };
+        this._onPauseAchievements = () => {
+            this.engine.audio.playClick();
+            this.menuUI.openAchievements();
+        };
 
         if (this._pauseResumeBtn) this._pauseResumeBtn.addEventListener('click', this._onPauseResume);
         if (this._pauseSoundBtn) this._pauseSoundBtn.addEventListener('click', this._onPauseSound);
         if (this._pauseMenuBtn) this._pauseMenuBtn.addEventListener('click', this._onPauseMenu);
+        if (this._pauseSaveBtn) this._pauseSaveBtn.addEventListener('click', this._onPauseSave);
+        if (this._pauseSettingsBtn) this._pauseSettingsBtn.addEventListener('click', this._onPauseSettings);
+        if (this._pauseAchievementsBtn) this._pauseAchievementsBtn.addEventListener('click', this._onPauseAchievements);
 
         // 15. Running properties
         this.time = 0.0;
@@ -354,6 +420,21 @@ export class GameScene extends Scene {
             });
         }
 
+        // ── v0.5: Combat System & Wildlife ──
+        this.combatSystem = new CombatSystem();
+        this.creatures = [];
+
+        // Spawn creatures
+        this._spawnCrabs();
+        this._spawnSeagulls();
+        this._spawnBoars();
+        this._spawnSharks();
+
+        // Register creatures with collision system
+        for (const creature of this.creatures) {
+            this.collisionSystem.register(creature);
+        }
+
         // v0.4: sky color set dynamically each frame — initial placeholder
         gl.clearColor(0.53, 0.74, 0.90, 1.0);
 
@@ -361,18 +442,275 @@ export class GameScene extends Scene {
         const hud = document.getElementById('resource-hud');
         if (hud) hud.style.display = '';
 
+        // ── v1.0: Release polish systems ──
+        this._initReleaseSystems();
+
         // Start ambient audio (v0.4: also start weather audio)
         this.engine.audio._ensureContext();
         this.engine.audio.resume();
         this.engine.audio.startAmbientWaves();
         this.engine.audio.startWind();
         this.engine.audio.startRain();
+
+        // Restoring last means every subsystem already exists and can simply be
+        // overwritten with the stored values.
+        if (this._pendingSave) {
+            this._applySave(this._pendingSave);
+            this._pendingSave = null;
+        }
+    }
+
+    // ============================================
+    //  v1.0 — RELEASE SYSTEMS
+    // ============================================
+
+    /**
+     * Wire up the systems introduced in v1.0: run statistics, achievements,
+     * autosave, culling, post-processing, and the settings overlays.
+     */
+    _initReleaseSystems() {
+        const gl = this.gl;
+        const settings = this.engine.settings;
+
+        /** Per-run counters that feed achievement predicates. */
+        this.stats = createStats();
+        this.achievements = this.engine.achievements;
+        this._achievementTimer = 0;
+
+        // Night/storm milestones are edge-triggered, so remember the previous
+        // sample rather than counting every frame spent in that state.
+        this._wasNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
+        this._wasStorm = false;
+
+        this._autosaveTimer = 0;
+        this._saveStatusTimer = 0;
+
+        // Culling + post-processing
+        this.frustum = new Frustum();
+        this.postFx = new PostProcessing(gl);
+        this._drawCalls = 0;
+
+        // Shared settings/achievements/credits overlays. Closing one of them
+        // returns to whatever was behind it (usually the pause menu), so no
+        // close hook is needed here.
+        this.menuUI = new MenuUI(this.engine);
+
+        // Per-frame DOM lookups for the debug toggles were showing up in
+        // profiles, so resolve them once and reuse the references.
+        this._domCache = {
+            wireframe: document.getElementById('toggle-wireframe'),
+            water: document.getElementById('toggle-water'),
+            lightRot: document.getElementById('toggle-light-rot'),
+            pickupHint: document.getElementById('pickup-hint'),
+            debugPanel: document.getElementById('debug-panel'),
+            fpsCounter: document.getElementById('fps-counter'),
+            lightDir: document.getElementById('debug-light-dir'),
+            timeLabel: document.getElementById('debug-time-label'),
+            timeOfDay: document.getElementById('debug-time-of-day'),
+            weatherLabel: document.getElementById('debug-weather-label'),
+            drawCalls: document.getElementById('debug-draw-calls'),
+            culled: document.getElementById('debug-culled'),
+            resolution: document.getElementById('debug-resolution'),
+            postFx: document.getElementById('debug-postfx'),
+            saveStatus: document.getElementById('pause-save-status'),
+        };
+
+        this._applySettings();
+        this._unsubscribeSettings = settings.onChange(() => this._applySettings());
+    }
+
+    /**
+     * Push the current settings into the renderer, camera and particle system.
+     * Cheap enough to re-run wholesale on any change.
+     */
+    _applySettings() {
+        const s = this.engine.settings;
+
+        this.camera.setFov(s.get('fov') * Math.PI / 180);
+        this.camera.setLookSettings(s.get('mouseSensitivity'), s.get('invertY'));
+
+        if (this.particleSystem) this.particleSystem.density = s.get('particleDensity');
+        if (this.frustum) this.frustum.enabled = s.get('frustumCulling');
+        if (this.postFx) this.postFx.enabled = s.get('postProcessing') && this.postFx.available;
+
+        this._viewDistance = s.get('viewDistance');
+
+        const fpsEl = this._domCache && this._domCache.fpsCounter;
+        if (fpsEl) fpsEl.classList.toggle('hidden', !s.get('showFps'));
+    }
+
+    /**
+     * Write a save snapshot.
+     * @param {boolean} silent Autosaves and exit-saves stay quiet; the pause
+     *        menu button reports success or failure to the player.
+     */
+    _saveGame(silent) {
+        // A finished run has nothing meaningful to resume, and restoring into a
+        // death/victory screen would leave the player stuck there.
+        if (this._isGameOver || this.isEscaping) {
+            if (!silent) this._setSaveStatus('Không thể lưu khi ván chơi đã kết thúc.', true);
+            return false;
+        }
+
+        this.stats.survivalSeconds = this.survivalSeconds;
+        const ok = SaveSystem.save(SaveSystem.captureScene(this));
+
+        this._autosaveTimer = 0;
+        if (!silent) {
+            this._setSaveStatus(
+                ok ? '💾 Đã lưu tiến trình!' : '❌ Lưu thất bại — bộ nhớ trình duyệt đã đầy.',
+                !ok
+            );
+        }
+        return ok;
+    }
+
+    _setSaveStatus(message, isError) {
+        const el = this._domCache.saveStatus;
+        if (!el) return;
+        el.textContent = message;
+        el.classList.toggle('error', !!isError);
+        this._saveStatusTimer = 3.0;
+    }
+
+    /**
+     * Overwrite live state with a stored snapshot. Called at the tail of
+     * `init`, once every subsystem exists.
+     * @param {object} save
+     */
+    _applySave(save) {
+        console.log('GameScene: Restoring saved run...');
+
+        // ── Player ──
+        this.player.position[0] = save.player.position[0];
+        this.player.position[1] = save.player.position[1];
+        this.player.position[2] = save.player.position[2];
+        this.player.rotation[1] = save.player.yaw;
+        this.player.updateModelMatrix();
+
+        this.survivalSeconds = save.survivalSeconds || 0;
+
+        // ── Vitals ── (assign directly, then push the values to the HUD)
+        this.vitals.health = save.vitals.health;
+        this.vitals.hunger = save.vitals.hunger;
+        this.vitals.thirst = save.vitals.thirst;
+        this.vitals.stamina = save.vitals.stamina;
+        for (const id of ['health', 'hunger', 'thirst', 'stamina']) {
+            this._updateVitalBar(id, this.vitals[id], 100);
+        }
+
+        // ── Inventory ──
+        for (let i = 0; i < this.inventory.slots.length; i++) {
+            const stored = save.inventory.slots[i];
+            this.inventory.slots[i] = stored ? { id: stored.id, count: stored.count } : null;
+        }
+        this.inventory.selectedHotbarIndex = save.inventory.selectedHotbarIndex || 0;
+
+        // ── Raft assembly ──
+        Object.assign(this.raftAssembly, {
+            framePlaced: !!save.raft.framePlaced,
+            floatsPlaced: !!save.raft.floatsPlaced,
+            paddlePlaced: !!save.raft.paddlePlaced,
+            sailPlaced: !!save.raft.sailPlaced,
+            motorPlaced: !!save.raft.motorPlaced,
+        });
+
+        // ── Placed structures ──
+        const cf = save.structures.campfire;
+        this.campfire.isBuilt = !!cf.isBuilt;
+        this.campfire.position[0] = cf.position[0];
+        this.campfire.position[1] = cf.position[1];
+        this.campfire.position[2] = cf.position[2];
+        this.campfire.updateModelMatrix();
+
+        const wc = save.structures.waterCollector;
+        this.waterCollector.isBuilt = !!wc.isBuilt;
+        this.waterCollector.position[0] = wc.position[0];
+        this.waterCollector.position[1] = wc.position[1];
+        this.waterCollector.position[2] = wc.position[2];
+        this.waterCollector.waterStored = wc.waterStored || 0;
+        this.waterCollector.updateModelMatrix();
+
+        // ── Blueprints ──
+        this.unlockedBlueprints = new Set(save.blueprints || []);
+
+        // ── Environment ──
+        if (save.environment) {
+            this.dayNight.timeOfDay = save.environment.timeOfDay;
+            this.weather.currentWeather = save.environment.weather;
+            this.weather.nextWeather = save.environment.weather;
+            this.weather.cloudCover = save.environment.cloudCover;
+            this.weather.windSpeed = save.environment.windSpeed;
+            this.weather.rainIntensity = save.environment.rainIntensity;
+        }
+
+        // ── World resources ──
+        // Wipe the freshly generated pickups and rebuild only the ones the save
+        // still lists, so harvested nodes stay harvested.
+        this.resourceManager.delete();
+        for (const entry of save.resources || []) {
+            const def = getResourceDef(entry.id);
+            if (!def) continue;
+            const resource = new WorldResource(this.gl, def, [entry.position[0], entry.position[1], entry.position[2]]);
+            if (entry.rewardType) resource.rewardType = entry.rewardType;
+            this.resourceManager.worldResources.push(resource);
+        }
+
+        // ── Statistics ──
+        if (save.stats) Object.assign(this.stats, save.stats);
+        this._wasNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
+        this._wasStorm = this.weather.currentWeather === 'storm';
+
+        this._updateGridInventory();
+        this._renderCraftingPanel();
+        this._showNotification('💾 Đã tải lại tiến trình đã lưu!');
+    }
+
+    /**
+     * Advance achievement bookkeeping: edge-triggered world milestones, plus a
+     * throttled sweep of the predicates.
+     * @param {number} deltaTime
+     */
+    _updateAchievements(deltaTime) {
+        this.stats.survivalSeconds = this.survivalSeconds;
+
+        // Surviving a night = being present when the clock rolls out of the
+        // night window back into dawn.
+        const isNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
+        if (this._wasNight && !isNight) this.stats.nightsSurvived++;
+        this._wasNight = isNight;
+
+        const isStorm = this.weather.currentWeather === 'storm';
+        if (this._wasStorm && !isStorm) this.stats.stormsSurvived++;
+        this._wasStorm = isStorm;
+
+        if (this.raftAssembly.isComplete() && this.stats.raftCompleted === 0) {
+            this.stats.raftCompleted = 1;
+        }
+        if (this.raftAssembly.motorPlaced && this.stats.motorInstalled === 0) {
+            this.stats.motorInstalled = 1;
+        }
+
+        this._achievementTimer += deltaTime;
+        if (this._achievementTimer >= ACHIEVEMENT_CHECK_INTERVAL) {
+            this._achievementTimer = 0;
+            this.achievements.evaluate(this.stats);
+        }
     }
 
     update(deltaTime) {
-        // Handle ESC for pause toggle
+        // v1.0 — achievement toasts and the FPS readout keep running while
+        // paused; they are presentation, not simulation.
+        this.achievements.update(deltaTime);
+        this._updateFpsCounter();
+        this._tickSaveStatus(deltaTime);
+
+        // Handle ESC — closes an open settings/achievements panel first, so it
+        // never skips a step and drops the player straight back into play.
         if (this.engine.input.isKeyPressed('Escape')) {
-            if (this.isPaused) {
+            if (this.menuUI && this.menuUI.isAnyOpen()) {
+                this.menuUI.closeAll();
+            } else if (this.isPaused) {
                 this._resumeGame();
             } else {
                 this._pauseGame();
@@ -484,6 +822,14 @@ export class GameScene extends Scene {
                         document.exitPointerLock();
                     }
 
+                    // v1.0 — the run is over: bank the escape achievement and
+                    // clear the save so "Chơi tiếp" can't resurrect a finished
+                    // game into a victory screen.
+                    this.stats.escaped = 1;
+                    this.stats.survivalSeconds = this.survivalSeconds;
+                    this.achievements.evaluate(this.stats);
+                    SaveSystem.deleteSave();
+
                     // Play victory fanfare
                     this.engine.audio.playVictory();
                 }
@@ -494,6 +840,13 @@ export class GameScene extends Scene {
         // Increment survived time
         this.survivalSeconds += deltaTime;
 
+        // v1.0 — milestones and background autosave
+        this._updateAchievements(deltaTime);
+        this._autosaveTimer += deltaTime;
+        if (this._autosaveTimer >= AUTOSAVE_INTERVAL) {
+            this._saveGame(true);
+        }
+
         // Rescale aspect ratio if canvas resized
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
 
@@ -502,7 +855,7 @@ export class GameScene extends Scene {
             this.fishingTimer -= deltaTime;
             
             // Show prompt with countdown
-            const hintEl = document.getElementById('pickup-hint');
+            const hintEl = this._domCache.pickupHint;
             if (hintEl) {
                 hintEl.innerHTML = `🎣 Đang câu cá... (còn ${Math.max(1, Math.ceil(this.fishingTimer))} giây)`;
                 hintEl.classList.remove('hidden');
@@ -523,6 +876,7 @@ export class GameScene extends Scene {
             if (this.fishingTimer <= 0.0) {
                 this.isFishing = false;
                 this.inventory.addItem('raw_fish', 1);
+                this.stats.fishCaught++;
                 this._showNotification('🐟 Bạn đã câu được: Cá Sống!');
                 this.engine.audio.playPickup();
                 
@@ -549,9 +903,12 @@ export class GameScene extends Scene {
             : this.engine.input;
         this.player.update(deltaTime, movementInput, this.camera, this.terrain);
 
-        // Collision resolution via CollisionSystem (data-driven, layer-filtered)
+        // Collision resolution via CollisionSystem (data-driven, layer-filtered).
+        // Creatures are excluded: they already get pushed out of the player in
+        // the wildlife loop below, and resolving both directions made the
+        // player slide around on its own whenever an animal was nearby.
         if (this.collisionSystem) {
-            this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain);
+            this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain, CollisionLayers.Creature);
         }
 
         // Footstep sounds while moving
@@ -571,6 +928,61 @@ export class GameScene extends Scene {
             }
         } else {
             this._footstepTimer = this._footstepInterval * 0.8; // Quick first step on resume
+        }
+
+        // ── v0.5: Creature AI Update ──
+        const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
+        for (let i = this.creatures.length - 1; i >= 0; i--) {
+            const creature = this.creatures[i];
+
+            // Update AI
+            creature.update(deltaTime, this.player.position, this.terrain, playerTerrainHeight);
+
+            // Resolve creature vs environment collision
+            if (this.collisionSystem) {
+                this.collisionSystem.resolvePlayerCollisions(creature, this.terrain);
+            }
+
+            // Creature attack damage to player on contact
+            if (creature.attackDamage > 0 &&
+                (creature.state === CreatureState.CHASE || creature.state === CreatureState.ATTACK)) {
+                const dx = creature.position[0] - this.player.position[0];
+                const dz = creature.position[2] - this.player.position[2];
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                // Vertical gate so a shark at sea level can't bite someone
+                // standing on the cliff directly above it.
+                const dy = Math.abs(creature.position[1] - this.player.position[1]);
+                if (dist <= creature.attackRange && dy <= 2.0) {
+                    if (creature.canDamagePlayer()) {
+                        this.vitals.heal(-creature.attackDamage);
+                        this._showNotification(`💥 Trúng đòn! Mất ${creature.attackDamage} máu!`);
+                        this.engine.audio.playFootstep();
+
+                        // Blood particle effect
+                        this.particleSystem.emit(
+                            this.player.position,
+                            { count: 6, color: [0.8, 0.1, 0.1], colorVariance: 0.1, size: 4, sizeVariance: 2, speed: 2.0, speedVariance: 1.0, lifetime: 0.5, lifetimeVariance: 0.2, gravity: -3.0, spread: 0.8, yBias: 1.5 }
+                        );
+                    }
+                }
+            }
+
+            // Remove dead creatures that have faded out
+            if (creature.isReadyForCleanup()) {
+                this.collisionSystem.unregister(creature);
+                creature.delete();
+                this.creatures.splice(i, 1);
+            }
+        }
+
+        // ── v0.5: Combat System Update ──
+        this.combatSystem.update(deltaTime);
+
+        // Handle left-click attack (one-shot on the press edge, never while
+        // fishing, escaping, or with the inventory panel open)
+        const combatMenuOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+        if (this.engine.input.isMousePressed(0) && !this.isFishing && !this.isEscaping && !combatMenuOpen) {
+            this._handleCombatInput();
         }
 
         // Toggle Inventory & Crafting Menu via 'C' or 'Tab' key
@@ -640,35 +1052,37 @@ export class GameScene extends Scene {
         let showCampfirePrompt = false;
         let campfirePromptText = '';
         if (this.campfire.isPlayerNear(this.player.position)) {
-            const hasRawFood = this.inventory.hasItem('coconut') || this.inventory.hasItem('raw_fish');
+            const hasRawFood = this.inventory.hasItem('coconut') || this.inventory.hasItem('raw_fish')
+                || this.inventory.hasItem('raw_crab_meat') || this.inventory.hasItem('raw_seagull_meat')
+                || this.inventory.hasItem('raw_boar_meat');
             if (hasRawFood) {
                 campfirePromptText = '<span class="hint-key">E</span> Nấu thức ăn 🔥';
                 showCampfirePrompt = true;
             }
         }
 
-        // Handle campfire cooking via 'E' key
+        // Handle campfire cooking via 'E' key (v0.5: also cook new meat types)
         if (showCampfirePrompt && this.engine.input.isKeyPressed('KeyE')) {
             this.engine.input.keys['KeyE'] = false;
-            // Cook raw fish first, then coconut
-            if (this.inventory.hasItem('raw_fish')) {
-                this.inventory.removeItem('raw_fish', 1);
-                this.inventory.addItem('cooked_meal', 1);
-                this._showNotification('🔥 Đã nấu: 🍖 Thức Ăn Chín!');
-                this.engine.audio.playCraft();
-                this.particleSystem.emit(
-                    [this.campfire.position[0], this.campfire.position[1] + 0.5, this.campfire.position[2]],
-                    ParticleSystem.PRESET.CRAFT
-                );
-            } else if (this.inventory.hasItem('coconut')) {
-                this.inventory.removeItem('coconut', 1);
-                this.inventory.addItem('cooked_meal', 1);
-                this._showNotification('🔥 Đã nấu: 🍖 Thức Ăn Chín!');
-                this.engine.audio.playCraft();
-                this.particleSystem.emit(
-                    [this.campfire.position[0], this.campfire.position[1] + 0.5, this.campfire.position[2]],
-                    ParticleSystem.PRESET.CRAFT
-                );
+            const rawMeats = ['raw_fish', 'raw_crab_meat', 'raw_seagull_meat', 'raw_boar_meat', 'coconut'];
+            let cooked = false;
+            for (const meat of rawMeats) {
+                if (this.inventory.hasItem(meat)) {
+                    this.inventory.removeItem(meat, 1);
+                    this.inventory.addItem('cooked_meal', 1);
+                    this.stats.mealsCooked++;
+                    this._showNotification('🔥 Đã nấu: 🍖 Thức Ăn Chín!');
+                    this.engine.audio.playCraft();
+                    this.particleSystem.emit(
+                        [this.campfire.position[0], this.campfire.position[1] + 0.5, this.campfire.position[2]],
+                        ParticleSystem.PRESET.CRAFT
+                    );
+                    cooked = true;
+                    break;
+                }
+            }
+            if (!cooked) {
+                this._showNotification('❌ Không có nguyên liệu nấu!');
             }
         }
 
@@ -784,12 +1198,12 @@ export class GameScene extends Scene {
 
         // ---- v0.3: Coastline Fishing Check ----
         let showFishingPrompt = false;
-        const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
+        const fishingTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
         const hotbarItem = this.inventory.slots[hotbarIdx];
         const hasFishingRod = hotbarItem && hotbarItem.id === 'fishing_rod';
 
-        if (playerTerrainHeight <= 0.15 && hasFishingRod && !this.isFishing) {
+        if (fishingTerrainHeight <= 0.15 && hasFishingRod && !this.isFishing) {
             showFishingPrompt = true;
             if (this.engine.input.isKeyPressed('KeyE')) {
                 this.engine.input.keys['KeyE'] = false; // Consume key
@@ -815,6 +1229,7 @@ export class GameScene extends Scene {
         
         // Check if a pickup happened (for sound + particles)
         if (this._getTotalInventoryCount() > prevPickupCount) {
+            this.stats.resourcesPicked++;
             this.engine.audio.playPickup();
             this.particleSystem.emit(this.player.position, ParticleSystem.PRESET.PICKUP);
             this.tutorial.notifyPickup();
@@ -826,13 +1241,14 @@ export class GameScene extends Scene {
 
         // Check if debris pickup happened
         if (this._getTotalInventoryCount() > prevDebrisCount) {
+            this.stats.resourcesPicked++;
             this.engine.audio.playPickup();
             this.particleSystem.emit(this.player.position, ParticleSystem.PRESET.PICKUP);
             this.tutorial.notifyPickup();
         }
 
         // Override pickup hint text — priority: waterfall > fishing > chest > campfire > water collector > raft > default
-        const hintEl = document.getElementById('pickup-hint');
+        const hintEl = this._domCache.pickupHint;
         if (showWaterfallPrompt && hintEl) {
             hintEl.innerHTML = `<span class="hint-key">E</span> Uống nước thác ngọt mát 💧`;
             hintEl.classList.remove('hidden');
@@ -892,8 +1308,7 @@ export class GameScene extends Scene {
         // ── v0.4: Day/Night Cycle & Weather System ──
         this.weather.update(deltaTime);
 
-        const rotLightEl = document.getElementById('toggle-light-rot');
-        const rotateLight = rotLightEl ? rotLightEl.checked : true;
+        const rotateLight = this._domCache.lightRot ? this._domCache.lightRot.checked : true;
         if (rotateLight) {
             this.dayNight.update(deltaTime);
         }
@@ -985,31 +1400,83 @@ export class GameScene extends Scene {
         this.engine.audio.setRainIntensity(this.weather.rainIntensity);
         this.engine.audio.updateWeatherAudio(deltaTime);
 
-        // Push debug info
-        const lightDirEl = document.getElementById('debug-light-dir');
-        if (lightDirEl) {
+        // Push debug info — skipped entirely while the panel is hidden, since
+        // these writes forced layout work every frame for nothing.
+        this._updateDebugPanel();
+    }
+
+    /**
+     * Refresh the debug panel readouts. No-op when the panel is collapsed.
+     */
+    _updateDebugPanel() {
+        const dom = this._domCache;
+        if (dom.debugPanel && dom.debugPanel.classList.contains('hidden')) return;
+
+        if (dom.lightDir) {
             const dir = this.dirLight.direction;
-            lightDirEl.textContent = `X: ${dir[0].toFixed(2)}, Y: ${dir[1].toFixed(2)}, Z: ${dir[2].toFixed(2)}`;
+            dom.lightDir.textContent = `X: ${dir[0].toFixed(2)}, Y: ${dir[1].toFixed(2)}, Z: ${dir[2].toFixed(2)}`;
         }
-        // v0.4 frame-rate debug update
-        const timeLabel = document.getElementById('debug-time-label');
-        if (timeLabel) timeLabel.textContent = this.dayNight.getTimeLabel();
-        const timeOfDay = document.getElementById('debug-time-of-day');
-        if (timeOfDay) timeOfDay.textContent = (this.dayNight.timeOfDay * 24).toFixed(1) + 'h';
-        const weatherLabel = document.getElementById('debug-weather-label');
-        if (weatherLabel) weatherLabel.textContent = this.weather.getWeatherLabel();
+        if (dom.timeLabel) dom.timeLabel.textContent = this.dayNight.getTimeLabel();
+        if (dom.timeOfDay) dom.timeOfDay.textContent = (this.dayNight.timeOfDay * 24).toFixed(1) + 'h';
+        if (dom.weatherLabel) dom.weatherLabel.textContent = this.weather.getWeatherLabel();
+
+        // v1.0 performance rows
+        if (dom.drawCalls) dom.drawCalls.textContent = this._drawCalls.toString();
+        if (dom.culled) {
+            dom.culled.textContent = this.frustum.enabled
+                ? `${this.frustum.culledCount}/${this.frustum.testedCount}`
+                : 'Tắt';
+        }
+        if (dom.resolution) {
+            dom.resolution.textContent = `${this.gl.canvas.width}×${this.gl.canvas.height}`;
+        }
+        if (dom.postFx) {
+            if (!this.postFx.available) dom.postFx.textContent = 'Không khả dụng';
+            else if (!this.postFx.enabled) dom.postFx.textContent = 'Tắt';
+            else dom.postFx.textContent = this.engine.settings.get('bloom') ? 'Bloom + Vignette' : 'Vignette';
+        }
+    }
+
+    /**
+     * Update the standalone FPS readout, colour-coded by frame rate. Reads the
+     * value the GameLoop already computes rather than measuring again.
+     */
+    _updateFpsCounter() {
+        const el = this._domCache.fpsCounter;
+        if (!el || el.classList.contains('hidden')) return;
+
+        const fps = this.engine.loop.fps;
+        el.textContent = `${fps} FPS`;
+        el.classList.toggle('warn', fps < 45 && fps >= 25);
+        el.classList.toggle('bad', fps < 25);
+    }
+
+    /** Clear the pause-menu save message after a few seconds. */
+    _tickSaveStatus(deltaTime) {
+        if (this._saveStatusTimer <= 0) return;
+        this._saveStatusTimer -= deltaTime;
+        if (this._saveStatusTimer <= 0 && this._domCache.saveStatus) {
+            this._domCache.saveStatus.textContent = '';
+            this._domCache.saveStatus.classList.remove('error');
+        }
     }
 
     render() {
         const gl = this.gl;
 
-        // Fetch display controls from DOM checkboxes
-        const wireframeEl = document.getElementById('toggle-wireframe');
-        const drawWireframe = wireframeEl ? wireframeEl.checked : false;
+        // Display controls come from cached checkbox references (v1.0) — the
+        // old per-frame getElementById calls were pure overhead.
+        const drawWireframe = this._domCache.wireframe ? this._domCache.wireframe.checked : false;
         const drawMode = drawWireframe ? gl.LINES : gl.TRIANGLES;
+        const animateWater = this._domCache.water ? this._domCache.water.checked : true;
 
-        const waterAnimEl = document.getElementById('toggle-water');
-        const animateWater = waterAnimEl ? waterAnimEl.checked : true;
+        // v1.0 — refresh culling planes for this frame, then route the scene
+        // through the offscreen target when post-processing is on.
+        this.frustum.update(this.camera.projectionMatrix, this.camera.viewMatrix);
+        this._drawCalls = 0;
+
+        this.postFx.resize(gl.canvas.width, gl.canvas.height);
+        this.postFx.beginScene();
 
         // v0.4: Dynamic sky color based on day/night and weather
         const skyColors = this.dayNight.getSkyColors();
@@ -1048,8 +1515,13 @@ export class GameScene extends Scene {
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, this.player.rotation[1]);
         this.characterRenderer.draw(this.basicShader, this.tempMatrix, drawMode);
 
-        // 5. Draw World Resources
-        this.resourceManager.drawAll(this.basicShader, drawMode);
+        // 5. Draw World Resources — pickups are small, so a 1.5m bound is
+        //    generous enough to avoid popping at the screen edge.
+        for (const resource of this.resourceManager.worldResources) {
+            if (!this._isVisible(resource.position, 1.5)) continue;
+            resource.draw(this.basicShader, drawMode);
+            this._drawCalls++;
+        }
 
         // 6. Draw Drifting Debris (on water surface, before water pass)
         this.debrisManager.drawAll(this.basicShader, drawMode);
@@ -1059,11 +1531,24 @@ export class GameScene extends Scene {
             this.raftAssembly.draw(this.basicShader, drawMode, false);
         }
 
-        // Draw environment objects (trees, bushes, rocks)
+        // Draw environment objects (trees, bushes, rocks). This is by far the
+        // largest batch, so it's where frustum + distance culling pays off.
         if (this.environmentEntities) {
             for (const entity of this.environmentEntities) {
+                // Collider radius under-describes tall trees, so bias the
+                // bound upward rather than clipping trunks at the frame edge.
+                const radius = (entity.collisionRadius || 1.0) * 2.0 + 1.0;
+                if (!this._isVisible(entity.position, radius)) continue;
                 entity.draw(this.basicShader, drawMode);
+                this._drawCalls++;
             }
+        }
+
+        // 7.5 Draw Creatures (v0.5)
+        for (const creature of this.creatures) {
+            if (!this._isVisible(creature.position, 2.0)) continue;
+            creature.draw(this.basicShader, drawMode);
+            this._drawCalls++;
         }
 
         // 8. Draw Campfire (v0.2)
@@ -1151,6 +1636,58 @@ export class GameScene extends Scene {
                 colliders
             );
         }
+
+        // 12. v1.0 — resolve the offscreen target to the screen with bloom and
+        // vignette. A no-op when post-processing is disabled.
+        this._compositeFrame();
+    }
+
+    /**
+     * Run the post-processing composite, grading the image from the current
+     * time of day so nights read cooler and sunsets warmer.
+     */
+    _compositeFrame() {
+        if (!this.postFx.enabled) return;
+
+        const settings = this.engine.settings;
+        const sunColor = this.dayNight.getSunColor();
+        const sunIntensity = this.dayNight.getSunIntensity();
+
+        // Blend the sun's hue in gently — a full tint would recolour the whole
+        // frame, which reads as a broken white balance rather than a mood.
+        const tintStrength = 0.12;
+        const tint = [
+            1.0 + (sunColor[0] - 1.0) * tintStrength,
+            1.0 + (sunColor[1] - 1.0) * tintStrength,
+            1.0 + (sunColor[2] - 1.0) * tintStrength,
+        ];
+
+        // Lightning briefly lifts exposure so strikes wash over the frame.
+        const lightning = this.weather.getLightningModulation();
+        const exposure = 1.0 + lightning * 0.35;
+
+        // Bloom is strongest at dawn/dusk when the sun sits low and bright.
+        const bloomBoost = 0.75 + (1.0 - sunIntensity) * 0.35;
+
+        this.postFx.composite({
+            bloom: settings.get('bloom'),
+            bloomIntensity: settings.get('bloomIntensity') * bloomBoost,
+            bloomThreshold: 0.8,
+            vignette: settings.get('vignette') ? 0.35 : 0.0,
+            exposure,
+            tint,
+            iterations: 2,
+        });
+    }
+
+    /**
+     * Frustum + draw-distance test used by the render loop.
+     * @param {number[]|Float32Array} position
+     * @param {number} radius Bounding sphere radius
+     * @returns {boolean}
+     */
+    _isVisible(position, radius) {
+        return this.frustum.isVisible(position, radius, this.camera.position, this._viewDistance);
     }
 
     // ============================================
@@ -1284,6 +1821,25 @@ export class GameScene extends Scene {
                 }
             }
             hotbarEl.innerHTML = html;
+
+            // v0.5: Ammo counter — show arrow count when bow is equipped
+            const equippedSlot = this.inventory.slots[20 + this.inventory.selectedHotbarIndex];
+            if (equippedSlot && equippedSlot.id === 'bow') {
+                const arrowCount = this.inventory.getCount('arrow');
+                // Find or create ammo indicator
+                let ammoEl = document.getElementById('ammo-counter');
+                if (!ammoEl) {
+                    ammoEl = document.createElement('div');
+                    ammoEl.id = 'ammo-counter';
+                    ammoEl.className = 'ammo-counter';
+                    hotbarEl.parentNode.appendChild(ammoEl);
+                }
+                ammoEl.innerHTML = `➵ ${arrowCount}`;
+                ammoEl.style.display = '';
+            } else {
+                const ammoEl = document.getElementById('ammo-counter');
+                if (ammoEl) ammoEl.style.display = 'none';
+            }
         }
 
         // Re-bind drag & drop and click events
@@ -1395,26 +1951,16 @@ export class GameScene extends Scene {
                 if (!item) return;
 
                 const resDef = getResourceDef(item.id);
-                if (resDef && resDef.consumable) {
-                    if (item.id === 'cooked_meal') {
-                        this.inventory.removeItemAt(idx, 1);
-                        this.vitals.eat(40);
-                        this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
-                        this.engine.audio.playPickup();
-                    } else if (item.id === 'fresh_water') {
-                        this.inventory.removeItemAt(idx, 1);
-                        this.vitals.drink(50);
-                        this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
-                        this.engine.audio.playPickup();
-                    } else if (item.id === 'campfire' || item.id === 'water_collector') {
-                        // Place structures
-                        const hotbarOffset = idx - 20;
-                        if (hotbarOffset >= 0 && hotbarOffset < 8) {
-                            this.inventory.selectedHotbarIndex = hotbarOffset;
-                        }
-                        this._closeInventoryMenu();
-                        this._showNotification(`🔧 Đã chọn ${resDef.name}. Nhấn Q để đặt!`);
+                if (this._consumeItemAt(idx)) return;
+
+                if (resDef && (item.id === 'campfire' || item.id === 'water_collector')) {
+                    // Place structures
+                    const hotbarOffset = idx - 20;
+                    if (hotbarOffset >= 0 && hotbarOffset < 8) {
+                        this.inventory.selectedHotbarIndex = hotbarOffset;
                     }
+                    this._closeInventoryMenu();
+                    this._showNotification(`🔧 Đã chọn ${resDef.name}. Nhấn Q để đặt!`);
                 }
             });
 
@@ -1424,25 +1970,44 @@ export class GameScene extends Scene {
                 if (indexAttr === null) return;
                 
                 const idx = parseInt(indexAttr);
-                const item = this.inventory.slots[idx];
-                if (!item) return;
-
-                const resDef = getResourceDef(item.id);
-                if (resDef && resDef.consumable && (item.id === 'cooked_meal' || item.id === 'fresh_water')) {
-                    if (item.id === 'cooked_meal') {
-                        this.inventory.removeItemAt(idx, 1);
-                        this.vitals.eat(40);
-                        this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
-                        this.engine.audio.playPickup();
-                    } else if (item.id === 'fresh_water') {
-                        this.inventory.removeItemAt(idx, 1);
-                        this.vitals.drink(50);
-                        this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
-                        this.engine.audio.playPickup();
-                    }
-                }
+                this._consumeItemAt(idx);
             });
         });
+    }
+
+    /**
+     * Consume the item in a slot, applying its `vitalEffect` from the resource
+     * database.
+     *
+     * Every consume entry point (Q, right-click, double-click) routes through
+     * here. They each used to carry their own hardcoded id list, which is why a
+     * crafted Bandage could be eaten with Q but did nothing on right-click.
+     *
+     * @param {number} idx Inventory slot index
+     * @returns {boolean} True when something was actually consumed.
+     */
+    _consumeItemAt(idx) {
+        const item = this.inventory.slots[idx];
+        if (!item) return false;
+
+        const resDef = getResourceDef(item.id);
+        const effect = resDef && resDef.consumable ? resDef.vitalEffect : null;
+        if (!effect) return false;
+
+        const action = VITAL_ACTIONS[effect.type];
+        if (!action) {
+            console.warn(`GameScene: '${item.id}' has an unknown vitalEffect type '${effect.type}'.`);
+            return false;
+        }
+
+        this.inventory.removeItemAt(idx, 1);
+        this.vitals[action.method](effect.amount);
+        this._showNotification(`${resDef.icon} ${action.verb} ${resDef.name}! ${action.label} +${effect.amount}`);
+        this.engine.audio.playPickup();
+        // Redraw so the slot count drops immediately. Previously the stack only
+        // refreshed on the next hotbar change, so eating looked like a no-op.
+        this._updateGridInventory();
+        return true;
     }
 
     /**
@@ -1484,17 +2049,9 @@ export class GameScene extends Scene {
         if (!resDef) return;
 
         if (resDef.consumable) {
-            if (activeItem.id === 'cooked_meal') {
-                this.inventory.removeItemAt(activeIdx, 1);
-                this.vitals.eat(40);
-                this._showNotification('🍖 Đã ăn Thức Ăn Chín! Hunger +40');
-                this.engine.audio.playPickup();
-            } else if (activeItem.id === 'fresh_water') {
-                this.inventory.removeItemAt(activeIdx, 1);
-                this.vitals.drink(50);
-                this._showNotification('💧 Đã uống Nước Ngọt! Thirst +50');
-                this.engine.audio.playPickup();
-            } else if (activeItem.id === 'campfire') {
+            if (this._consumeItemAt(activeIdx)) return;
+
+            if (activeItem.id === 'campfire') {
                 this._placeStructure('campfire');
             } else if (activeItem.id === 'water_collector') {
                 this._placeStructure('water_collector');
@@ -1718,6 +2275,7 @@ export class GameScene extends Scene {
 
         const success = CraftingSystem.craft(recipeId, this.inventory);
         if (success) {
+            this.stats.itemsCrafted++;
             this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
 
             this.engine.audio.playCraft();
@@ -1734,6 +2292,7 @@ export class GameScene extends Scene {
 
     _openTreasureChest(chest) {
         chest.collect();
+        this.stats.chestsOpened++;
         this.engine.audio.playPickup();
 
         this.particleSystem.emit(
@@ -1795,6 +2354,12 @@ export class GameScene extends Scene {
      */
     _showGameOver() {
         this._isGameOver = true;
+
+        // v1.0 — a dead run isn't resumable, so drop the save rather than
+        // letting "Chơi tiếp" drop the player back at 0 HP.
+        SaveSystem.deleteSave();
+        this.stats.survivalSeconds = this.survivalSeconds;
+        this.achievements.evaluate(this.stats);
 
         // Show game over screen
         if (this.gameoverScreen) {
@@ -1868,9 +2433,218 @@ export class GameScene extends Scene {
 
         // Hide tutorial during escape
         this.tutorial.skip();
-        
+
         // Sound
         this.engine.audio.playClick();
+    }
+
+    // ── v0.5: Wildlife Spawning Methods ──
+
+    /**
+     * Spawn crabs along the shoreline
+     */
+    _spawnCrabs() {
+        const gl = this.gl;
+        const island = this.world.terrainGenerator.island;
+        const count = 12;
+        let spawned = 0;
+
+        for (let i = 0; i < count * 5; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = island.innerRadius + Math.random() * (island.radius - island.innerRadius);
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const y = this.terrain.getHeight(x, z);
+
+            // Only spawn in beach zone
+            if (y > 0.0 && y <= 0.35) {
+                const crab = new Crab(gl, [x, y, z]);
+                crab.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
+                this.creatures.push(crab);
+                spawned++;
+                if (spawned >= count) break;
+            }
+        }
+        console.log(`GameScene: Spawned ${spawned} crabs`);
+    }
+
+    /**
+     * Spawn seagulls circling above the island
+     */
+    _spawnSeagulls() {
+        const gl = this.gl;
+        const count = 4;
+        const island = this.world.terrainGenerator.island;
+
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * island.innerRadius * 0.6;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const altitude = 10 + Math.random() * 5;
+
+            const seagull = new Seagull(gl, [x, altitude, z]);
+            seagull.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
+            this.creatures.push(seagull);
+        }
+        console.log(`GameScene: Spawned ${count} seagulls`);
+    }
+
+    /**
+     * Spawn boars in forest biomes
+     */
+    _spawnBoars() {
+        const gl = this.gl;
+        const count = 5;
+        let spawned = 0;
+        const island = this.world.terrainGenerator.island;
+
+        for (let i = 0; i < count * 10; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = island.innerRadius * 0.3 + Math.random() * island.innerRadius * 0.5;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const y = this.terrain.getHeight(x, z);
+
+            if (y <= 0.3) continue;
+
+            // Forest biome only. The biome generator randomizes its sector
+            // orientation per seed, so the old `x > 2.0` guess put boars in
+            // whatever biome happened to sit east of the origin.
+            const biomeGen = this.world.biomeGenerator;
+            if (biomeGen && biomeGen.getBiome(x, z, y) !== BiomeType.FOREST) continue;
+
+            // Prevent overlap with existing boars
+            let tooClose = false;
+            for (const creature of this.creatures) {
+                if (creature instanceof Boar) {
+                    const dx = creature.position[0] - x;
+                    const dz = creature.position[2] - z;
+                    if (dx * dx + dz * dz < 100) { tooClose = true; break; }
+                }
+            }
+            if (tooClose) continue;
+
+            const boar = new Boar(gl, [x, y, z]);
+            boar.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
+            this.creatures.push(boar);
+            spawned++;
+            if (spawned >= count) break;
+        }
+        console.log(`GameScene: Spawned ${spawned} boars`);
+    }
+
+    /**
+     * Spawn sharks in deep water around the island
+     */
+    _spawnSharks() {
+        const gl = this.gl;
+        const count = 3;
+        const island = this.world.terrainGenerator.island;
+
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = island.radius + 5 + Math.random() * 8;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const waterY = 0.1; // Water surface level
+
+            const shark = new Shark(gl, [x, waterY, z]);
+            shark.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
+            this.creatures.push(shark);
+        }
+        console.log(`GameScene: Spawned ${count} sharks`);
+    }
+
+    /**
+     * Called when a creature dies — spawns loot as world resources
+     * @param {Array<{resourceId: string, count: number, chance: number}>} lootTable
+     * @param {number[]} position
+     */
+    _creatureDropLoot(lootTable, position) {
+        for (const entry of lootTable) {
+            if (Math.random() > entry.chance) continue;
+
+            // Drop one pickup per unit of `count`, scattered slightly so the
+            // stacks don't render inside each other.
+            const count = entry.count || 1;
+            for (let i = 0; i < count; i++) {
+                const offsetX = count > 1 ? (Math.random() - 0.5) * 1.2 : 0;
+                const offsetZ = count > 1 ? (Math.random() - 0.5) * 1.2 : 0;
+                this.resourceManager.spawnResource(
+                    this.gl, entry.resourceId,
+                    position[0] + offsetX, position[2] + offsetZ,
+                    this.terrain,
+                    { allowWater: true } // crabs die on the beach, sharks at sea
+                );
+            }
+        }
+    }
+
+    /**
+     * Handle left-click attack input
+     * Reads equipped hotbar item and delegates to CombatSystem
+     */
+    _handleCombatInput() {
+        if (this._isGameOver || this.isPaused) return;
+
+        const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
+        const equippedItem = this.inventory.slots[hotbarIdx];
+
+        // Aim along the camera heading rather than player.rotation — the player
+        // model only turns while walking, so standing still and clicking used to
+        // swing at whatever direction was last walked in.
+        const aimYaw = this._getAimYaw();
+        this.player.rotation[1] = aimYaw;
+        this.player.updateModelMatrix();
+
+        // Perform attack
+        const result = this.combatSystem.attack(
+            this.player.position,
+            aimYaw,
+            equippedItem,
+            this.creatures,
+            this.inventory
+        );
+
+        if (result.reason === 'no_ammo') {
+            this._showNotification('➵ Hết tên! Chế tạo thêm tên để bắn cung.');
+            return;
+        }
+
+        // Still on cooldown — no swing happened, so stay silent
+        if (!result.swung) return;
+
+        if (result.hit) {
+            // Hit feedback
+            const killed = result.creature.state === CreatureState.DEAD;
+            if (killed) this.stats.creaturesKilled++;
+            this._showNotification(killed
+                ? `💀 Hạ gục! -${result.damage} máu`
+                : `⚔️ Trúng! -${result.damage} máu`);
+            this.particleSystem.emit(
+                result.creature.position,
+                { count: 8, color: [1.0, 0.5, 0.1], colorVariance: 0.15, size: 5, sizeVariance: 3, speed: 3.0, speedVariance: 1.5, lifetime: 0.4, lifetimeVariance: 0.15, gravity: -2.0, spread: 0.6, yBias: 2.0 }
+            );
+            this.engine.audio.playRaftBuild(); // Reuse build sound as hit SFX
+        } else if (equippedItem && (equippedItem.id === 'spear' || equippedItem.id === 'bow')) {
+            // Only nag about misses when an actual weapon is equipped —
+            // otherwise every stray click spams the notification bar.
+            this._showNotification('💨 Đánh trượt!');
+        }
+    }
+
+    /**
+     * Horizontal yaw the camera is looking along, matching the convention used
+     * by Player.rotation[1] (atan2(x, z)).
+     */
+    _getAimYaw() {
+        const dx = this.camera.target[0] - this.camera.position[0];
+        const dz = this.camera.target[2] - this.camera.position[2];
+        if (Math.abs(dx) < 0.0001 && Math.abs(dz) < 0.0001) {
+            return this.player.rotation[1];
+        }
+        return Math.atan2(dx, dz);
     }
 
 
@@ -1894,6 +2668,14 @@ export class GameScene extends Scene {
         if (this.inventory) this.inventory.clear();
         if (this._notificationTimeoutId) {
             clearTimeout(this._notificationTimeoutId);
+        }
+
+        // Cleanup creatures (v0.5)
+        if (this.creatures) {
+            for (const creature of this.creatures) {
+                creature.delete();
+            }
+            this.creatures = [];
         }
 
         // Cleanup particle system
@@ -1932,6 +2714,31 @@ export class GameScene extends Scene {
         if (this._pauseResumeBtn) this._pauseResumeBtn.removeEventListener('click', this._onPauseResume);
         if (this._pauseSoundBtn) this._pauseSoundBtn.removeEventListener('click', this._onPauseSound);
         if (this._pauseMenuBtn) this._pauseMenuBtn.removeEventListener('click', this._onPauseMenu);
+        if (this._pauseSaveBtn) this._pauseSaveBtn.removeEventListener('click', this._onPauseSave);
+        if (this._pauseSettingsBtn) this._pauseSettingsBtn.removeEventListener('click', this._onPauseSettings);
+        if (this._pauseAchievementsBtn) this._pauseAchievementsBtn.removeEventListener('click', this._onPauseAchievements);
+
+        // v1.0 cleanup
+        if (this._unsubscribeSettings) {
+            this._unsubscribeSettings();
+            this._unsubscribeSettings = null;
+        }
+        if (this.menuUI) {
+            this.menuUI.dispose();
+            this.menuUI = null;
+        }
+        if (this.postFx) {
+            this.postFx.delete();
+            this.postFx = null;
+        }
+
+        const fpsCounter = document.getElementById('fps-counter');
+        if (fpsCounter) fpsCounter.classList.add('hidden');
+        const achievementToast = document.getElementById('achievement-toast');
+        if (achievementToast) {
+            achievementToast.classList.remove('visible');
+            achievementToast.classList.add('hidden');
+        }
 
         // Hide overlays
         const pauseMenu = document.getElementById('pause-menu');

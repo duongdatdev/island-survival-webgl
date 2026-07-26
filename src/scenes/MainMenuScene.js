@@ -6,10 +6,15 @@ import { DirectionalLight, AmbientLight } from '../renderer/Light.js';
 import { Camera } from '../renderer/Camera.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
+import { MenuUI } from '../systems/MenuUI.js';
 
 /**
  * Main Menu Scene — first screen after loading.
  * Renders animated ocean background with glassmorphism UI overlay.
+ *
+ * v1.0 adds Continue (resume a stored save), Settings, Achievements and
+ * Credits, all sharing the overlay controller in MenuUI.
  */
 export class MainMenuScene extends Scene {
     init() {
@@ -39,48 +44,81 @@ export class MainMenuScene extends Scene {
         // Show menu overlay
         this._showMenu();
 
+        // v1.0 shared overlay controller (settings / achievements / credits)
+        this.menuUI = new MenuUI(this.engine);
+
         // Bind button events
         this._startBtn = document.getElementById('menu-start-btn');
         this._tutorialBtn = document.getElementById('menu-tutorial-btn');
         this._soundBtn = document.getElementById('menu-sound-btn');
+        this._continueBtn = document.getElementById('menu-continue-btn');
+        this._settingsBtn = document.getElementById('menu-settings-btn');
+        this._achievementsBtn = document.getElementById('menu-achievements-btn');
+        this._creditsBtn = document.getElementById('menu-credits-btn');
 
         this._onStartClick = () => {
-            this.engine.audio._ensureContext();
-            this.engine.audio.resume();
-            this.engine.audio.playClick();
-            this._hideMenu();
-            // Small delay for button click sound
-            setTimeout(() => {
-                this.engine.scenes.switchScene('Game');
-            }, 150);
+            // A fresh run must not inherit a staged save, otherwise "Bắt đầu"
+            // right after "Chơi tiếp" would silently reload the old game.
+            this.engine.pendingLoad = null;
+            this._enterGame();
         };
 
         this._onTutorialClick = () => {
-            this.engine.audio._ensureContext();
-            this.engine.audio.resume();
-            this.engine.audio.playClick();
+            this.engine.pendingLoad = null;
             // Reset tutorial so it plays again
             try { localStorage.removeItem('island_survival_tutorial_done'); } catch(e) {}
-            this._hideMenu();
-            setTimeout(() => {
-                this.engine.scenes.switchScene('Game');
-            }, 150);
+            this._enterGame();
+        };
+
+        this._onContinueClick = () => {
+            const save = SaveSystem.load();
+            if (!save) {
+                // The save vanished between render and click (cleared in
+                // another tab, or quota-evicted) — drop the button and bail.
+                this._refreshContinueButton();
+                return;
+            }
+            this.engine.pendingLoad = save;
+            this._enterGame();
         };
 
         this._onSoundClick = () => {
             this.engine.audio._ensureContext();
             this.engine.audio.resume();
             const muted = this.engine.audio.toggleMute();
+            this.engine.settings.set('muted', muted);
             this._updateSoundButton(muted);
             if (!muted) this.engine.audio.playClick();
+        };
+
+        this._onSettingsClick = () => {
+            this.engine.audio._ensureContext();
+            this.engine.audio.playClick();
+            this.menuUI.openSettings();
+        };
+
+        this._onAchievementsClick = () => {
+            this.engine.audio.playClick();
+            this.menuUI.openAchievements();
+        };
+
+        this._onCreditsClick = () => {
+            this.engine.audio.playClick();
+            this.menuUI.openCredits();
         };
 
         if (this._startBtn) this._startBtn.addEventListener('click', this._onStartClick);
         if (this._tutorialBtn) this._tutorialBtn.addEventListener('click', this._onTutorialClick);
         if (this._soundBtn) this._soundBtn.addEventListener('click', this._onSoundClick);
+        if (this._continueBtn) this._continueBtn.addEventListener('click', this._onContinueClick);
+        if (this._settingsBtn) this._settingsBtn.addEventListener('click', this._onSettingsClick);
+        if (this._achievementsBtn) this._achievementsBtn.addEventListener('click', this._onAchievementsClick);
+        if (this._creditsBtn) this._creditsBtn.addEventListener('click', this._onCreditsClick);
 
         // Update sound button initial state
         this._updateSoundButton(this.engine.audio.isMuted);
+        this._refreshContinueButton();
+        this._refreshAchievementsButton();
 
         // Start ambient waves on menu
         this.engine.audio._ensureContext();
@@ -89,6 +127,14 @@ export class MainMenuScene extends Scene {
 
     update(deltaTime) {
         this.time += deltaTime;
+
+        // Achievement toasts can still be in flight when returning from a run.
+        this.engine.achievements.update(deltaTime);
+
+        // ESC closes whichever v1.0 panel is open.
+        if (this.engine.input.isKeyPressed('Escape') && this.menuUI && this.menuUI.isAnyOpen()) {
+            this.menuUI.closeAll();
+        }
 
         // Slow camera drift
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
@@ -163,6 +209,49 @@ export class MainMenuScene extends Scene {
         }
     }
 
+    /**
+     * Common transition into gameplay — audio unlock, click SFX, fade out.
+     */
+    _enterGame() {
+        this.engine.audio._ensureContext();
+        this.engine.audio.resume();
+        this.engine.audio.playClick();
+        this._hideMenu();
+        // Small delay for button click sound
+        setTimeout(() => {
+            this.engine.scenes.switchScene('Game');
+        }, 150);
+    }
+
+    /**
+     * Show "Chơi tiếp" only when a save exists, annotated with how far that
+     * run got so the player can tell what they'd be resuming.
+     */
+    _refreshContinueButton() {
+        if (!this._continueBtn) return;
+
+        const meta = SaveSystem.getMeta();
+        if (!meta) {
+            this._continueBtn.classList.add('hidden');
+            return;
+        }
+
+        this._continueBtn.classList.remove('hidden');
+        const metaEl = document.getElementById('menu-continue-meta');
+        if (metaEl) {
+            const mins = Math.floor(meta.survivalSeconds / 60).toString().padStart(2, '0');
+            const secs = Math.floor(meta.survivalSeconds % 60).toString().padStart(2, '0');
+            metaEl.textContent = `${mins}:${secs}`;
+        }
+    }
+
+    _refreshAchievementsButton() {
+        const metaEl = document.getElementById('menu-achievements-meta');
+        if (!metaEl) return;
+        const progress = this.engine.achievements.getProgress();
+        metaEl.textContent = `${progress.unlocked}/${progress.total}`;
+    }
+
     destroy() {
         console.log('MainMenuScene: Destroying...');
 
@@ -170,6 +259,15 @@ export class MainMenuScene extends Scene {
         if (this._startBtn) this._startBtn.removeEventListener('click', this._onStartClick);
         if (this._tutorialBtn) this._tutorialBtn.removeEventListener('click', this._onTutorialClick);
         if (this._soundBtn) this._soundBtn.removeEventListener('click', this._onSoundClick);
+        if (this._continueBtn) this._continueBtn.removeEventListener('click', this._onContinueClick);
+        if (this._settingsBtn) this._settingsBtn.removeEventListener('click', this._onSettingsClick);
+        if (this._achievementsBtn) this._achievementsBtn.removeEventListener('click', this._onAchievementsClick);
+        if (this._creditsBtn) this._creditsBtn.removeEventListener('click', this._onCreditsClick);
+
+        if (this.menuUI) {
+            this.menuUI.dispose();
+            this.menuUI = null;
+        }
 
         if (this.waterShader) this.waterShader.delete();
         if (this.water) this.water.delete();

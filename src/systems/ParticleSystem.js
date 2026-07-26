@@ -18,6 +18,13 @@ export class ParticleSystem {
         this.gl = gl;
         this.maxParticles = maxParticles;
 
+        /**
+         * v1.0 — global multiplier on every preset's particle count, driven by
+         * the graphics quality setting. Applied at emit time so existing call
+         * sites keep passing unmodified presets.
+         */
+        this.density = 1.0;
+
         // CPU particle pool
         this.particles = [];
 
@@ -184,8 +191,10 @@ export class ParticleSystem {
      */
     emit(position, preset) {
         const p = preset;
+        // Never round a burst away entirely — one particle still reads as feedback.
+        const count = Math.max(1, Math.round(p.count * this.density));
 
-        for (let i = 0; i < p.count; i++) {
+        for (let i = 0; i < count; i++) {
             if (this.particles.length >= this.maxParticles) break;
 
             const angle = Math.random() * Math.PI * 2;

@@ -293,12 +293,19 @@ export class EnvironmentBuilder {
             { biome: BiomeType.ROCK_AREA, types: ['stone'], count: 20 }
         ];
 
+        // v0.5: Additional herbs in Forest biome
+        const herbRules = [
+            { biome: BiomeType.FOREST, types: ['herb'], count: 15 }
+        ];
+        resourceSpawnRules.push(...herbRules);
+
         const resourceSpecs = {
             'wood': { scale: [0.25, 0.6, 0.25] },
             'stone': { scale: [0.5, 0.3, 0.45] },
             'rope': { scale: [0.4, 0.15, 0.4] },
             'barrel': { scale: [0.4, 0.55, 0.4] },
-            'coconut': { scale: [0.3, 0.3, 0.3] }
+            'coconut': { scale: [0.3, 0.3, 0.3] },
+            'herb': { scale: [0.12, 0.06, 0.12] } // v0.5
         };
 
         for (const rule of resourceSpawnRules) {

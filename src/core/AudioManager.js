@@ -7,9 +7,17 @@ export class AudioManager {
         /** @type {AudioContext|null} */
         this.ctx = null;
         this.masterGain = null;
+        /** v1.0: sub-buses so the settings menu can mix SFX and ambience apart. */
+        this.sfxGain = null;
+        this.ambientBus = null;
         this._limiter = null;
         this.isMuted = false;
         this._initialized = false;
+
+        // v1.0 volume levels (0..1), applied whenever the context exists.
+        this._masterVolume = 1.0;
+        this._sfxVolume = 1.0;
+        this._ambientVolume = 1.0;
 
         // Ambient loop nodes
         this._ambientSource = null;
@@ -44,7 +52,17 @@ export class AudioManager {
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = this.isMuted ? 0 : 1;
+            this.masterGain.gain.value = this.isMuted ? 0 : this._masterVolume;
+
+            // Two sub-buses feed the master so volume sliders can be adjusted
+            // independently without touching every individual sound node.
+            this.sfxGain = this.ctx.createGain();
+            this.sfxGain.gain.value = this._sfxVolume;
+            this.sfxGain.connect(this.masterGain);
+
+            this.ambientBus = this.ctx.createGain();
+            this.ambientBus.gain.value = this._ambientVolume;
+            this.ambientBus.connect(this.masterGain);
 
             // Master limiter: tames harsh peaks / clipping so synthesized
             // sounds stay smooth instead of buzzy and distorted.
@@ -80,13 +98,7 @@ export class AudioManager {
      * @returns {boolean} New mute state
      */
     toggleMute() {
-        this.isMuted = !this.isMuted;
-        if (this.masterGain) {
-            this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 1, this.ctx.currentTime, 0.05);
-        }
-        try {
-            localStorage.setItem('island_survival_muted', this.isMuted.toString());
-        } catch (e) { /* ignore */ }
+        this.setMuted(!this.isMuted);
         return this.isMuted;
     }
 
@@ -95,12 +107,59 @@ export class AudioManager {
      */
     setMuted(muted) {
         this.isMuted = muted;
-        if (this.masterGain) {
-            this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 1, this.ctx.currentTime, 0.05);
-        }
+        // Unmuting restores the configured master volume rather than jumping
+        // to full scale, so the settings slider stays authoritative.
+        this._applyGain(this.masterGain, this.isMuted ? 0 : this._masterVolume);
         try {
             localStorage.setItem('island_survival_muted', this.isMuted.toString());
         } catch (e) { /* ignore */ }
+    }
+
+    // ==========================================
+    //  v1.0 VOLUME MIXING
+    // ==========================================
+
+    /**
+     * Overall output level (0..1). Ignored while muted, but remembered so
+     * unmuting comes back at the right level.
+     */
+    setMasterVolume(volume) {
+        this._masterVolume = Math.max(0, Math.min(1, volume));
+        if (!this.isMuted) {
+            this._applyGain(this.masterGain, this._masterVolume);
+        }
+    }
+
+    /** Level of one-shot sound effects (0..1). */
+    setSfxVolume(volume) {
+        this._sfxVolume = Math.max(0, Math.min(1, volume));
+        this._applyGain(this.sfxGain, this._sfxVolume);
+    }
+
+    /** Level of looping ambience — waves, wind, rain (0..1). */
+    setAmbientVolume(volume) {
+        this._ambientVolume = Math.max(0, Math.min(1, volume));
+        this._applyGain(this.ambientBus, this._ambientVolume);
+    }
+
+    /**
+     * Apply every level from a SettingsManager in one call.
+     * @param {{get:(k:string)=>*}} settings
+     */
+    applySettings(settings) {
+        this.setMasterVolume(settings.get('masterVolume'));
+        this.setSfxVolume(settings.get('sfxVolume'));
+        this.setAmbientVolume(settings.get('ambientVolume'));
+        this.setMuted(!!settings.get('muted'));
+    }
+
+    /**
+     * Ramp a gain node, tolerating a not-yet-created audio context (the value
+     * is stored on `this` either way and applied when the context comes up).
+     */
+    _applyGain(node, value) {
+        if (!node || !this.ctx) return;
+        node.gain.setTargetAtTime(value, this.ctx.currentTime, 0.05);
     }
 
     // ==========================================
@@ -141,8 +200,8 @@ export class AudioManager {
 
             osc.connect(gain);
             osc2.connect(gain2);
-            gain.connect(this.masterGain);
-            gain2.connect(this.masterGain);
+            gain.connect(this.sfxGain);
+            gain2.connect(this.sfxGain);
             osc.start(t);
             osc.stop(t + 0.3);
             osc2.start(t);
@@ -175,7 +234,7 @@ export class AudioManager {
         gain1.gain.value = 0.35;
         impact.connect(impactFilter);
         impactFilter.connect(gain1);
-        gain1.connect(this.masterGain);
+        gain1.connect(this.sfxGain);
         impact.start(now);
 
         // Metallic ring — softer sine partials instead of a bright triangle sweep.
@@ -189,7 +248,7 @@ export class AudioManager {
             gain.gain.exponentialRampToValueAtTime(amp, now + 0.03);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
             osc.connect(gain);
-            gain.connect(this.masterGain);
+            gain.connect(this.sfxGain);
             osc.start(now + 0.01);
             osc.stop(now + 0.4);
         });
@@ -222,7 +281,7 @@ export class AudioManager {
             nGain.gain.value = level * 0.5;
             src.connect(nFilter);
             nFilter.connect(nGain);
-            nGain.connect(this.masterGain);
+            nGain.connect(this.sfxGain);
             src.start(t);
 
             // Hollow body
@@ -234,7 +293,7 @@ export class AudioManager {
             gain.gain.setValueAtTime(level, t);
             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
             osc.connect(gain);
-            gain.connect(this.masterGain);
+            gain.connect(this.sfxGain);
             osc.start(t);
             osc.stop(t + 0.26);
         };
@@ -280,8 +339,8 @@ export class AudioManager {
 
             osc.connect(gain);
             harm.connect(harmGain);
-            gain.connect(this.masterGain);
-            harmGain.connect(this.masterGain);
+            gain.connect(this.sfxGain);
+            harmGain.connect(this.sfxGain);
             osc.start(startTime);
             osc.stop(startTime + dur + 0.35);
             harm.start(startTime);
@@ -310,7 +369,7 @@ export class AudioManager {
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
 
         osc.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxGain);
         osc.start(now);
         osc.stop(now + 0.11);
     }
@@ -347,7 +406,7 @@ export class AudioManager {
 
         src.connect(filter);
         filter.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxGain);
         src.start(now);
     }
 
@@ -401,7 +460,7 @@ export class AudioManager {
 
         this._ambientSource.connect(filter);
         filter.connect(this._ambientGain);
-        this._ambientGain.connect(this.masterGain);
+        this._ambientGain.connect(this.ambientBus);
 
         this._ambientSource.start();
     }
@@ -468,7 +527,7 @@ export class AudioManager {
         this._windFilter = filter;
         this._windSource.connect(filter);
         filter.connect(this._windGain);
-        this._windGain.connect(this.masterGain);
+        this._windGain.connect(this.ambientBus);
         this._windSource.start();
     }
 
@@ -518,7 +577,7 @@ export class AudioManager {
         this._rainSource.connect(filter);
         filter.connect(lp);
         lp.connect(this._rainGain);
-        this._rainGain.connect(this.masterGain);
+        this._rainGain.connect(this.ambientBus);
         this._rainSource.start();
     }
 
@@ -615,7 +674,7 @@ export class AudioManager {
 
         source.connect(filter);
         filter.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxGain);
         source.start(now);
     }
 

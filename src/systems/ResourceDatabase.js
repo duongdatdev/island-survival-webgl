@@ -3,6 +3,7 @@
  * Each resource defines its visual properties, mesh shape, and gameplay parameters.
  * 
  * v0.2: Added Coconut, Raw Fish, Cooked Meal, Fresh Water
+ * v0.5: Added meats (crab/seagull/boar), herbs, bandage, spear, bow, arrow
  */
 
 export const ResourceType = {
@@ -25,7 +26,17 @@ export const ResourceType = {
     ENGINE_PARTS:     'engine_parts',
     RAFT_SAIL:        'raft_sail',
     RAFT_MOTOR:       'raft_motor',
-    TREASURE_CHEST:   'treasure_chest'
+    TREASURE_CHEST:   'treasure_chest',
+
+    // v0.5: Wildlife & Combat
+    RAW_CRAB_MEAT:      'raw_crab_meat',
+    RAW_SEAGULL_MEAT:   'raw_seagull_meat',
+    RAW_BOAR_MEAT:      'raw_boar_meat',
+    HERB:               'herb',
+    BANDAGE:            'bandage',
+    SPEAR:              'spear',
+    BOW:                'bow',
+    ARROW:              'arrow'
 };
 
 /**
@@ -148,7 +159,12 @@ export const ResourceDatabase = {
         pickupRadius: 0,
         stackSize: 1,
         spawnWeight: 0,
-        consumable: false
+        consumable: false,
+        // v0.5: doubles as a weak melee weapon (CombatSystem reads these).
+        weaponType: 'melee',
+        weaponDamage: 10,
+        weaponRange: 2.0,
+        weaponCooldown: 0.7
     },
 
     [ResourceType.CAMPFIRE]: {
@@ -292,6 +308,121 @@ export const ResourceDatabase = {
         stackSize: 1,
         spawnWeight: 0,
         consumable: false
+    },
+
+    // ── v0.5: Wildlife & Combat Resources ──
+
+    [ResourceType.RAW_CRAB_MEAT]: {
+        id: ResourceType.RAW_CRAB_MEAT,
+        name: 'Thịt Cua Sống',
+        nameEn: 'Raw Crab Meat',
+        icon: '🦀',
+        color: [0.85, 0.4, 0.2],
+        meshScale: [0.18, 0.08, 0.14],
+        pickupRadius: 2.5,
+        stackSize: 20,
+        spawnWeight: 0,
+        consumable: false // Must be cooked first (like raw_fish)
+    },
+
+    [ResourceType.RAW_SEAGULL_MEAT]: {
+        id: ResourceType.RAW_SEAGULL_MEAT,
+        name: 'Thịt Chim Sống',
+        nameEn: 'Raw Seagull Meat',
+        icon: '🍗',
+        color: [0.75, 0.5, 0.3],
+        meshScale: [0.16, 0.08, 0.12],
+        pickupRadius: 2.5,
+        stackSize: 20,
+        spawnWeight: 0,
+        consumable: false // Must be cooked first
+    },
+
+    [ResourceType.RAW_BOAR_MEAT]: {
+        id: ResourceType.RAW_BOAR_MEAT,
+        name: 'Thịt Lợn Rừng Sống',
+        nameEn: 'Raw Boar Meat',
+        icon: '🥩',
+        color: [0.6, 0.25, 0.15],
+        meshScale: [0.2, 0.1, 0.15],
+        pickupRadius: 2.5,
+        stackSize: 20,
+        spawnWeight: 0,
+        consumable: false // Must be cooked first
+    },
+
+    [ResourceType.HERB]: {
+        id: ResourceType.HERB,
+        name: 'Thảo Dược',
+        nameEn: 'Herb',
+        icon: '🌿',
+        color: [0.2, 0.7, 0.25],
+        meshScale: [0.12, 0.06, 0.12],
+        pickupRadius: 2.5,
+        stackSize: 30,
+        spawnWeight: 2, // Spawns naturally on forest terrain
+        consumable: false
+    },
+
+    [ResourceType.BANDAGE]: {
+        id: ResourceType.BANDAGE,
+        name: 'Băng Gạc',
+        nameEn: 'Bandage',
+        icon: '🩹',
+        color: [0.95, 0.95, 0.85],
+        meshScale: [0.2, 0.1, 0.15],
+        pickupRadius: 0,
+        stackSize: 10,
+        spawnWeight: 0,
+        consumable: true,
+        vitalEffect: { type: 'health', amount: 25 }
+    },
+
+    [ResourceType.SPEAR]: {
+        id: ResourceType.SPEAR,
+        name: 'Giáo',
+        nameEn: 'Spear',
+        icon: '🔱',
+        color: [0.55, 0.35, 0.15],
+        meshScale: [0.1, 0.9, 0.1],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false,
+        weaponType: 'melee',
+        weaponDamage: 25,
+        weaponRange: 3.0,
+        weaponCooldown: 0.8
+    },
+
+    [ResourceType.BOW]: {
+        id: ResourceType.BOW,
+        name: 'Cung',
+        nameEn: 'Bow',
+        icon: '🏹',
+        color: [0.5, 0.3, 0.1],
+        meshScale: [0.3, 0.6, 0.05],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: false,
+        weaponType: 'ranged',
+        weaponDamage: 15,
+        weaponRange: 20.0,
+        weaponCooldown: 1.2
+    },
+
+    [ResourceType.ARROW]: {
+        id: ResourceType.ARROW,
+        name: 'Tên',
+        nameEn: 'Arrow',
+        icon: '➵',
+        color: [0.6, 0.5, 0.25],
+        meshScale: [0.05, 0.4, 0.05],
+        pickupRadius: 0,
+        stackSize: 30,
+        spawnWeight: 0,
+        consumable: false // Used as ammo by the bow
     }
 };
 

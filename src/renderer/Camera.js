@@ -80,6 +80,28 @@ export class Camera {
         }
     }
 
+    /**
+     * v1.0 — vertical field of view from the settings menu.
+     * @param {number} fovRadians
+     */
+    setFov(fovRadians) {
+        if (Math.abs(this.config.fov - fovRadians) > 0.0001) {
+            this.config.fov = fovRadians;
+            this._updateProjection();
+        }
+    }
+
+    /**
+     * v1.0 — look sensitivity as a multiplier over the tuned base value, so
+     * the stored setting stays a readable "1.0 = default" number.
+     * @param {number} multiplier
+     * @param {boolean} [invertY]
+     */
+    setLookSettings(multiplier, invertY = false) {
+        this.config.mouseSensitivity = this._cfg.Orbit.mouseSensitivity * multiplier;
+        this.config.invertY = invertY;
+    }
+
     setMode(name) {
         const next = this._states.get(name);
         if (!next || next === this._currentState) return;
@@ -143,6 +165,7 @@ export class Camera {
         this.config.pitchMin = t.Orbit.pitchMin;
         this.config.pitchMax = t.Orbit.pitchMax;
         this.config.mouseSensitivity = t.Orbit.mouseSensitivity;
+        this.config.invertY = false;
         this.config.collisionRadius = t.Collision.radius;
         this.config.collisionEnabled = t.Collision.enabled;
         this.config.terrainOffset = t.Terrain.offset;
@@ -186,8 +209,9 @@ export class Camera {
 
     _handleInput(input, config) {
         if (input.mouse.isLocked || input.mouse.buttons[0]) {
+            const pitchSign = config.invertY ? -1 : 1;
             this._yaw -= input.mouse.deltaX * config.mouseSensitivity;
-            this._pitch += input.mouse.deltaY * config.mouseSensitivity;
+            this._pitch += input.mouse.deltaY * config.mouseSensitivity * pitchSign;
             this._pitch = Math.max(config.pitchMin, Math.min(this._pitch, config.pitchMax));
         }
 
