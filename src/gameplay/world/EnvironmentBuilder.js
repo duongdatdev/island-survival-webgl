@@ -1,4 +1,4 @@
-import { BiomeType } from './BiomeGenerator.js?v=6';
+import { BiomeType } from './BiomeGenerator.js';
 
 /**
  * Category-based scale multipliers to keep environment objects proportional

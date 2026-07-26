@@ -1,5 +1,5 @@
 import { Scene } from '../core/Scene.js';
-import { WorldGenerator } from '../gameplay/world/WorldGenerator.js?v=6';
+import { WorldGenerator } from '../gameplay/world/WorldGenerator.js';
 import { CharacterRegistry } from '../characters/CharacterRegistry.js';
 import { parseMtl } from '../characters/CharacterLoader.js';
 import { ObjParser } from '../core/ObjParser.js';

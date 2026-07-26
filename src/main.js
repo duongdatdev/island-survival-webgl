@@ -1,7 +1,7 @@
-import { Engine } from './core/Engine.js?v=6';
-import { LoadingScene } from './scenes/LoadingScene.js?v=6';
-import { MainMenuScene } from './scenes/MainMenuScene.js?v=6';
-import { GameScene } from './scenes/GameScene.js?v=6';
+import { Engine } from './core/Engine.js';
+import { LoadingScene } from './scenes/LoadingScene.js';
+import { MainMenuScene } from './scenes/MainMenuScene.js';
+import { GameScene } from './scenes/GameScene.js';
 
 // Boot strap the WebGL 2 application on DOM completion
 document.addEventListener('DOMContentLoaded', () => {
