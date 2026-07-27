@@ -2,6 +2,7 @@ import { Entity } from './Entity.js';
 import { Mesh } from '../renderer/Mesh.js';
 import { Vec3 } from '../math/Vec3.js';
 import { randomInRange } from '../systems/DebrisDatabase.js';
+import { WaveField } from '../shaders/WaterWaves.js';
 
 /**
  * DriftingDebris - A collectible debris entity that spawns in the ocean
@@ -71,13 +72,15 @@ export class DriftingDebris extends Entity {
 
         // --- Animation state ---
         this.animTime = Math.random() * Math.PI * 2; // Random phase
-        this.bobAmplitude = 0.08;
-        this.bobSpeed = 1.8;
         this.rotSpeed = 0.6 + Math.random() * 0.4;
 
-        // --- Tilt for wave feel ---
-        this.tiltAmount = 0.15 + Math.random() * 0.1;
-        this.tiltSpeed = 1.2 + Math.random() * 0.5;
+        // How far the hull leans out of the wave's own slope. Light debris sits
+        // flatter on the water than heavy debris, so this varies per item.
+        this.tiltResponse = 1.6 + Math.random() * 0.8;
+
+        // Scratch buffer for the wave slope lookup, so drifting debris does not
+        // allocate an array per item per frame.
+        this._slope = [0, 0];
 
         // --- State flags ---
         this.isCollected = false;
@@ -131,15 +134,27 @@ export class DriftingDebris extends Entity {
             // On shore: very subtle bob, no drift
             this.rotation[1] = this.animTime * this.rotSpeed * 0.1;
         } else {
-            // In water: float on waves
-            this.position[1] = this.waterY + Math.sin(this.animTime * this.bobSpeed) * this.bobAmplitude;
+            // Float on the real ocean surface. This used to be a private sine
+            // at its own frequency, which left debris visibly out of phase with
+            // the water directly underneath it.
+            const x = this.position[0];
+            const z = this.position[2];
+            this.position[1] = this.waterY + WaveField.heightAt(x, z);
 
             // Slow Y-axis rotation
-            this.rotation[1] = this.animTime * this.rotSpeed;
+            const yaw = this.animTime * this.rotSpeed;
+            this.rotation[1] = yaw;
 
-            // Tilt on X/Z for wave rocking effect
-            this.rotation[0] = Math.sin(this.animTime * this.tiltSpeed) * this.tiltAmount;
-            this.rotation[2] = Math.cos(this.animTime * this.tiltSpeed * 0.7) * this.tiltAmount * 0.6;
+            // Lie along the wave face: the surface slope *is* the tilt. Pitch
+            // and roll are applied after yaw (see Entity.updateModelMatrix), so
+            // project the world slope onto the yawed axes first.
+            WaveField.slopeAt(x, z, this._slope);
+            const cy = Math.cos(yaw);
+            const sy = Math.sin(yaw);
+            const slopeAlongX = this._slope[0] * cy - this._slope[1] * sy;
+            const slopeAlongZ = this._slope[0] * sy + this._slope[1] * cy;
+            this.rotation[0] = -slopeAlongZ * this.tiltResponse;
+            this.rotation[2] = slopeAlongX * this.tiltResponse;
         }
 
         this.updateModelMatrix();

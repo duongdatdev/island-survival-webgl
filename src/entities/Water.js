@@ -1,17 +1,34 @@
 import { Entity } from './Entity.js';
 import { Mesh } from '../renderer/Mesh.js';
 
+/** Water this deep is fully "open ocean" for colouring purposes. */
+const DEEP_WATER = 6.0;
+
+/** How far offshore the surf band reaches, in world metres from the waterline. */
+const SHORE_BAND_WIDTH = 6.0;
+
+/** How far the terrain height interpolation extends above the waterline. */
+const SHORE_BAND_HEIGHT = 0.8;
+
 /**
  * Ocean Water Plane Grid Mesh
  */
 export class Water extends Entity {
-    constructor(gl, size = 60, width = 100.0) {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} size - grid divisions per axis
+     * @param {number} width - world size of the plane
+     * @param {object} [terrain] - sampled once to bake seabed depth into the
+     *   mesh. Without it the whole plane is treated as deep open water, which
+     *   is what the menu ocean wants.
+     */
+    constructor(gl, size = 60, width = 100.0, terrain = null) {
         super();
         this.gl = gl;
         this.size = size;
         this.width = width;
 
-        const data = this._generateWaterGrid();
+        const data = this._generateWaterGrid(terrain);
         this.mesh = new Mesh(gl, data);
 
         // Water level is at Y = 0.0
@@ -19,7 +36,7 @@ export class Water extends Entity {
         this.updateModelMatrix();
     }
 
-    _generateWaterGrid() {
+    _generateWaterGrid(terrain) {
         const size = this.size;
         const width = this.width;
         const step = width / size;
@@ -40,10 +57,14 @@ export class Water extends Entity {
 
                 positions.push(px, py, pz);
                 normals.push(0.0, 1.0, 0.0); // Upward base normals
-                
+
                 // Translucent ocean blue color [R, G, B, A]
-                colors.push(0.06, 0.32, 0.52, 0.85); 
-                texCoords.push(x / size, z / size);
+                colors.push(0.06, 0.32, 0.52, 0.85);
+
+                // The texcoord slot carries seabed data rather than a UV — the
+                // water shader has no texture, and baking it here costs nothing
+                // at runtime because the island never moves.
+                texCoords.push(...this._sampleSeabed(terrain, px, pz));
             }
         }
 
@@ -70,6 +91,45 @@ export class Water extends Entity {
             texCoords: new Float32Array(texCoords),
             indices: new Uint32Array(indices)
         };
+    }
+
+    /**
+     * Per-vertex seabed description for the water shader.
+     * @returns {number[]} [depth, shore] — depth 0 at the waterline rising to 1
+     *   over open water, shore peaking at 1 exactly where land meets sea.
+     *
+     * Shore is keyed on *radial distance* to the island, not on seabed depth,
+     * because the terrain generator floors the seabed at a constant −1 m. A
+     * depth-based shore value would paint every open-ocean vertex as "shore".
+     */
+    _sampleSeabed(terrain, x, z) {
+        if (!terrain) return [1.0, 0.0];
+
+        const height = terrain.getHeight(x, z);
+        const r = Math.sqrt(x * x + z * z);
+        const islandRadius = terrain.generator?.island?.radius || 44.0;
+
+        // Distance from the waterline.  Positive = offshore, negative = inland.
+        const d = r - islandRadius;
+
+        // Shore band: peaks at the waterline (d = 0), decays to zero
+        // SHORE_BAND_WIDTH metres offshore.
+        const SW = SHORE_BAND_WIDTH;
+        const shore = d > 0 ? Math.max(0.0, 1.0 - d / SW) : 1.0;
+
+        if (height > 0.0) {
+            // Vertex is above water (beach). Interpolate so the mesh has a
+            // valid gradient crossing the waterline.
+            return [0.0, shore * Math.max(0.0, 1.0 - height / SHORE_BAND_HEIGHT)];
+        }
+
+        // Depth for shallow-water colour: the underwater sand shelf is ~2 m
+        // deep at most, so 2 m is a better normaliser than 6 m.
+        const depth = -height;
+        return [
+            Math.min(1.0, depth / 2.0),
+            shore
+        ];
     }
 
     draw(shaderProgram) {

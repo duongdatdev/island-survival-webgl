@@ -1,5 +1,6 @@
 import { Creature, CreatureState } from './Creature.js';
 import { Vec3 } from '../math/Vec3.js';
+import { WaveField } from '../shaders/WaterWaves.js';
 
 /**
  * How far past the shelf edge a shark may roam. GameScene seeds sharks on a
@@ -166,8 +167,10 @@ export class Shark extends Creature {
                 break;
         }
 
-        // Stay at water level
-        this.position[1] = this._waterLevel + Math.sin(this.animTime * 0.5) * 0.1;
+        // Ride the ocean surface instead of a private sine, so a shark cutting
+        // across a swell rises and falls with the water it is swimming in.
+        this.position[1] = this._waterLevel
+            + WaveField.heightAt(this.position[0], this.position[2]);
 
         // Keep within world bounds. Derived from the generated island rather
         // than hardcoded: the radius is procedural (44–47), so a fixed 50/45

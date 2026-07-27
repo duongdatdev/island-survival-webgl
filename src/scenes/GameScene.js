@@ -5,6 +5,7 @@ import { ShaderProgram } from '../renderer/ShaderProgram.js';
 import { Mesh } from '../renderer/Mesh.js';
 import { BasicShader } from '../shaders/BasicShader.js';
 import { WaterShader } from '../shaders/WaterShader.js';
+import { WaveField } from '../shaders/WaterWaves.js';
 import { UnlitShader } from '../shaders/UnlitShader.js';
 import { Player } from '../entities/Player.js';
 import { CharacterRenderer } from '../characters/CharacterRenderer.js';
@@ -54,6 +55,25 @@ const AUTOSAVE_INTERVAL = 60.0;
 
 /** How often achievement predicates are re-evaluated, in seconds. */
 const ACHIEVEMENT_CHECK_INTERVAL = 1.0;
+
+/**
+ * Compass strip scale. Shared by the ticks, the direction labels and the POI
+ * markers so an icon lands exactly over the bearing it points at. At 2.9px per
+ * degree the default 260px bar shows ~90° of arc.
+ */
+const COMPASS_PX_PER_DEG = 2.9;
+
+/** Map a biome type onto the footstep surface key used by AudioManager. */
+function biomeToSurface(biome) {
+    switch (biome) {
+        case BiomeType.BEACH: return 'sand';
+        case BiomeType.FOREST: return 'grass';
+        case BiomeType.ROCK_AREA: return 'rock';
+        case BiomeType.GRASSLAND: return 'grass';
+        case BiomeType.OCEAN: return 'water';
+        default: return 'grass';
+    }
+}
 
 /**
  * Maps a resource's `vitalEffect.type` onto the VitalsSystem call and the
@@ -129,7 +149,10 @@ export class GameScene extends Scene {
 
         // Initialize terrain with generated data
         this.terrain = new Terrain(gl, 120, 100.0, this.world.terrain, this.world.terrainGenerator);
-        this.water = new Water(gl, 100, 200.0);   // 100x100 divisions, size 200
+        // 100x100 divisions, size 200. The terrain is handed over so the mesh
+        // can bake seabed depth per vertex — that drives the shallow-water
+        // colour and the shoreline foam band.
+        this.water = new Water(gl, 100, 200.0, this.terrain);
 
         // Instantiate environment props (trees, bushes, rocks) from the generated world
         this.environmentEntities = [];
@@ -324,6 +347,7 @@ export class GameScene extends Scene {
         this._pauseSaveBtn = document.getElementById('pause-save-btn');
         this._pauseSettingsBtn = document.getElementById('pause-settings-btn');
         this._pauseAchievementsBtn = document.getElementById('pause-achievements-btn');
+        this._pauseGuideBtn = document.getElementById('pause-guide-btn');
 
         this._onPauseResume = () => {
             this.engine.audio.playClick();
@@ -359,6 +383,10 @@ export class GameScene extends Scene {
             this.engine.audio.playClick();
             this.menuUI.openAchievements();
         };
+        this._onPauseGuide = () => {
+            this.engine.audio.playClick();
+            this.menuUI.openGuide();
+        };
 
         if (this._pauseResumeBtn) this._pauseResumeBtn.addEventListener('click', this._onPauseResume);
         if (this._pauseSoundBtn) this._pauseSoundBtn.addEventListener('click', this._onPauseSound);
@@ -366,6 +394,7 @@ export class GameScene extends Scene {
         if (this._pauseSaveBtn) this._pauseSaveBtn.addEventListener('click', this._onPauseSave);
         if (this._pauseSettingsBtn) this._pauseSettingsBtn.addEventListener('click', this._onPauseSettings);
         if (this._pauseAchievementsBtn) this._pauseAchievementsBtn.addEventListener('click', this._onPauseAchievements);
+        if (this._pauseGuideBtn) this._pauseGuideBtn.addEventListener('click', this._onPauseGuide);
 
         // 15. Running properties
         this.time = 0.0;
@@ -445,12 +474,22 @@ export class GameScene extends Scene {
         // ── v1.0: Release polish systems ──
         this._initReleaseSystems();
 
-        // Start ambient audio (v0.4: also start weather audio)
+        // Start ambient audio (v1.1: positional emitters + procedural music)
         this.engine.audio._ensureContext();
         this.engine.audio.resume();
         this.engine.audio.startAmbientWaves();
         this.engine.audio.startWind();
         this.engine.audio.startRain();
+        this.engine.audio.startMusic();
+        this.engine.audio.setHealthFraction(this.vitals.health / 100);
+
+        // Register positional emitters for the waterfall and campfire (if
+        // already built from a save). These are one-shot registrations;
+        // the campfire emitter is created dynamically on placement.
+        this.engine.audio.addEmitter('waterfall', 'waterfall', this.waterfall.position, true);
+        if (this.campfire.isBuilt) {
+            this.engine.audio.addEmitter('campfire', 'campfire', this.campfire.position, true);
+        }
 
         // Restoring last means every subsystem already exists and can simply be
         // overwritten with the stored values.
@@ -513,7 +552,21 @@ export class GameScene extends Scene {
             resolution: document.getElementById('debug-resolution'),
             postFx: document.getElementById('debug-postfx'),
             saveStatus: document.getElementById('pause-save-status'),
+            // v1.1 HUD widgets
+            timeWeatherWidget: document.getElementById('time-weather-widget'),
+            twClock: document.getElementById('tw-clock'),
+            twWeather: document.getElementById('tw-weather'),
+            twDay: document.getElementById('tw-day'),
+            compassBar: document.getElementById('compass-bar'),
+            compassStrip: document.getElementById('compass-strip'),
+            compassMarkers: document.getElementById('compass-markers'),
+            crosshair: document.getElementById('crosshair'),
+            hitMarker: document.getElementById('hit-marker'),
         };
+
+        // Track the survival day counter
+        this._survivalDay = 1;
+        this._lastDayIndex = 0;
 
         this._applySettings();
         this._unsubscribeSettings = settings.onChange(() => this._applySettings());
@@ -723,6 +776,11 @@ export class GameScene extends Scene {
 
         this.time += deltaTime;
 
+        // Refresh the shared wave field before anything that floats updates.
+        // render() feeds these very same values to the shader, so what the
+        // player sees and what debris rides are one surface, not two.
+        this._syncWaveField();
+
         // Escape cutscene update loop
         if (this.isEscaping) {
             this.escapeTime += deltaTime;
@@ -736,7 +794,10 @@ export class GameScene extends Scene {
             }
 
             this.raftAssembly.position[2] += sailSpeed * deltaTime;
-            this.raftAssembly.position[1] = Math.sin(this.time * 2.5) * 0.08;
+            // Ride the actual ocean rather than an unrelated sine — the raft
+            // is the one thing the player is staring at during the escape.
+            this.raftAssembly.position[1] = WaveField.heightAt(
+                this.raftAssembly.position[0], this.raftAssembly.position[2]);
             this.raftAssembly.updateModelMatrix();
 
             // Pin player character to raft frame
@@ -911,12 +972,21 @@ export class GameScene extends Scene {
             this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain, CollisionLayers.Creature);
         }
 
-        // Footstep sounds while moving
+        // Footstep sounds while moving — surface type comes from the biome
+        // underfoot, running makes the steps louder and brighter.
         if (this.player.currentSpeed > 0.1) {
             this._footstepTimer += deltaTime;
-            if (this._footstepTimer >= this._footstepInterval) {
+            const running = this.player.currentSpeed > 2.0;
+            if (this._footstepTimer >= (running ? this._footstepInterval * 0.7 : this._footstepInterval)) {
                 this._footstepTimer = 0;
-                this.engine.audio.playFootstep();
+                const px = this.player.position[0];
+                const pz = this.player.position[2];
+                const h = this.terrain.getHeight(px, pz);
+                const biome = this.world.biomeGenerator ? this.world.biomeGenerator.getBiome(px, pz, h) : null;
+                this.engine.audio.playFootstep(
+                    biomeToSurface(biome),
+                    running
+                );
 
                 // Dust particles at player feet
                 const dustPos = [
@@ -956,7 +1026,9 @@ export class GameScene extends Scene {
                     if (creature.canDamagePlayer()) {
                         this.vitals.heal(-creature.attackDamage);
                         this._showNotification(`💥 Trúng đòn! Mất ${creature.attackDamage} máu!`);
-                        this.engine.audio.playFootstep();
+                        this.engine.audio.playPlayerHurt();
+                        this.engine.audio.setHealthFraction(this.vitals.health / 100);
+                        this._showDamageFlash();
 
                         // Blood particle effect
                         this.particleSystem.emit(
@@ -1083,6 +1155,7 @@ export class GameScene extends Scene {
             }
             if (!cooked) {
                 this._showNotification('❌ Không có nguyên liệu nấu!');
+                this.engine.audio.playError();
             }
         }
 
@@ -1105,7 +1178,7 @@ export class GameScene extends Scene {
             if (this.waterCollector.collectWater()) {
                 this.inventory.addItem('fresh_water', 1);
                 this._showNotification('💧 Đã lấy: Nước Ngọt!');
-                this.engine.audio.playPickup();
+                this.engine.audio.playDrink();
             }
         }
 
@@ -1172,7 +1245,7 @@ export class GameScene extends Scene {
             }
 
             // Sound + particle effects for raft building
-            this.engine.audio.playRaftBuild();
+            this.engine.audio.playRaftBuild(this.raftAssembly.position);
             this.particleSystem.emit(
                 [this.raftAssembly.position[0], this.raftAssembly.position[1] + 0.5 * 0.45, this.raftAssembly.position[2]],
                 ParticleSystem.PRESET.BUILD
@@ -1187,7 +1260,8 @@ export class GameScene extends Scene {
                 this.engine.input.keys['KeyE'] = false; // Consume key
                 this.vitals.drink(100); // Fully restore thirst
                 this._showNotification('💧 Đã uống nước thác! Khôi phục hết Thối Khát.');
-                this.engine.audio.playPickup();
+                this.engine.audio.playDrink();
+                this.engine.audio.playSplash(this.player.position);
                 
                 this.particleSystem.emit(
                     [this.player.position[0], this.player.position[1] - 0.5 * this.player.scaleFactor, this.player.position[2]],
@@ -1209,7 +1283,7 @@ export class GameScene extends Scene {
                 this.engine.input.keys['KeyE'] = false; // Consume key
                 this.isFishing = true;
                 this.fishingTimer = 4.0; // 4 seconds channel
-                this.engine.audio.playRaftBuild();
+                this.engine.audio.playSplash(this.player.position);
             }
         }
 
@@ -1395,14 +1469,228 @@ export class GameScene extends Scene {
             this.engine.audio.playThunder();
         }
 
-        // ── Weather Audio Update ──
+        // ── Audio Update (v1.1) ──
         this.engine.audio.setWindIntensity(this.weather.windSpeed / 5.0);
         this.engine.audio.setRainIntensity(this.weather.rainIntensity);
-        this.engine.audio.updateWeatherAudio(deltaTime);
+        this.engine.audio.setTimeOfDay(this.dayNight.timeOfDay);
+        this.engine.audio.setListener(this.camera.position, this.camera.target);
+
+        // Music mood: danger when a predator is chasing, night when the sun is
+        // down, calm for everything else.
+        const closestThreat = this._nearestThreatDistance();
+        if (closestThreat < 12) {
+            this.engine.audio.setMusicMood('danger');
+        } else if (this.dayNight.timeOfDay > 0.82 || this.dayNight.timeOfDay < 0.12) {
+            this.engine.audio.setMusicMood('night');
+        } else {
+            this.engine.audio.setMusicMood('calm');
+        }
+
+        // Move waterfall emitter if present
+        if (this.waterfall) {
+            this.engine.audio.setEmitterPosition('waterfall', this.waterfall.position);
+        }
+
+        // Keep heartbeat in sync even when not injured
+        this.engine.audio.setHealthFraction(this.vitals.health / 100);
+
+        this.engine.audio.update(deltaTime);
+
+        // ── v1.1 HUD Widgets ──
+        this._updateHUDWidgets(deltaTime);
 
         // Push debug info — skipped entirely while the panel is hidden, since
         // these writes forced layout work every frame for nothing.
         this._updateDebugPanel();
+    }
+
+    /**
+     * Update the v1.1 HUD widgets: time/weather, compass, crosshair and hit
+     * marker. Runs every frame but skips DOM writes when the panel is hidden.
+     */
+    _updateHUDWidgets(deltaTime) {
+        const dom = this._domCache;
+        if (!dom) return;
+
+        // ── Time/Weather Widget ──
+        if (dom.timeWeatherWidget && dom.twClock && dom.twWeather && dom.twDay) {
+            dom.timeWeatherWidget.classList.remove('hidden');
+
+            // Convert normalised time (0..1) to HH:MM
+            const hours24 = this.dayNight.timeOfDay * 24;
+            const hh = Math.floor(hours24);
+            const mm = Math.floor((hours24 - hh) * 60);
+            dom.twClock.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+
+            // Weather icon
+            const weather = this.weather.currentWeather;
+            const icons = { clear: '☀️', cloudy: '⛅', rain: '🌧️', storm: '⛈️' };
+            dom.twWeather.textContent = icons[weather] || '☀️';
+
+            // Day counter: each full cycle of timeOfDay (0→1) is one day.
+            const dayIndex = Math.floor(this.survivalSeconds * this.dayNight.daySpeed);
+            const displayDay = dayIndex + 1;
+            dom.twDay.textContent = `Ngày ${displayDay}`;
+        }
+
+        // ── Compass Bar ──
+        this._updateCompass(deltaTime);
+
+        // ── Crosshair: show when a weapon is equipped ──
+        if (dom.crosshair) {
+            const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
+            const equipped = this.inventory.slots[hotbarIdx];
+            const isWeapon = equipped && (
+                equipped.id === 'spear' || equipped.id === 'bow' ||
+                (getResourceDef(equipped.id) || {}).weaponType
+            );
+            dom.crosshair.classList.toggle('hidden', !isWeapon || this.isPaused || this.isEscaping);
+        }
+    }
+
+    /**
+     * Build the compass tick strip. Runs once — the strip is then moved purely
+     * by `transform`, which is what makes turning smooth. The old version
+     * re-sliced a string of characters every frame, so the compass could only
+     * step in whole-character jumps (~2.7° each) and multi-letter labels like
+     * "NE" got cut in half at the window edge, showing a bare "E".
+     *
+     * Positions are in strip-space pixels at a fixed COMPASS_PX_PER_DEG, so a
+     * narrow viewport shows less arc at the same scale rather than squashing
+     * it. Coverage runs -90°..450° because the visible window straddles 0/360.
+     */
+    _buildCompassStrip() {
+        const strip = this._domCache && this._domCache.compassStrip;
+        if (!strip || strip.childElementCount > 0) return;
+
+        const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        let html = '';
+
+        for (let deg = -90; deg <= 450; deg += 15) {
+            const x = (deg * COMPASS_PX_PER_DEG).toFixed(2);
+            if (deg % 45 !== 0) {
+                html += `<span class="compass-tick" style="left:${x}px"></span>`;
+                continue;
+            }
+            const label = labels[(((deg / 45) % 8) + 8) % 8];
+            const north = label === 'N' ? ' north' : '';
+            html += `<span class="compass-tick major${north}" style="left:${x}px"></span>`;
+            html += `<span class="compass-label${north}" style="left:${x}px">${label}</span>`;
+        }
+
+        strip.innerHTML = html;
+    }
+
+    /**
+     * Scroll the compass to the camera's bearing.
+     *
+     * Heading comes from the camera, not `player.rotation[1]`: the player's yaw
+     * is only assigned while WASD is held, and it snaps straight to the movement
+     * angle. Driving the compass from it meant looking around moved nothing at
+     * all, and a strafe flicked the needle 90° in one frame.
+     */
+    _updateCompass(deltaTime) {
+        const dom = this._domCache;
+        const bar = dom && dom.compassBar;
+        if (!bar || !dom.compassStrip) return;
+
+        bar.classList.remove('hidden');
+        this._buildCompassStrip();
+
+        // clientWidth forces a layout flush, so only re-measure when the window
+        // actually changed size.
+        if (this._compassHalfWidth === undefined || this._compassWinW !== window.innerWidth) {
+            this._compassWinW = window.innerWidth;
+            this._compassHalfWidth = bar.clientWidth / 2;
+        }
+        const half = this._compassHalfWidth;
+
+        const dx = this.camera.target[0] - this.camera.position[0];
+        const dz = this.camera.target[2] - this.camera.position[2];
+        const target = (((Math.atan2(dx, dz) * 180 / Math.PI) % 360) + 360) % 360;
+
+        // Ease along the shortest arc so mouse-look micro-jitter doesn't shake
+        // the strip. Exponential decay keeps it frame-rate independent.
+        if (this._compassHeading === undefined) {
+            this._compassHeading = target;
+        } else {
+            let delta = target - this._compassHeading;
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+            const k = 1 - Math.exp(-deltaTime * 16);
+            this._compassHeading = (((this._compassHeading + delta * k) % 360) + 360) % 360;
+        }
+        const heading = this._compassHeading;
+
+        const shift = half - heading * COMPASS_PX_PER_DEG;
+        dom.compassStrip.style.transform = `translate3d(${shift.toFixed(2)}px, 0, 0)`;
+
+        if (!dom.compassMarkers) return;
+
+        const markers = [];
+        if (this.campfire && this.campfire.isBuilt) {
+            markers.push({ id: 'campfire', pos: this.campfire.position, icon: '🔥' });
+        }
+        if (this.raftAssembly) {
+            markers.push({ id: 'raft', pos: this.raftAssembly.position, icon: '⛵' });
+        }
+
+        // Reuse marker nodes. Rebuilding innerHTML every frame re-parsed and
+        // re-laid out the whole bar, which is exactly the kind of per-frame
+        // work that makes a HUD element stutter.
+        if (!this._compassMarkerEls) this._compassMarkerEls = new Map();
+        const pool = this._compassMarkerEls;
+        const live = new Set();
+        // Same scale as the ticks, so an icon now sits over the bearing it means.
+        const maxVisible = half / COMPASS_PX_PER_DEG + 4;
+
+        for (const m of markers) {
+            let el = pool.get(m.id);
+            if (!el) {
+                el = document.createElement('div');
+                el.className = 'compass-marker';
+                el.textContent = m.icon;
+                dom.compassMarkers.appendChild(el);
+                pool.set(m.id, el);
+            }
+            live.add(m.id);
+
+            const mdx = m.pos[0] - this.player.position[0];
+            const mdz = m.pos[2] - this.player.position[2];
+            const bearing = (((Math.atan2(mdx, mdz) * 180 / Math.PI) % 360) + 360) % 360;
+            let diff = bearing - heading;
+            if (diff > 180) diff -= 360;
+            if (diff < -180) diff += 360;
+
+            if (Math.abs(diff) > maxVisible) {
+                el.style.visibility = 'hidden';
+                continue;
+            }
+            el.style.visibility = 'visible';
+            const px = half + diff * COMPASS_PX_PER_DEG;
+            // calc() resolves the -50% against the icon's own width, keeping it
+            // centred on its bearing while transform does the positioning.
+            el.style.transform = `translateX(calc(${px.toFixed(2)}px - 50%))`;
+        }
+
+        for (const [id, el] of pool) {
+            if (!live.has(id)) el.style.visibility = 'hidden';
+        }
+    }
+
+    /** Show the crosshair hit marker (brief flash). */
+    _showHitMarker(killed) {
+        const el = this._domCache && this._domCache.hitMarker;
+        if (!el) return;
+        el.classList.remove('hidden', 'hit-marker-show', 'hit-marker-kill');
+        void el.offsetWidth;
+        el.classList.add('hit-marker-show');
+        if (killed) el.classList.add('hit-marker-kill');
+        if (this._hitMarkerTimeout) clearTimeout(this._hitMarkerTimeout);
+        this._hitMarkerTimeout = setTimeout(() => {
+            el.classList.add('hidden');
+            el.classList.remove('hit-marker-show', 'hit-marker-kill');
+        }, 300);
     }
 
     /**
@@ -1459,6 +1747,29 @@ export class GameScene extends Scene {
             this._domCache.saveStatus.textContent = '';
             this._domCache.saveStatus.classList.remove('error');
         }
+    }
+
+    /**
+     * Push this frame's weather into the shared wave field.
+     *
+     * Wind now steers the waves: WeatherSystem has always carried a direction,
+     * but the ocean used to ignore it and run a fixed diagonal regardless of
+     * the storm. Attenuation keeps swell off the beach so it cannot punch up
+     * through the sand.
+     */
+    _syncWaveField() {
+        const island = this.world.terrainGenerator.island;
+        const animate = this._domCache.water ? this._domCache.water.checked : true;
+
+        WaveField.sync(
+            this.time,
+            this.weather.getWaveAmplitudeMultiplier(),
+            this.weather.getWaveSpeedMultiplier(),
+            this.weather.windDirection,
+            island.innerRadius - 2,
+            island.radius + 5,
+            animate
+        );
     }
 
     render() {
@@ -1595,16 +1906,36 @@ export class GameScene extends Scene {
         this.waterShader.setUniform3fv('uAmbientColor', this.ambientLight.color);
         this.waterShader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity);
 
-        // Load Time & Animation Control Uniforms
+        // Wave uniforms come from the shared field, not from weather directly,
+        // so the drawn surface is bit-for-bit the one gameplay floats things on.
         this.waterShader.setUniform1f('uTime', this.time);
         this.waterShader.setUniform1f('uWaveEnable', animateWater ? 1.0 : 0.0);
-        // v0.4: Dynamic wave amplitude/speed from weather
         this.waterShader.setUniform1f('uWaveAmplitude', this.weather.getWaveAmplitudeMultiplier());
         this.waterShader.setUniform1f('uWaveSpeed', this.weather.getWaveSpeedMultiplier());
-        // v0.4: Wave attenuation near island shoreline
-        const islandData = this.world.terrainGenerator.island;
-        this.waterShader.setUniform1f('uWaveAttenStart', islandData.innerRadius - 2);
-        this.waterShader.setUniform1f('uWaveAttenEnd', islandData.radius + 5);
+        this.waterShader.setUniform1f('uWaveAttenStart', WaveField.attenStart);
+        this.waterShader.setUniform1f('uWaveAttenEnd', WaveField.attenEnd);
+        this.waterShader.setUniform2f('uWaveHeading', WaveField.heading[0], WaveField.heading[1]);
+
+        // Fresnel needs the sky it is reflecting; use the same horizon tint the
+        // day/night cycle is painting behind the island.
+        const horizonColor = skyColors.horizon;
+        this.waterShader.setUniform3fv('uHorizonColor', [
+            horizonColor[0] * weatherDim,
+            horizonColor[1] * weatherDim,
+            horizonColor[2] * weatherDim
+        ]);
+        this.waterShader.setUniform3fv('uShallowColor', [0.24, 0.66, 0.62]);
+
+        // Ripples are subtler than the menu's: the gameplay camera sits close
+        // to the surface, where the menu's strength reads as boiling.
+        this.waterShader.setUniform1f('uDetailStrength', animateWater ? 0.6 : 0.0);
+        this.waterShader.setUniform1f('uFoamStrength', 1.0);
+
+        // Whitecaps are wind-driven: a clear day (windSpeed ~0.5) breaks
+        // nothing, a storm (~3.5+) breaks everywhere.
+        const whitecaps = Math.min(1.0, Math.max(0.0, (this.weather.windSpeed - 1.0) / 2.0));
+        this.waterShader.setUniform1f('uWhitecaps', animateWater ? whitecaps : 0.0);
+
         // v0.4: Lightning flash for water reflections
         this.waterShader.setUniform1f('uLightningFlash', this.weather.getLightningModulation());
 
@@ -1711,6 +2042,7 @@ export class GameScene extends Scene {
         }
 
         this.engine.audio.playClick();
+        this.engine.audio.setDucked(true);
     }
 
     _resumeGame() {
@@ -1720,14 +2052,16 @@ export class GameScene extends Scene {
         // Hide pause menu
         const pauseMenu = document.getElementById('pause-menu');
         if (pauseMenu) pauseMenu.classList.add('hidden');
+        this.engine.audio.setDucked(false);
     }
 
     _updatePauseSoundButton(isMuted) {
-        if (this._pauseSoundBtn) {
-            this._pauseSoundBtn.innerHTML = isMuted
-                ? '<span class="btn-icon">🔇</span><span class="btn-text">ÂM THANH: TẮT</span>'
-                : '<span class="btn-icon">🔊</span><span class="btn-text">ÂM THANH: BẬT</span>';
-        }
+        if (!this._pauseSoundBtn) return;
+
+        this._pauseSoundBtn.innerHTML =
+            `<svg class="ui-icon" aria-hidden="true"><use href="#i-volume${isMuted ? '-off' : ''}"/></svg>` +
+            `<span class="btn-text">ÂM THANH: ${isMuted ? 'TẮT' : 'BẬT'}</span>`;
+        this._pauseSoundBtn.setAttribute('aria-pressed', isMuted ? 'true' : 'false');
     }
 
     // ============================================
@@ -2003,7 +2337,14 @@ export class GameScene extends Scene {
         this.inventory.removeItemAt(idx, 1);
         this.vitals[action.method](effect.amount);
         this._showNotification(`${resDef.icon} ${action.verb} ${resDef.name}! ${action.label} +${effect.amount}`);
-        this.engine.audio.playPickup();
+
+        // Different consumables get their own cue so the player doesn't hear
+        // the same generic chime when eating, drinking or healing.
+        if (effect.type === 'hunger') this.engine.audio.playEat();
+        else if (effect.type === 'thirst') this.engine.audio.playDrink();
+        else if (effect.type === 'health') this.engine.audio.playHeal();
+
+        this.engine.audio.setHealthFraction(this.vitals.health / 100);
         // Redraw so the slot count drops immediately. Previously the stack only
         // refreshed on the next hotbar change, so eating looked like a no-op.
         this._updateGridInventory();
@@ -2042,6 +2383,7 @@ export class GameScene extends Scene {
         const activeItem = this.inventory.slots[activeIdx];
         if (!activeItem) {
             this._showNotification('❌ Ô hotbar đang chọn trống!');
+            this.engine.audio.playError();
             return;
         }
 
@@ -2071,10 +2413,12 @@ export class GameScene extends Scene {
         // crafted item, so refuse and tell the player.
         if (type === 'campfire' && this.campfire && this.campfire.isBuilt) {
             this._showNotification('🔥 Đã có Lửa Trại rồi! Không thể đặt thêm.');
+            this.engine.audio.playError();
             return;
         }
         if (type === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) {
             this._showNotification('💧 Đã có Bẫy Nước rồi! Không thể đặt thêm.');
+            this.engine.audio.playError();
             return;
         }
 
@@ -2100,6 +2444,8 @@ export class GameScene extends Scene {
 
         const activeIdx = 20 + this.inventory.selectedHotbarIndex;
 
+        const buildPos = [clampedX, placeY + 0.5, clampedZ];
+
         if (type === 'campfire') {
             this.campfire.position[0] = clampedX;
             this.campfire.position[1] = placeY;
@@ -2108,6 +2454,7 @@ export class GameScene extends Scene {
             this.campfire.updateModelMatrix();
             this.inventory.removeItemAt(activeIdx, 1);
             this._showNotification('🔥 Đã đặt Lửa Trại! Đến gần để nấu ăn.');
+            this.engine.audio.addEmitter('campfire', 'campfire', buildPos, true);
         } else if (type === 'water_collector') {
             this.waterCollector.position[0] = clampedX;
             this.waterCollector.position[1] = placeY;
@@ -2118,7 +2465,7 @@ export class GameScene extends Scene {
             this._showNotification('💧 Đã đặt Bẫy Nước Mưa! Nước hứng tự động.');
         }
 
-        this.engine.audio.playRaftBuild();
+        this.engine.audio.playRaftBuild(buildPos);
         this.particleSystem.emit(
             [clampedX, placeY + 0.5, clampedZ],
             ParticleSystem.PRESET.BUILD
@@ -2139,7 +2486,8 @@ export class GameScene extends Scene {
             this._renderCraftingPanel();
             this._updateGridInventory();
             this.tutorial.notifyCraftingOpened();
-            this.engine.audio.playClick();
+            this.engine.audio.playOpenPanel();
+            this.engine.audio.setDucked(true);
         } else {
             this._closeInventoryMenu();
         }
@@ -2148,7 +2496,8 @@ export class GameScene extends Scene {
     _closeInventoryMenu() {
         if (this.inventoryMenu) {
             this.inventoryMenu.classList.add('hidden');
-            this.engine.audio.playClick();
+            this.engine.audio.playClosePanel();
+            this.engine.audio.setDucked(false);
         }
     }
 
@@ -2287,6 +2636,7 @@ export class GameScene extends Scene {
             this._renderCraftingPanel();
         } else {
             console.warn(`GameScene: Crafting failed for ${recipeId}`);
+            this.engine.audio.playError();
         }
     }
 
@@ -2361,6 +2711,12 @@ export class GameScene extends Scene {
         this.stats.survivalSeconds = this.survivalSeconds;
         this.achievements.evaluate(this.stats);
 
+        // Death SFX + duck the world so the funeral figure lands
+        this.engine.audio.playDeath();
+        this.engine.audio.setDucked(true);
+        this.engine.audio.setHealthFraction(0);
+        this.engine.audio.setMusicMood('calm');
+
         // Show game over screen
         if (this.gameoverScreen) {
             this.gameoverScreen.classList.remove('hidden');
@@ -2388,30 +2744,25 @@ export class GameScene extends Scene {
      * @param {string} message
      */
     _showNotification(message) {
-        const el = document.getElementById('pickup-notification');
-        if (!el) return;
+        const container = document.getElementById('pickup-notification');
+        if (!container) return;
 
-        el.innerHTML = message;
-        el.classList.remove('hidden');
-        el.classList.remove('animate-out');
+        const toast = document.createElement('div');
+        toast.className = 'toast-item';
+        toast.innerHTML = message;
+        container.appendChild(toast);
 
-        // Force reflow for animation restart
-        void el.offsetWidth;
-        el.classList.add('animate-in');
-
-        // Clear existing timeout if any
-        if (this._notificationTimeoutId) {
-            clearTimeout(this._notificationTimeoutId);
+        // Cap visible toasts at 4 — oldest are removed first so the latest
+        // message is always on top and nothing overflows the viewport.
+        while (container.children.length > 4) {
+            container.removeChild(container.firstChild);
         }
 
-        this._notificationTimeoutId = setTimeout(() => {
-            el.classList.remove('animate-in');
-            el.classList.add('animate-out');
-            setTimeout(() => {
-                el.classList.add('hidden');
-                el.classList.remove('animate-out');
-            }, 300);
-        }, 2500);
+        // Remove the DOM node after the CSS animation completes (2.5s in +
+        // 0.3s fade-out = ~3s total).
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 3100);
     }
 
     /**
@@ -2615,6 +2966,18 @@ export class GameScene extends Scene {
         // Still on cooldown — no swing happened, so stay silent
         if (!result.swung) return;
 
+        // The weapon left the player's hands — always whoosh.
+        // creature can be null on a miss (swing with no target in range)
+        const weaponType = equippedItem
+            ? (getResourceDef(equippedItem.id) || {}).weaponType
+            : 'melee';
+        const swingPos = result.creature ? result.creature.position : null;
+        if (weaponType === 'ranged') {
+            this.engine.audio.playBowRelease(swingPos);
+        } else {
+            this.engine.audio.playSwing(swingPos);
+        }
+
         if (result.hit) {
             // Hit feedback
             const killed = result.creature.state === CreatureState.DEAD;
@@ -2622,11 +2985,24 @@ export class GameScene extends Scene {
             this._showNotification(killed
                 ? `💀 Hạ gục! -${result.damage} máu`
                 : `⚔️ Trúng! -${result.damage} máu`);
+
+            // Creature kind determines the hurt voice. Default is used for
+            // any creature not in the map (future additions are covered).
+            const creatureKind = result.creature.constructor.name.toLowerCase();
+
+            if (killed) {
+                this.engine.audio.playCreatureDie(creatureKind, result.creature.position);
+                this._showHitMarker(true);
+            } else {
+                this.engine.audio.playHit(result.creature.position);
+                this.engine.audio.playCreatureHurt(creatureKind, result.creature.position);
+                this._showHitMarker(false);
+            }
+
             this.particleSystem.emit(
                 result.creature.position,
                 { count: 8, color: [1.0, 0.5, 0.1], colorVariance: 0.15, size: 5, sizeVariance: 3, speed: 3.0, speedVariance: 1.5, lifetime: 0.4, lifetimeVariance: 0.15, gravity: -2.0, spread: 0.6, yBias: 2.0 }
             );
-            this.engine.audio.playRaftBuild(); // Reuse build sound as hit SFX
         } else if (equippedItem && (equippedItem.id === 'spear' || equippedItem.id === 'bow')) {
             // Only nag about misses when an actual weapon is equipped —
             // otherwise every stray click spams the notification bar.
@@ -2647,10 +3023,63 @@ export class GameScene extends Scene {
         return Math.atan2(dx, dz);
     }
 
+    /**
+     * Find the closest hostile creature within detection range. Used to
+     * decide when to switch the music into the danger cue.
+     * @returns {number} Distance, or Infinity when nothing is threatening.
+     */
+    _nearestThreatDistance() {
+        let closest = Infinity;
+        for (const creature of this.creatures) {
+            if (creature.state !== CreatureState.CHASE && creature.state !== CreatureState.ATTACK) continue;
+            const dx = creature.position[0] - this.player.position[0];
+            const dz = creature.position[2] - this.player.position[2];
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < closest) closest = dist;
+        }
+        return closest;
+    }
+
+    /**
+     * Brief red flash on the screen edge to indicate the direction damage
+     * came from. The overlay is created on first use and styled with CSS
+     * rather than a DOM element per direction.
+     */
+    _showDamageFlash() {
+        if (!this._damageFlash) {
+            this._damageFlash = document.createElement('div');
+            this._damageFlash.id = 'damage-vignette';
+            this._damageFlash.className = 'damage-vignette hidden';
+            document.body.appendChild(this._damageFlash);
+        }
+        this._damageFlash.classList.remove('hidden');
+        this._damageFlash.classList.remove('damage-vignette-fade');
+        void this._damageFlash.offsetWidth; // force reflow
+        this._damageFlash.classList.add('damage-vignette-fade');
+        if (this._damageFlashTimer) clearTimeout(this._damageFlashTimer);
+        this._damageFlashTimer = setTimeout(() => {
+            this._damageFlash.classList.add('hidden');
+            this._damageFlash.classList.remove('damage-vignette-fade');
+        }, 600);
+    }
+
 
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
-        
+
+        // These HUD widgets live in the shared page markup and are only ever
+        // un-hidden here, so this scene has to put them back — otherwise they
+        // stay painted over the main menu (z-index 120 beats the menu's 15).
+        const dom = this._domCache || {};
+        for (const el of [dom.compassBar, dom.timeWeatherWidget, dom.crosshair, dom.hitMarker]) {
+            if (el) el.classList.add('hidden');
+        }
+        // Marker nodes are appended to static markup, so a re-entered scene
+        // would otherwise stack a second copy behind its fresh pool.
+        if (dom.compassMarkers) dom.compassMarkers.replaceChildren();
+        this._compassMarkerEls = null;
+
+
         if (this.basicShader) this.basicShader.delete();
         if (this.waterShader) this.waterShader.delete();
         if (this.unlitShader) this.unlitShader.delete();
@@ -2717,6 +3146,7 @@ export class GameScene extends Scene {
         if (this._pauseSaveBtn) this._pauseSaveBtn.removeEventListener('click', this._onPauseSave);
         if (this._pauseSettingsBtn) this._pauseSettingsBtn.removeEventListener('click', this._onPauseSettings);
         if (this._pauseAchievementsBtn) this._pauseAchievementsBtn.removeEventListener('click', this._onPauseAchievements);
+        if (this._pauseGuideBtn) this._pauseGuideBtn.removeEventListener('click', this._onPauseGuide);
 
         // v1.0 cleanup
         if (this._unsubscribeSettings) {
@@ -2750,10 +3180,24 @@ export class GameScene extends Scene {
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');
 
-        // Stop ambient and weather sounds
+        // Stop ambient, weather and music
         this.engine.audio.stopAmbientWaves();
         this.engine.audio.stopWind();
         this.engine.audio.stopRain();
+        this.engine.audio.stopMusic();
+        this.engine.audio.removeEmitter('waterfall');
+        this.engine.audio.removeEmitter('campfire');
+
+        // Cleanup dynamically created HUD elements
+        if (this._damageFlash && this._damageFlash.parentNode) {
+            this._damageFlash.parentNode.removeChild(this._damageFlash);
+        }
+        if (this._damageFlashTimer) clearTimeout(this._damageFlashTimer);
+        if (this._hitMarkerTimeout) clearTimeout(this._hitMarkerTimeout);
+
+        // Clear any remaining stacked toasts
+        const toastContainer = document.getElementById('pickup-notification');
+        if (toastContainer) toastContainer.innerHTML = '';
     }
 
     /**
