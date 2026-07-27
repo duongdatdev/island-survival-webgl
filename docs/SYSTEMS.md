@@ -62,10 +62,26 @@ The **Island Survival: Escape** codebase is built around modular, decoupled syst
 
 ---
 
-## 8. Audio System
-*Class:* [AudioManager](file:///d:/Project/webgl/island-survival/src/core/AudioManager.js)
-* Initializes a browser `AudioContext` upon the first explicit user gesture.
-* Synthesizes audio waveforms dynamically using Web Audio API nodes.
+## 8. Audio System (v1.1)
+*Classes:* [AudioManager](file:///d:/Project/webgl/island-survival/src/core/AudioManager.js), [AmbienceDirector](file:///d:/Project/webgl/island-survival/src/core/audio/AmbienceDirector.js), [MusicDirector](file:///d:/Project/webgl/island-survival/src/core/audio/MusicDirector.js), [AudioBuffers](file:///d:/Project/webgl/island-survival/src/core/audio/AudioBuffers.js), [Spatial](file:///d:/Project/webgl/island-survival/src/core/audio/Spatial.js)
+
+Architecture (v1.1 restructure):
+```
+master ─┬─ sfx ──────────── one-shots (AudioManager)
+        └─ duck ─┬─ ambient ──── loops + 3D emitters (AmbienceDirector)
+                 └─ music ────── procedural pad (MusicDirector)
+```
+
+* **AudioManager** — facade. Initializes the `AudioContext` on first user gesture and owns the mixer graph, per-bus volume sliders, and every one-shot SFX method (pickups, combat, crafting, footsteps, UI feedback). Noise-based cues render through `AudioBuffers` rather than building arrays at play time.
+* **AudioBuffers** — pre-rendered, cached procedural sample banks. Multiple randomised variants per key so repeated plays don't sound identical. Also holds `crossfadeLoop`, `fillNoiseBurst` and `fillBrownNoise` helpers.
+* **AmbienceDirector** — every looping, world-driven sound: surf, wind, rain, day/night wildlife beds (insects, crickets), scheduled one-shots (birdsong, owl hoots), and positional 3D emitters (waterfall, campfire). Levels smooth toward targets each frame for fade transitions.
+* **MusicDirector** — procedural ambient score. Four chord voices (detuned oscillator pairs) through a lowpass filter and tremolo. Mood changes (`calm`/`night`/`danger`) retune the same voices instead of restarting.
+* **Spatial** — `createPanner`, `setPannerPosition`, `setListenerPose` wrappers that detect `AudioParam` vs legacy `setPosition()`/`setOrientation()` support.
+* Per-call `detune` (±35 cents) on every one-shot prevents mechanical repetition.
+* The **duck bus** pulls ambient + music under menus and death screens while SFX stays audible.
+* **Heartbeat** fades in below 35% health; frequency increases with severity.
+* **Positional emitters** use `PannerNode` with distance profiles per emitter class (`prop`, `landmark`, `creature`).
+* Thunder is routed through the ambient bus (not SFX) so the ambient volume slider controls it.
 * Manages volume states and saves user preferences to `localStorage`.
 
 ---

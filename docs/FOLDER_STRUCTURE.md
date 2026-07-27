@@ -8,12 +8,17 @@ island-survival/
 ├── src/                            # Application source code
 │   ├── core/                       # Core engine module managers
 │   │   ├── AssetManager.js         # Asynchronous asset loading (Textures, Text)
-│   │   ├── AudioManager.js         # Procedural audio synthesis (SFX/Ambient)
+│   │   ├── AudioManager.js         # Procedural audio facade (SFX/Ambient/Music)
 │   │   ├── Engine.js               # WebGL initialization, loop & scene orchestration
 │   │   ├── GameLoop.js             # Logic updates and rendering tick loop
 │   │   ├── InputManager.js         # Keyboard & mouse event listeners
 │   │   ├── Scene.js                # Base class for game scenes
-│   │   └── SceneManager.js         # Handles transitions and lifecycle of scenes
+│   │   ├── SceneManager.js         # Handles transitions and lifecycle of scenes
+│   │   └── audio/                  # v1.1 Audio subsystem modules
+│   │       ├── AmbienceDirector.js # Looping beds, 3D emitters, wildlife calls
+│   │       ├── AudioBuffers.js     # Pre-rendered, cached sample banks
+│   │       ├── MusicDirector.js    # Procedural ambient music pad
+│   │       └── Spatial.js          # PannerNode and listener wrappers
 │   │
 │   ├── math/                       # Matrix and Vector mathematics
 │   │   ├── Mat4.js                 # 4x4 Matrix transformations (Translation, Rotation, Scale, Projection)
