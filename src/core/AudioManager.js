@@ -1,7 +1,50 @@
+import {
+    AudioBuffers, fillNoiseBurst, rand, randomDetune,
+} from './audio/AudioBuffers.js';
+import { AmbienceDirector } from './audio/AmbienceDirector.js';
+import { MusicDirector } from './audio/MusicDirector.js';
+import { createPanner, setListenerPose, SpatialProfiles } from './audio/Spatial.js';
+
 /**
- * AudioManager - Procedural sound effects using Web Audio API
- * No external audio files needed — all sounds are synthesized at runtime.
+ * AudioManager — procedural sound using the Web Audio API.
+ * No external audio files: every cue is synthesized at runtime.
+ *
+ * v1.1 restructured this into a mixer plus two directors:
+ *
+ *   master ─┬─ sfx ───────────────── one-shots (this file)
+ *           └─ duck ─┬─ ambient ──── AmbienceDirector (loops, 3D emitters)
+ *                    └─ music ────── MusicDirector (procedural pad)
+ *
+ * The duck bus lets a menu or a low-health state pull the world down without
+ * touching the player's volume settings, and keeps interface sounds audible
+ * while it does. Noise-based cues render their sample banks once through
+ * `AudioBuffers` instead of rebuilding an array on every play call.
  */
+
+/**
+ * Footstep character per surface. `cutoff` is the low-pass that gives each
+ * material its weight; `wet` switches to the longer, splashier sample bank.
+ */
+const FOOTSTEP_SURFACES = {
+    sand:  { cutoff: 300,  Q: 0.7, gain: 0.115, wet: false },
+    grass: { cutoff: 620,  Q: 1.1, gain: 0.100, wet: false },
+    rock:  { cutoff: 1150, Q: 1.4, gain: 0.130, wet: false },
+    wood:  { cutoff: 780,  Q: 2.2, gain: 0.120, wet: false, body: 165 },
+    water: { cutoff: 1400, Q: 0.8, gain: 0.150, wet: true },
+};
+
+/** Voice character per creature, used by hurt/death cues. */
+const CREATURE_VOICES = {
+    boar:    { freq: 260, type: 'sawtooth', decay: 0.34, gain: 0.16, glideTo: 150 },
+    seagull: { freq: 1250, type: 'sawtooth', decay: 0.20, gain: 0.10, glideTo: 900 },
+    crab:    { freq: 640, type: 'square', decay: 0.09, gain: 0.07, glideTo: 520 },
+    shark:   { freq: 150, type: 'triangle', decay: 0.40, gain: 0.15, glideTo: 90 },
+    default: { freq: 380, type: 'triangle', decay: 0.22, gain: 0.11, glideTo: 260 },
+};
+
+/** Ambient/music level while ducked (menus, panels, death). */
+const DUCK_LEVEL = 0.32;
+
 export class AudioManager {
     constructor() {
         /** @type {AudioContext|null} */
@@ -10,33 +53,36 @@ export class AudioManager {
         /** v1.0: sub-buses so the settings menu can mix SFX and ambience apart. */
         this.sfxGain = null;
         this.ambientBus = null;
+        /** v1.1: music sits on its own bus with its own slider. */
+        this.musicBus = null;
+        this._duckGain = null;
         this._limiter = null;
         this.isMuted = false;
         this._initialized = false;
 
-        // v1.0 volume levels (0..1), applied whenever the context exists.
+        // Volume levels (0..1), applied whenever the context exists.
         this._masterVolume = 1.0;
         this._sfxVolume = 1.0;
         this._ambientVolume = 1.0;
+        this._musicVolume = 1.0;
 
-        // Ambient loop nodes
-        this._ambientSource = null;
-        this._ambientGain = null;
+        /** @type {AudioBuffers|null} */
+        this.buffers = null;
+        /** @type {AmbienceDirector|null} */
+        this.ambience = null;
+        /** @type {MusicDirector|null} */
+        this.music = null;
 
-        // Dynamic weather audio nodes
-        this._windSource = null;
-        this._windGain = null;
-        this._windFilter = null;
-        this._rainSource = null;
-        this._rainGain = null;
-        this._rainLowpass = null;
-        this._thunderGain = null;
+        // Duck / heartbeat state
+        this._ducked = false;
+        this._healthFraction = 1.0;
+        this._heartbeatTimer = 0;
+        this._listenerReady = false;
 
-        // Audio state
-        this._targetWindGain = 0.0;
-        this._targetRainGain = 0.0;
-        this._currentWindGain = 0.0;
-        this._currentRainGain = 0.0;
+        // Weather intensities are cached so a scene can set them before the
+        // context exists (first frame, before any user gesture).
+        this._windIntensity = 0;
+        this._rainIntensity = 0;
 
         // Load mute preference
         try {
@@ -50,32 +96,46 @@ export class AudioManager {
     _ensureContext() {
         if (this._initialized) return true;
         try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.masterGain = this.ctx.createGain();
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.ctx = ctx;
+
+            this.masterGain = ctx.createGain();
             this.masterGain.gain.value = this.isMuted ? 0 : this._masterVolume;
-
-            // Two sub-buses feed the master so volume sliders can be adjusted
-            // independently without touching every individual sound node.
-            this.sfxGain = this.ctx.createGain();
-            this.sfxGain.gain.value = this._sfxVolume;
-            this.sfxGain.connect(this.masterGain);
-
-            this.ambientBus = this.ctx.createGain();
-            this.ambientBus.gain.value = this._ambientVolume;
-            this.ambientBus.connect(this.masterGain);
 
             // Master limiter: tames harsh peaks / clipping so synthesized
             // sounds stay smooth instead of buzzy and distorted.
-            const limiter = this.ctx.createDynamicsCompressor();
+            const limiter = ctx.createDynamicsCompressor();
             limiter.threshold.value = -6;
             limiter.knee.value = 12;
             limiter.ratio.value = 6;
             limiter.attack.value = 0.003;
             limiter.release.value = 0.2;
-
             this.masterGain.connect(limiter);
-            limiter.connect(this.ctx.destination);
+            limiter.connect(ctx.destination);
             this._limiter = limiter;
+
+            // Interface and impact sounds bypass the duck bus — they must stay
+            // audible exactly when the world is being pulled down.
+            this.sfxGain = ctx.createGain();
+            this.sfxGain.gain.value = this._sfxVolume;
+            this.sfxGain.connect(this.masterGain);
+
+            this._duckGain = ctx.createGain();
+            this._duckGain.gain.value = this._ducked ? DUCK_LEVEL : 1.0;
+            this._duckGain.connect(this.masterGain);
+
+            this.ambientBus = ctx.createGain();
+            this.ambientBus.gain.value = this._ambientVolume;
+            this.ambientBus.connect(this._duckGain);
+
+            this.musicBus = ctx.createGain();
+            this.musicBus.gain.value = this._musicVolume;
+            this.musicBus.connect(this._duckGain);
+
+            this.buffers = new AudioBuffers(ctx);
+            this.ambience = new AmbienceDirector(ctx, this.buffers, this.ambientBus);
+            this.music = new MusicDirector(ctx, this.musicBus);
+
             this._initialized = true;
             return true;
         } catch (e) {
@@ -116,7 +176,7 @@ export class AudioManager {
     }
 
     // ==========================================
-    //  v1.0 VOLUME MIXING
+    //  VOLUME MIXING
     // ==========================================
 
     /**
@@ -124,7 +184,7 @@ export class AudioManager {
      * unmuting comes back at the right level.
      */
     setMasterVolume(volume) {
-        this._masterVolume = Math.max(0, Math.min(1, volume));
+        this._masterVolume = clamp01(volume);
         if (!this.isMuted) {
             this._applyGain(this.masterGain, this._masterVolume);
         }
@@ -132,14 +192,20 @@ export class AudioManager {
 
     /** Level of one-shot sound effects (0..1). */
     setSfxVolume(volume) {
-        this._sfxVolume = Math.max(0, Math.min(1, volume));
+        this._sfxVolume = clamp01(volume);
         this._applyGain(this.sfxGain, this._sfxVolume);
     }
 
-    /** Level of looping ambience — waves, wind, rain (0..1). */
+    /** Level of looping ambience — waves, wind, rain, wildlife (0..1). */
     setAmbientVolume(volume) {
-        this._ambientVolume = Math.max(0, Math.min(1, volume));
+        this._ambientVolume = clamp01(volume);
         this._applyGain(this.ambientBus, this._ambientVolume);
+    }
+
+    /** Level of the procedural music pad (0..1). */
+    setMusicVolume(volume) {
+        this._musicVolume = clamp01(volume);
+        this._applyGain(this.musicBus, this._musicVolume);
     }
 
     /**
@@ -150,20 +216,163 @@ export class AudioManager {
         this.setMasterVolume(settings.get('masterVolume'));
         this.setSfxVolume(settings.get('sfxVolume'));
         this.setAmbientVolume(settings.get('ambientVolume'));
+        this.setMusicVolume(settings.get('musicVolume'));
         this.setMuted(!!settings.get('muted'));
+    }
+
+    /**
+     * Pull ambience and music down (menus, panels, death screens) while
+     * leaving interface sounds at full level.
+     * @param {boolean} ducked
+     */
+    setDucked(ducked) {
+        if (this._ducked === ducked) return;
+        this._ducked = ducked;
+        this._applyGain(this._duckGain, ducked ? DUCK_LEVEL : 1.0, 0.12);
     }
 
     /**
      * Ramp a gain node, tolerating a not-yet-created audio context (the value
      * is stored on `this` either way and applied when the context comes up).
      */
-    _applyGain(node, value) {
+    _applyGain(node, value, timeConstant = 0.05) {
         if (!node || !this.ctx) return;
-        node.gain.setTargetAtTime(value, this.ctx.currentTime, 0.05);
+        node.gain.setTargetAtTime(value, this.ctx.currentTime, timeConstant);
     }
 
     // ==========================================
-    //  SOUND EFFECTS
+    //  SPATIALISATION
+    // ==========================================
+
+    /**
+     * Point the audio listener at the camera. Until this is called every
+     * positional cue falls back to plain stereo, so a scene without a camera
+     * (the main menu) needs no special-casing.
+     * @param {number[]} position Camera position
+     * @param {number[]} target Camera look-at point
+     */
+    setListener(position, target) {
+        if (!this._initialized) return;
+        const fx = target[0] - position[0];
+        const fy = target[1] - position[1];
+        const fz = target[2] - position[2];
+        const length = Math.hypot(fx, fy, fz);
+        if (length < 0.0001) return;
+
+        setListenerPose(this.ctx, position, [fx / length, fy / length, fz / length]);
+        this._listenerReady = true;
+    }
+
+    /**
+     * Destination for a one-shot: a panner at `position` when the listener is
+     * live, the flat SFX bus otherwise.
+     * @param {number[]|null} position
+     * @param {object} [profile]
+     * @returns {AudioNode}
+     */
+    _target(position, profile = SpatialProfiles.creature) {
+        if (!position || !this._listenerReady) return this.sfxGain;
+        return createPanner(this.ctx, position, this.sfxGain, profile);
+    }
+
+    // ==========================================
+    //  SYNTH PRIMITIVES
+    // ==========================================
+
+    /**
+     * Play a cached buffer through an optional filter chain.
+     * @param {AudioBuffer} buffer
+     * @param {object} [opts]
+     * @returns {AudioBufferSourceNode|null}
+     */
+    _playBuffer(buffer, opts = {}) {
+        const ctx = this.ctx;
+        const when = opts.when !== undefined ? opts.when : ctx.currentTime;
+
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        if (opts.playbackRate) source.playbackRate.value = opts.playbackRate;
+
+        let node = source;
+        for (const spec of opts.filters || []) {
+            const filter = ctx.createBiquadFilter();
+            filter.type = spec.type;
+            filter.frequency.setValueAtTime(spec.frequency, when);
+            if (spec.Q !== undefined) filter.Q.value = spec.Q;
+            if (spec.sweepTo !== undefined) {
+                filter.frequency.exponentialRampToValueAtTime(
+                    Math.max(20, spec.sweepTo), when + (spec.sweepTime || 0.2)
+                );
+            }
+            node.connect(filter);
+            node = filter;
+        }
+
+        const gain = ctx.createGain();
+        const level = opts.gain !== undefined ? opts.gain : 0.2;
+        if (opts.decay) {
+            gain.gain.setValueAtTime(level, when);
+            gain.gain.exponentialRampToValueAtTime(0.0001, when + opts.decay);
+        } else {
+            gain.gain.value = level;
+        }
+
+        node.connect(gain);
+        gain.connect(opts.destination || this.sfxGain);
+        source.start(when);
+        return source;
+    }
+
+    /**
+     * Play a single enveloped oscillator. Covers every tonal cue in the game;
+     * layered calls make up the richer ones.
+     * @param {object} opts
+     */
+    _tone(opts) {
+        const ctx = this.ctx;
+        const when = opts.when !== undefined ? opts.when : ctx.currentTime;
+        const attack = opts.attack !== undefined ? opts.attack : 0.01;
+        const hold = opts.hold || 0;
+        const decay = opts.decay !== undefined ? opts.decay : 0.2;
+        const peak = Math.max(0.0002, opts.gain !== undefined ? opts.gain : 0.1);
+
+        const osc = ctx.createOscillator();
+        osc.type = opts.type || 'sine';
+        osc.frequency.setValueAtTime(opts.freq, when);
+        if (opts.freqTo) {
+            osc.frequency.exponentialRampToValueAtTime(
+                Math.max(1, opts.freqTo), when + (opts.glide || attack + hold + decay)
+            );
+        }
+        // Every one-shot is detuned slightly so a repeated cue never sounds
+        // like the same sample played twice.
+        osc.detune.value = opts.detune !== undefined ? opts.detune : randomDetune(35);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, when);
+        gain.gain.exponentialRampToValueAtTime(peak, when + attack);
+        if (hold) gain.gain.setValueAtTime(peak, when + attack + hold);
+        gain.gain.exponentialRampToValueAtTime(0.0001, when + attack + hold + decay);
+
+        osc.connect(gain);
+        gain.connect(opts.destination || this.sfxGain);
+        osc.start(when);
+        osc.stop(when + attack + hold + decay + 0.05);
+        return osc;
+    }
+
+    /** Shared percussive noise bank (short, snappy). */
+    _impactBuffer() {
+        return this.buffers.pick('sfx:impact', 5, 0.14, (data) => fillNoiseBurst(data, 2.6));
+    }
+
+    /** Shared soft noise bank (longer tail, used for steps and splashes). */
+    _softBuffer() {
+        return this.buffers.pick('sfx:soft', 6, 0.09, (data) => fillNoiseBurst(data, 2.2));
+    }
+
+    // ==========================================
+    //  SOUND EFFECTS — pickups, crafting, UI
     // ==========================================
 
     /**
@@ -171,41 +380,14 @@ export class AudioManager {
      */
     playPickup() {
         if (!this._ensureContext()) return;
-        const ctx = this.ctx;
-        const now = ctx.currentTime;
+        const now = this.ctx.currentTime;
 
         // Soft two-note "ping" (a fifth apart) — pleasant, not a shrill beep.
-        const notes = [
-            { freq: 784, start: 0.0 },   // G5
-            { freq: 1175, start: 0.07 }, // D6
-        ];
-        notes.forEach(({ freq, start }) => {
-            const t = now + start;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, t);
-
-            // Add a gentle overtone for a bell-like body
-            const osc2 = ctx.createOscillator();
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(freq * 2, t);
-            const gain2 = ctx.createGain();
-            gain2.gain.setValueAtTime(0.04, t);
-            gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-
-            gain.gain.setValueAtTime(0.0001, t);
-            gain.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-
-            osc.connect(gain);
-            osc2.connect(gain2);
-            gain.connect(this.sfxGain);
-            gain2.connect(this.sfxGain);
-            osc.start(t);
-            osc.stop(t + 0.3);
-            osc2.start(t);
-            osc2.stop(t + 0.22);
+        [{ freq: 784, at: 0.0 }, { freq: 1175, at: 0.07 }].forEach(({ freq, at }) => {
+            const when = now + at;
+            this._tone({ freq, type: 'sine', gain: 0.12, attack: 0.01, decay: 0.24, when });
+            // Gentle overtone for a bell-like body.
+            this._tone({ freq: freq * 2, type: 'sine', gain: 0.04, attack: 0.008, decay: 0.17, when });
         });
     }
 
@@ -214,88 +396,41 @@ export class AudioManager {
      */
     playCraft() {
         if (!this._ensureContext()) return;
-        const ctx = this.ctx;
-        const now = ctx.currentTime;
+        const now = this.ctx.currentTime;
 
-        // Impact: short filtered noise burst — reads as a real "thock",
-        // not a buzzy square-wave tone.
-        const impactBuf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
-        const impactData = impactBuf.getChannelData(0);
-        for (let i = 0; i < impactData.length; i++) {
-            const t = i / impactData.length;
-            impactData[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.5);
-        }
-        const impact = ctx.createBufferSource();
-        impact.buffer = impactBuf;
-        const impactFilter = ctx.createBiquadFilter();
-        impactFilter.type = 'lowpass';
-        impactFilter.frequency.value = 900;
-        const gain1 = ctx.createGain();
-        gain1.gain.value = 0.35;
-        impact.connect(impactFilter);
-        impactFilter.connect(gain1);
-        gain1.connect(this.sfxGain);
-        impact.start(now);
+        // Impact: filtered noise burst — reads as a real "thock" rather than a
+        // buzzy square-wave tone.
+        this._playBuffer(this._impactBuffer(), {
+            gain: 0.35,
+            filters: [{ type: 'lowpass', frequency: 900 }],
+        });
 
-        // Metallic ring — softer sine partials instead of a bright triangle sweep.
-        [1568, 2350].forEach((freq, idx) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, now + 0.01);
-            const amp = idx === 0 ? 0.07 : 0.03;
-            gain.gain.setValueAtTime(0.0001, now + 0.01);
-            gain.gain.exponentialRampToValueAtTime(amp, now + 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-            osc.connect(gain);
-            gain.connect(this.sfxGain);
-            osc.start(now + 0.01);
-            osc.stop(now + 0.4);
+        // Metallic ring — soft sine partials.
+        [[1568, 0.07], [2350, 0.03]].forEach(([freq, gain]) => {
+            this._tone({ freq, type: 'sine', gain, attack: 0.02, decay: 0.32, when: now + 0.01 });
         });
     }
 
     /**
-     * Wood thunk for raft assembly
+     * Wood thunk for raft assembly and structure placement
      */
-    playRaftBuild() {
+    playRaftBuild(position = null) {
         if (!this._ensureContext()) return;
-        const ctx = this.ctx;
-        const now = ctx.currentTime;
+        const now = this.ctx.currentTime;
+        const destination = this._target(position, SpatialProfiles.prop);
 
-        // Two wooden knocks: a filtered-noise attack + a low triangle "body"
+        // Two wooden knocks: a filtered-noise attack plus a low triangle body
         // give a hollow-wood thunk rather than a synthetic creak.
-        const knock = (t, bodyFreq, level) => {
-            // Attack transient
-            const nBuf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
-            const nData = nBuf.getChannelData(0);
-            for (let i = 0; i < nData.length; i++) {
-                const p = i / nData.length;
-                nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - p, 3);
-            }
-            const src = ctx.createBufferSource();
-            src.buffer = nBuf;
-            const nFilter = ctx.createBiquadFilter();
-            nFilter.type = 'lowpass';
-            nFilter.frequency.value = 1200;
-            const nGain = ctx.createGain();
-            nGain.gain.value = level * 0.5;
-            src.connect(nFilter);
-            nFilter.connect(nGain);
-            nGain.connect(this.sfxGain);
-            src.start(t);
-
-            // Hollow body
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(bodyFreq, t);
-            osc.frequency.exponentialRampToValueAtTime(bodyFreq * 0.6, t + 0.1);
-            gain.gain.setValueAtTime(level, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-            osc.connect(gain);
-            gain.connect(this.sfxGain);
-            osc.start(t);
-            osc.stop(t + 0.26);
+        const knock = (when, bodyFreq, level) => {
+            this._playBuffer(this._impactBuffer(), {
+                when, destination, gain: level * 0.5,
+                filters: [{ type: 'lowpass', frequency: 1200 }],
+            });
+            this._tone({
+                freq: bodyFreq, freqTo: bodyFreq * 0.6, glide: 0.1,
+                type: 'triangle', gain: level, attack: 0.004, decay: 0.2,
+                when, destination,
+            });
         };
 
         knock(now, 150, 0.18);
@@ -307,44 +442,25 @@ export class AudioManager {
      */
     playVictory() {
         if (!this._ensureContext()) return;
-        const ctx = this.ctx;
-        const now = ctx.currentTime;
-
+        const now = this.ctx.currentTime;
         const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
         const noteDuration = 0.25;
 
         notes.forEach((freq, i) => {
-            const startTime = now + i * noteDuration;
+            const when = now + i * noteDuration;
             // Sustain the final note longer for a satisfying resolve.
-            const dur = i === notes.length - 1 ? noteDuration * 2.5 : noteDuration;
+            const isLast = i === notes.length - 1;
+            const hold = isLast ? noteDuration * 1.8 : noteDuration * 0.6;
 
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, startTime);
-
+            this._tone({
+                freq, type: 'triangle', gain: 0.13,
+                attack: 0.04, hold, decay: 0.25, when, detune: 0,
+            });
             // A soft sine fifth adds warmth without harshness.
-            const harm = ctx.createOscillator();
-            const harmGain = ctx.createGain();
-            harm.type = 'sine';
-            harm.frequency.setValueAtTime(freq * 1.5, startTime);
-            harmGain.gain.setValueAtTime(0, startTime);
-            harmGain.gain.linearRampToValueAtTime(0.04, startTime + 0.05);
-            harmGain.gain.exponentialRampToValueAtTime(0.001, startTime + dur + 0.2);
-
-            gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.13, startTime + 0.04);
-            gain.gain.setValueAtTime(0.13, startTime + dur * 0.7);
-            gain.gain.exponentialRampToValueAtTime(0.01, startTime + dur + 0.25);
-
-            osc.connect(gain);
-            harm.connect(harmGain);
-            gain.connect(this.sfxGain);
-            harmGain.connect(this.sfxGain);
-            osc.start(startTime);
-            osc.stop(startTime + dur + 0.35);
-            harm.start(startTime);
-            harm.stop(startTime + dur + 0.35);
+            this._tone({
+                freq: freq * 1.5, type: 'sine', gain: 0.04,
+                attack: 0.05, hold, decay: 0.25, when, detune: 0,
+            });
         });
     }
 
@@ -353,342 +469,513 @@ export class AudioManager {
      */
     playClick() {
         if (!this._ensureContext()) return;
-        const ctx = this.ctx;
-        const now = ctx.currentTime;
-
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(660, now);
-        osc.frequency.exponentialRampToValueAtTime(440, now + 0.05);
-
-        // Quick fade-in avoids the hard "tick" of an instant gain jump.
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.008);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-
-        osc.connect(gain);
-        gain.connect(this.sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.11);
+        this._tone({
+            freq: 660, freqTo: 440, glide: 0.05,
+            type: 'sine', gain: 0.08, attack: 0.008, decay: 0.08,
+        });
     }
 
-    /**
-     * Single footstep sound
-     */
-    playFootstep() {
+    /** Quiet tick for hovering an interactive control. */
+    playHover() {
         if (!this._ensureContext()) return;
-        const ctx = this.ctx;
-        const now = ctx.currentTime;
-
-        // Footsteps are soft filtered-noise thumps, not a pure tone.
-        const dur = 0.09;
-        const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) {
-            const t = i / data.length;
-            // Fast attack, quick decay — the shape of a foot landing.
-            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.2);
-        }
-
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-
-        // Low-pass with slight random cutoff = subtle step-to-step variety.
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 220 + Math.random() * 120;
-        filter.Q.value = 0.8;
-
-        const gain = ctx.createGain();
-        gain.gain.value = 0.12;
-
-        src.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.sfxGain);
-        src.start(now);
+        this._tone({ freq: 1320, type: 'sine', gain: 0.018, attack: 0.004, decay: 0.04 });
     }
 
     /**
-     * Start ambient ocean wave loop
+     * Refusal cue — crafting without materials, an empty hotbar slot, a
+     * structure that already exists. Anything that used to fail in silence.
      */
+    playError() {
+        if (!this._ensureContext()) return;
+        const now = this.ctx.currentTime;
+        this._tone({ freq: 320, type: 'square', gain: 0.05, attack: 0.006, decay: 0.09, when: now });
+        this._tone({ freq: 220, type: 'square', gain: 0.05, attack: 0.006, decay: 0.14, when: now + 0.09 });
+    }
+
+    /** Panel or inventory opening: a short upward whoosh. */
+    playOpenPanel() {
+        if (!this._ensureContext()) return;
+        this._playBuffer(this._softBuffer(), {
+            gain: 0.08, playbackRate: 0.35, decay: 0.22,
+            filters: [{ type: 'bandpass', frequency: 500, Q: 1.2, sweepTo: 1800, sweepTime: 0.18 }],
+        });
+    }
+
+    /** Panel closing: the same whoosh, falling. */
+    playClosePanel() {
+        if (!this._ensureContext()) return;
+        this._playBuffer(this._softBuffer(), {
+            gain: 0.07, playbackRate: 0.35, decay: 0.2,
+            filters: [{ type: 'bandpass', frequency: 1600, Q: 1.2, sweepTo: 420, sweepTime: 0.16 }],
+        });
+    }
+
+    /** Achievement unlocked — a brighter, shorter cousin of the fanfare. */
+    playAchievement() {
+        if (!this._ensureContext()) return;
+        const now = this.ctx.currentTime;
+        [1046.50, 1318.51, 1567.98].forEach((freq, i) => {
+            const when = now + i * 0.1;
+            this._tone({ freq, type: 'triangle', gain: 0.1, attack: 0.01, hold: 0.05, decay: 0.3, when, detune: 0 });
+            this._tone({ freq: freq * 2, type: 'sine', gain: 0.025, attack: 0.01, decay: 0.25, when, detune: 0 });
+        });
+    }
+
+    // ==========================================
+    //  SOUND EFFECTS — movement & survival
+    // ==========================================
+
+    /**
+     * A single footstep. Surface and gait both change the sample, so walking
+     * from sand onto rock is audible without looking down.
+     * @param {string} [surface] sand | grass | rock | wood | water
+     * @param {boolean} [running]
+     */
+    playFootstep(surface = 'grass', running = false) {
+        if (!this._ensureContext()) return;
+        const profile = FOOTSTEP_SURFACES[surface] || FOOTSTEP_SURFACES.grass;
+
+        const buffer = profile.wet
+            ? this.buffers.pick('sfx:stepwet', 4, 0.2, (data) => fillNoiseBurst(data, 1.4))
+            : this._softBuffer();
+
+        // Running lands harder and brighter than walking.
+        const gain = profile.gain * (running ? 1.35 : 1.0);
+        const cutoff = profile.cutoff * (running ? 1.15 : 1.0) * rand(0.85, 1.18);
+
+        this._playBuffer(buffer, {
+            gain,
+            playbackRate: rand(0.9, 1.12),
+            filters: [{ type: 'lowpass', frequency: cutoff, Q: profile.Q }],
+        });
+
+        // Boards and decking ring a little; soil and sand do not.
+        if (profile.body) {
+            this._tone({
+                freq: profile.body * rand(0.9, 1.1), type: 'triangle',
+                gain: gain * 0.4, attack: 0.004, decay: 0.09,
+            });
+        }
+    }
+
+    /** Water entry / fishing cast / splash. */
+    playSplash(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position, SpatialProfiles.prop);
+        this._playBuffer(
+            this.buffers.pick('sfx:splash', 3, 0.5, (data) => fillNoiseBurst(data, 1.1)),
+            {
+                destination, gain: 0.18, decay: 0.45,
+                filters: [
+                    { type: 'highpass', frequency: 400 },
+                    { type: 'lowpass', frequency: 2600, sweepTo: 700, sweepTime: 0.35 },
+                ],
+            }
+        );
+    }
+
+    /** Chewing — three short, dull bursts. */
+    playEat() {
+        if (!this._ensureContext()) return;
+        const now = this.ctx.currentTime;
+        for (let i = 0; i < 3; i++) {
+            this._playBuffer(this._softBuffer(), {
+                when: now + i * rand(0.13, 0.19),
+                gain: 0.1,
+                playbackRate: rand(0.7, 1.0),
+                filters: [{ type: 'lowpass', frequency: rand(500, 800), Q: 1.6 }],
+            });
+        }
+    }
+
+    /** Gulping — rising blips, the classic "drink" shorthand. */
+    playDrink() {
+        if (!this._ensureContext()) return;
+        const now = this.ctx.currentTime;
+        for (let i = 0; i < 3; i++) {
+            const base = 180 + i * 45;
+            this._tone({
+                freq: base, freqTo: base * 2.2, glide: 0.07,
+                type: 'sine', gain: 0.1, attack: 0.006, decay: 0.07,
+                when: now + i * 0.16,
+            });
+        }
+    }
+
+    /** Bandage / heal — a soft rising sweep. */
+    playHeal() {
+        if (!this._ensureContext()) return;
+        const now = this.ctx.currentTime;
+        this._tone({ freq: 440, freqTo: 880, glide: 0.35, type: 'sine', gain: 0.07, attack: 0.05, decay: 0.3, when: now });
+        this._tone({ freq: 660, freqTo: 1320, glide: 0.35, type: 'sine', gain: 0.035, attack: 0.08, decay: 0.3, when: now });
+    }
+
+    // ==========================================
+    //  SOUND EFFECTS — combat
+    // ==========================================
+
+    /** Weapon whoosh through the air — plays on every swing, hit or miss. */
+    playSwing(position = null) {
+        if (!this._ensureContext()) return;
+        this._playBuffer(this._softBuffer(), {
+            destination: this._target(position, SpatialProfiles.prop),
+            gain: 0.12,
+            playbackRate: 0.32,
+            decay: 0.18,
+            filters: [{ type: 'bandpass', frequency: 900, Q: 1.0, sweepTo: 260, sweepTime: 0.16 }],
+        });
+    }
+
+    /** Bowstring release: a short pluck plus the arrow leaving. */
+    playBowRelease(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position, SpatialProfiles.prop);
+        const now = this.ctx.currentTime;
+
+        this._tone({
+            freq: 180, freqTo: 90, glide: 0.12, type: 'triangle',
+            gain: 0.13, attack: 0.002, decay: 0.12, when: now, destination,
+        });
+        this._playBuffer(this._softBuffer(), {
+            destination, when: now, gain: 0.1, playbackRate: 0.5, decay: 0.16,
+            filters: [{ type: 'highpass', frequency: 1200, sweepTo: 3200, sweepTime: 0.14 }],
+        });
+    }
+
+    /** Weapon connecting with flesh — thud plus a wet transient. */
+    playHit(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position);
+        const now = this.ctx.currentTime;
+
+        this._playBuffer(this._impactBuffer(), {
+            destination, when: now, gain: 0.3, decay: 0.13,
+            filters: [{ type: 'lowpass', frequency: rand(420, 620), Q: 1.2 }],
+        });
+        this._tone({
+            freq: rand(90, 130), freqTo: 55, glide: 0.13, type: 'sine',
+            gain: 0.17, attack: 0.003, decay: 0.14, when: now, destination,
+        });
+    }
+
+    /**
+     * Creature reacting to damage.
+     * @param {string} [kind] boar | seagull | crab | shark
+     * @param {number[]|null} [position]
+     */
+    playCreatureHurt(kind = 'default', position = null) {
+        if (!this._ensureContext()) return;
+        const voice = CREATURE_VOICES[kind] || CREATURE_VOICES.default;
+        const destination = this._target(position);
+
+        this._tone({
+            freq: voice.freq * rand(0.92, 1.1),
+            freqTo: voice.glideTo,
+            glide: voice.decay,
+            type: voice.type,
+            gain: voice.gain,
+            attack: 0.008,
+            decay: voice.decay,
+            destination,
+        });
+    }
+
+    /**
+     * Creature dying — the hurt voice, pitched down and drawn out.
+     * @param {string} [kind]
+     * @param {number[]|null} [position]
+     */
+    playCreatureDie(kind = 'default', position = null) {
+        if (!this._ensureContext()) return;
+        const voice = CREATURE_VOICES[kind] || CREATURE_VOICES.default;
+        const destination = this._target(position);
+        const now = this.ctx.currentTime;
+
+        this._tone({
+            freq: voice.freq * 0.85, freqTo: voice.glideTo * 0.5,
+            glide: voice.decay * 2.2, type: voice.type,
+            gain: voice.gain, attack: 0.01, decay: voice.decay * 2.2,
+            when: now, destination,
+        });
+        this._playBuffer(this._impactBuffer(), {
+            destination, when: now + voice.decay * 1.6, gain: 0.14, decay: 0.2,
+            filters: [{ type: 'lowpass', frequency: 380 }],
+        });
+    }
+
+    /** The player taking a hit — a body thud with a short grunt over it. */
+    playPlayerHurt() {
+        if (!this._ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        this._playBuffer(this._impactBuffer(), {
+            gain: 0.26, decay: 0.16,
+            filters: [{ type: 'lowpass', frequency: 320 }],
+        });
+        this._tone({
+            freq: rand(150, 190), freqTo: 105, glide: 0.2,
+            type: 'sawtooth', gain: 0.09, attack: 0.01, decay: 0.2, when: now + 0.02,
+        });
+    }
+
+    /** The run ending — a slow descending minor figure. */
+    playDeath() {
+        if (!this._ensureContext()) return;
+        const now = this.ctx.currentTime;
+        [392.00, 349.23, 293.66, 220.00].forEach((freq, i) => {
+            const when = now + i * 0.36;
+            const isLast = i === 3;
+            this._tone({
+                freq, type: 'triangle', gain: 0.11,
+                attack: 0.06, hold: isLast ? 1.0 : 0.2, decay: isLast ? 1.6 : 0.4,
+                when, detune: 0,
+            });
+            this._tone({
+                freq: freq * 0.5, type: 'sine', gain: 0.06,
+                attack: 0.08, hold: isLast ? 1.0 : 0.2, decay: isLast ? 1.8 : 0.4,
+                when, detune: 0,
+            });
+        });
+    }
+
+    // ==========================================
+    //  SOUND EFFECTS — harvesting
+    // ==========================================
+
+    /** Axe biting into wood. */
+    playChop(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position, SpatialProfiles.prop);
+        const now = this.ctx.currentTime;
+
+        this._playBuffer(this._impactBuffer(), {
+            destination, when: now, gain: 0.32, decay: 0.14,
+            filters: [{ type: 'lowpass', frequency: rand(900, 1400), Q: 1.5 }],
+        });
+        this._tone({
+            freq: rand(190, 240), freqTo: 120, glide: 0.12, type: 'triangle',
+            gain: 0.12, attack: 0.003, decay: 0.13, when: now, destination,
+        });
+    }
+
+    /** Stone struck by a tool — brighter and shorter than a chop. */
+    playMine(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position, SpatialProfiles.prop);
+        const now = this.ctx.currentTime;
+
+        this._playBuffer(this._impactBuffer(), {
+            destination, when: now, gain: 0.3, decay: 0.11,
+            filters: [{ type: 'highpass', frequency: 700 }, { type: 'lowpass', frequency: 4200 }],
+        });
+        this._tone({
+            freq: rand(2100, 2900), type: 'sine',
+            gain: 0.05, attack: 0.003, decay: 0.1, when: now, destination,
+        });
+    }
+
+    // ==========================================
+    //  AMBIENCE & WEATHER (delegated)
+    // ==========================================
+
+    /** Start ambient ocean waves plus the day/night wildlife beds. */
     startAmbientWaves() {
         if (!this._ensureContext()) return;
-        if (this._ambientSource) return; // Already playing
-
-        const ctx = this.ctx;
-
-        // Create brown noise for ocean ambience
-        const bufferSize = ctx.sampleRate * 4; // 4 seconds loop
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        // Generate brown noise (random walk). Lower gain avoids clipping/distortion.
-        let lastOut = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            lastOut = (lastOut + (0.02 * white)) / 1.02;
-            data[i] = lastOut * 2.2;
-
-            // Two overlapping slow swells = a more natural, less mechanical surf.
-            const t = i / ctx.sampleRate;
-            const swell1 = Math.sin(t * Math.PI * 2 * 0.13) * 0.5 + 0.5;
-            const swell2 = Math.sin(t * Math.PI * 2 * 0.071 + 1.3) * 0.5 + 0.5;
-            data[i] *= 0.35 + 0.65 * (swell1 * 0.6 + swell2 * 0.4);
-        }
-
-        // Crossfade the loop seam so there's no click every 4 seconds.
-        const fade = Math.floor(ctx.sampleRate * 0.25);
-        for (let i = 0; i < fade; i++) {
-            const g = i / fade;
-            const tail = data[bufferSize - fade + i];
-            data[i] = data[i] * g + tail * (1 - g);
-        }
-
-        this._ambientSource = ctx.createBufferSource();
-        this._ambientSource.buffer = buffer;
-        this._ambientSource.loop = true;
-
-        // Low-pass filter for deep ocean sound
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 400;
-
-        this._ambientGain = ctx.createGain();
-        this._ambientGain.gain.value = 0.12;
-
-        this._ambientSource.connect(filter);
-        filter.connect(this._ambientGain);
-        this._ambientGain.connect(this.ambientBus);
-
-        this._ambientSource.start();
+        this.ambience.startWaves();
+        this.ambience.startWildlifeBeds();
     }
 
-    /**
-     * Stop ambient ocean waves
-     */
     stopAmbientWaves() {
-        if (this._ambientSource) {
-            try {
-                this._ambientSource.stop();
-            } catch (e) { /* ignore */ }
-            this._ambientSource = null;
+        if (this.ambience) {
+            this.ambience.stopWaves();
+            this.ambience.stopWildlifeBeds();
         }
-        this._ambientGain = null;
     }
-
-    // ==========================================
-    //  DYNAMIC WEATHER AUDIO (v0.4)
-    // ==========================================
 
     startWind() {
         if (!this._ensureContext()) return;
-        if (this._windSource) return;
-
-        const ctx = this.ctx;
-        const bufferSize = ctx.sampleRate * 4;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        let lastOut = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            lastOut = (lastOut + (0.01 * white)) / 1.01;
-            data[i] = lastOut * 2.4;
-            const t = i / ctx.sampleRate;
-            // Gentle gusting from two slow LFOs.
-            const mod = (Math.sin(t * Math.PI * 2 * 0.08) * 0.3
-                + Math.sin(t * Math.PI * 2 * 0.037 + 0.7) * 0.2) + 0.6;
-            data[i] *= mod;
-        }
-
-        // Crossfade loop seam to remove periodic clicking.
-        const wFade = Math.floor(ctx.sampleRate * 0.25);
-        for (let i = 0; i < wFade; i++) {
-            const g = i / wFade;
-            const tail = data[bufferSize - wFade + i];
-            data[i] = data[i] * g + tail * (1 - g);
-        }
-
-        this._windSource = ctx.createBufferSource();
-        this._windSource.buffer = buffer;
-        this._windSource.loop = true;
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 180;
-        filter.Q.value = 0.7;
-
-        this._windGain = ctx.createGain();
-        this._windGain.gain.value = 0;
-        this._currentWindGain = 0;
-
-        this._windFilter = filter;
-        this._windSource.connect(filter);
-        filter.connect(this._windGain);
-        this._windGain.connect(this.ambientBus);
-        this._windSource.start();
+        this.ambience.startWind();
+        this.ambience.setWindIntensity(this._windIntensity);
     }
 
     startRain() {
         if (!this._ensureContext()) return;
-        if (this._rainSource) return;
-
-        const ctx = this.ctx;
-        const bufferSize = ctx.sampleRate * 2;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            const t = i / ctx.sampleRate;
-            const mod = Math.sin(t * Math.PI * 2 * 0.3 + Math.sin(t * Math.PI * 2 * 0.7) * 0.5);
-            data[i] = white * (0.4 + mod * 0.5);
-        }
-
-        // Crossfade loop seam.
-        const rFade = Math.floor(ctx.sampleRate * 0.15);
-        for (let i = 0; i < rFade; i++) {
-            const g = i / rFade;
-            const tail = data[bufferSize - rFade + i];
-            data[i] = data[i] * g + tail * (1 - g);
-        }
-
-        this._rainSource = ctx.createBufferSource();
-        this._rainSource.buffer = buffer;
-        this._rainSource.loop = true;
-
-        // Band-limit: highpass removes rumble, a companion lowpass tames the
-        // shrill hiss so it sounds like rain rather than static.
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'highpass';
-        filter.frequency.value = 1000;
-
-        const lp = ctx.createBiquadFilter();
-        lp.type = 'lowpass';
-        lp.frequency.value = 6000;
-        this._rainLowpass = lp;
-
-        this._rainGain = ctx.createGain();
-        this._rainGain.gain.value = 0;
-        this._currentRainGain = 0;
-
-        this._rainSource.connect(filter);
-        filter.connect(lp);
-        lp.connect(this._rainGain);
-        this._rainGain.connect(this.ambientBus);
-        this._rainSource.start();
+        this.ambience.startRain();
+        this.ambience.setRainIntensity(this._rainIntensity);
     }
 
     stopWind() {
-        if (this._windSource) {
-            try { this._windSource.stop(); } catch (e) { }
-            this._windSource = null;
-        }
-        this._windGain = null;
-        this._windFilter = null;
-        this._currentWindGain = 0;
+        if (this.ambience) this.ambience.stopWind();
     }
 
     stopRain() {
-        if (this._rainSource) {
-            try { this._rainSource.stop(); } catch (e) { }
-            this._rainSource = null;
-        }
-        this._rainGain = null;
-        this._rainLowpass = null;
-        this._currentRainGain = 0;
+        if (this.ambience) this.ambience.stopRain();
     }
 
-    setWindIntensity(intensity, smooth = true) {
-        this._targetWindGain = Math.max(0, Math.min(1, intensity * 0.25));
-        if (!smooth) {
-            this._currentWindGain = this._targetWindGain;
-            if (this._windGain) this._windGain.gain.value = this._targetWindGain;
-        }
+    setWindIntensity(intensity) {
+        this._windIntensity = clamp01(intensity);
+        if (this.ambience) this.ambience.setWindIntensity(this._windIntensity);
     }
 
-    setRainIntensity(intensity, smooth = true) {
-        this._targetRainGain = Math.max(0, Math.min(1, intensity * 0.2));
-        if (!smooth) {
-            this._currentRainGain = this._targetRainGain;
-            if (this._rainGain) this._rainGain.gain.value = this._targetRainGain;
-        }
+    setRainIntensity(intensity) {
+        this._rainIntensity = clamp01(intensity);
+        if (this.ambience) this.ambience.setRainIntensity(this._rainIntensity);
     }
 
-    updateWeatherAudio(deltaTime) {
-        if (this._windGain) {
-            this._currentWindGain += (this._targetWindGain - this._currentWindGain) * deltaTime * 2.0;
-            this._windGain.gain.value = this._currentWindGain;
-
-            const targetFreq = 120 + this._targetWindGain * 120;
-            if (this._windFilter) {
-                this._windFilter.frequency.value += (targetFreq - this._windFilter.frequency.value) * deltaTime * 2;
-            }
-        }
-
-        if (this._rainGain) {
-            this._currentRainGain += (this._targetRainGain - this._currentRainGain) * deltaTime * 2.0;
-            this._rainGain.gain.value = this._currentRainGain;
-        }
+    /** @param {number} t Normalised time of day, 0..1 */
+    setTimeOfDay(t) {
+        if (this.ambience) this.ambience.setTimeOfDay(t);
     }
 
     /**
-     * Play a thunder clap
+     * Register a looping positional emitter (waterfall, campfire).
+     * @see AmbienceDirector.addEmitter
+     */
+    addEmitter(id, kind, position, active = true) {
+        if (!this._ensureContext()) return;
+        this.ambience.addEmitter(id, kind, position, active);
+    }
+
+    setEmitterPosition(id, position) {
+        if (this.ambience) this.ambience.setEmitterPosition(id, position);
+    }
+
+    setEmitterActive(id, active) {
+        if (this.ambience) this.ambience.setEmitterActive(id, active);
+    }
+
+    removeEmitter(id) {
+        if (this.ambience) this.ambience.removeEmitter(id);
+    }
+
+    /**
+     * Play a thunder clap.
+     *
+     * Routed through the ambient bus, not SFX: it is weather, so turning the
+     * ambience slider down has to quiet the storm as well as the rain.
      */
     playThunder() {
         if (!this._ensureContext()) return;
-        const ctx = this.ctx;
-        const now = ctx.currentTime;
 
-        const bufferSize = ctx.sampleRate * 2.5;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
+        // Sharp crack up front, then a long rumbling tail — pre-rendered in
+        // three variants so no two strikes are identical and none of them
+        // build a 120k-sample array while lightning is on screen.
+        const buffer = this.buffers.pick('sfx:thunder', 3, 2.5, (data, sampleRate) => {
+            let last = 0;
+            for (let i = 0; i < data.length; i++) {
+                const white = Math.random() * 2 - 1;
+                const t = i / sampleRate;
+                const crack = Math.exp(-t * 6.0) * 1.2;
+                const rumble = Math.exp(-t * 1.1);
+                last = (last + 0.008 * white) / 1.008;
+                data[i] = last * (crack + rumble) * 4.0;
+            }
+        });
 
-        // Sharp crack up front, then a long rumbling tail.
-        let lastOut = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            const t = i / ctx.sampleRate;
-            const crack = Math.exp(-t * 6.0) * 1.2;   // initial clap
-            const rumble = Math.exp(-t * 1.1);          // rolling thunder
-            lastOut = (lastOut + (0.008 * white)) / 1.008;
-            data[i] = lastOut * (crack + rumble) * 4.0;
+        this._playBuffer(buffer, {
+            destination: this.ambientBus,
+            gain: 0.45,
+            decay: 2.2,
+            playbackRate: rand(0.9, 1.1),
+            // Sweep the cutoff open→closed so the clap is bright, then darkens
+            // as it rolls away.
+            filters: [{ type: 'lowpass', frequency: 1200, sweepTo: 120, sweepTime: 1.8 }],
+        });
+    }
+
+    // ==========================================
+    //  MUSIC (delegated)
+    // ==========================================
+
+    startMusic() {
+        if (!this._ensureContext()) return;
+        this.music.start();
+    }
+
+    stopMusic() {
+        if (this.music) this.music.stop();
+    }
+
+    /** @param {'calm'|'night'|'danger'} mood */
+    setMusicMood(mood) {
+        if (this.music) this.music.setMood(mood);
+    }
+
+    // ==========================================
+    //  PER-FRAME
+    // ==========================================
+
+    /**
+     * Player health as a 0..1 fraction. Drives the heartbeat that fades in as
+     * the player approaches death.
+     */
+    setHealthFraction(fraction) {
+        this._healthFraction = clamp01(fraction);
+    }
+
+    /**
+     * Advance ambience smoothing, the music pad and the heartbeat.
+     * Call once per frame from the active scene.
+     * @param {number} deltaTime
+     */
+    update(deltaTime) {
+        if (!this._initialized) return;
+        this.ambience.update(deltaTime);
+        this.music.update(deltaTime);
+        this._updateHeartbeat(deltaTime);
+    }
+
+    /**
+     * Below a third health the player hears their own pulse, quickening as it
+     * gets worse. It is the only cue that reports health without the HUD.
+     */
+    _updateHeartbeat(deltaTime) {
+        const threshold = 0.35;
+        if (this._healthFraction >= threshold) {
+            this._heartbeatTimer = 0;
+            return;
         }
 
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
+        // 0 at the threshold, 1 at death.
+        const severity = 1 - this._healthFraction / threshold;
+        this._heartbeatTimer -= deltaTime;
+        if (this._heartbeatTimer > 0) return;
+        this._heartbeatTimer = 1.05 - severity * 0.45;
 
-        // Sweep the cutoff open→closed so the clap is bright then darkens as
-        // it rolls away — much more natural than a static 80 Hz muffle.
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1200, now);
-        filter.frequency.exponentialRampToValueAtTime(120, now + 1.8);
+        const now = this.ctx.currentTime;
+        const level = 0.06 + severity * 0.10;
+        // "lub-dub": two thumps, the second softer and slightly higher.
+        this._tone({ freq: 58, freqTo: 40, glide: 0.16, type: 'sine', gain: level, attack: 0.012, decay: 0.16, when: now, detune: 0 });
+        this._tone({ freq: 66, freqTo: 44, glide: 0.14, type: 'sine', gain: level * 0.7, attack: 0.012, decay: 0.14, when: now + 0.19, detune: 0 });
+    }
 
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.45, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 2.2);
-
-        source.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.sfxGain);
-        source.start(now);
+    /**
+     * @deprecated v1.1 — retained so older call sites keep working.
+     * Use {@link update} instead; it drives music and the heartbeat too.
+     */
+    updateWeatherAudio(deltaTime) {
+        this.update(deltaTime);
     }
 
     /**
      * Clean up all audio resources
      */
     destroy() {
-        this.stopWind();
-        this.stopRain();
-        this.stopAmbientWaves();
+        if (this.ambience) this.ambience.stopAll();
+        if (this.music) this.music.stop();
+        if (this.buffers) this.buffers.clear();
         if (this.ctx) {
             this.ctx.close();
             this.ctx = null;
         }
+        this.ambience = null;
+        this.music = null;
+        this.buffers = null;
+        this._listenerReady = false;
         this._initialized = false;
     }
+}
+
+function clamp01(value) {
+    return Math.max(0, Math.min(1, value));
 }
