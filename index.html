@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Island Survival: Escape</title>
     <meta name="description" content="Island Survival: Escape - Game sinh tồn đảo hoang WebGL 2. Thu thập tài nguyên, chế tạo bè và thoát khỏi đảo!">
-    <!-- Game-Themed Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Almendra:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Game-Themed Fonts (self-hosted, no CDN dependency) -->
+    <link rel="stylesheet" href="assets/fonts/fonts.css">
     <!--
         Cache-busting lives ONLY on these two entry points. ES modules are keyed
         by URL, so a `?v=` on a deep import makes that module a *different*
@@ -17,18 +15,138 @@
         instantiated twice for exactly that reason. Deep imports stay bare; the
         static host revalidates them by ETag.
     -->
-    <link rel="stylesheet" href="index.css?v=8">
+    <link rel="stylesheet" href="index.css?v=9">
 </head>
 <body>
+    <!--
+        UI ICON SPRITE
+        One stroke-based set for every piece of interface chrome (menus, panels,
+        tabs, buttons). Emoji stay reserved for *content* — inventory items,
+        resources, achievements — so chrome and content never get confused with
+        each other. Every symbol shares a 24×24 grid and inherits `stroke:
+        currentColor` from `.ui-icon`, so an icon always matches the colour and
+        hover state of the control it sits in.
+    -->
+    <svg class="ui-sprite" aria-hidden="true" focusable="false"><defs>
+        <symbol id="i-island" viewBox="0 0 24 24">
+            <path d="M11.6 19.4V9.6"/>
+            <path d="M11.6 9.6C8.8 7.4 5.8 7.6 3.2 10.2"/>
+            <path d="M11.6 9.6c2.8-2.2 5.8-2 8.4.6"/>
+            <path d="M11.6 9.6C10.4 6.4 11.4 4 14 2.6"/>
+            <path d="M3.4 21.2c1.7-1.1 3.4-1.1 5.1 0s3.4 1.1 5.1 0 3.4-1.1 5.1 0"/>
+        </symbol>
+        <symbol id="i-anchor" viewBox="0 0 24 24">
+            <circle cx="12" cy="4.6" r="1.9"/>
+            <path d="M12 6.5V21"/>
+            <path d="M8.2 9.4h7.6"/>
+            <path d="M4.5 14.2c0 4 3.4 6.8 7.5 6.8s7.5-2.8 7.5-6.8"/>
+        </symbol>
+        <symbol id="i-save" viewBox="0 0 24 24">
+            <path d="M4.6 4.6h10.6l4.2 4.2v10.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V5.4a.8.8 0 0 1 .8-.8z"/>
+            <path d="M8.6 4.6v4.6h6.2V4.6"/>
+            <path d="M7.8 13.4h8.4v6.8H7.8z"/>
+        </symbol>
+        <symbol id="i-sail" viewBox="0 0 24 24">
+            <path d="M11.8 3v11.4"/>
+            <path d="M12.6 4.6c3.2 2.4 5.2 5.8 5.8 9.8h-5.8z"/>
+            <path d="M3.4 16.4h17.2l-3 4.4H6.4z"/>
+        </symbol>
+        <symbol id="i-book" viewBox="0 0 24 24">
+            <path d="M12 6.4v13"/>
+            <path d="M12 6.4C10.2 5 7.8 4.4 4.4 4.6v12.6c3.4-.2 5.8.4 7.6 1.8"/>
+            <path d="M12 6.4c1.8-1.4 4.2-2 7.6-1.8v12.6c-3.4-.2-5.8.4-7.6 1.8"/>
+        </symbol>
+        <symbol id="i-gear" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="6.3"/>
+            <circle cx="12" cy="12" r="2.6"/>
+            <path d="M18.3 12h2.3M16.45 16.45l1.63 1.63M12 18.3v2.3M7.55 16.45l-1.63 1.63M5.7 12H3.4M7.55 7.55 5.92 5.92M12 5.7V3.4M16.45 7.55l1.63-1.63"/>
+        </symbol>
+        <symbol id="i-trophy" viewBox="0 0 24 24">
+            <path d="M7.4 4.4h9.2v4.2a4.6 4.6 0 0 1-9.2 0z"/>
+            <path d="M7.4 6H5.1a3 3 0 0 0 3 3.4"/>
+            <path d="M16.6 6h2.3a3 3 0 0 1-3 3.4"/>
+            <path d="M12 13.2v3"/>
+            <path d="M9.4 16.2h5.2l1 3.4H8.4z"/>
+        </symbol>
+        <symbol id="i-scroll" viewBox="0 0 24 24">
+            <path d="M6 3.6h9l3.4 3.4v13.4H6z"/>
+            <path d="M15 3.6V7h3.4"/>
+            <path d="M9 11.4h6M9 14.6h6M9 17.8h3.6"/>
+        </symbol>
+        <symbol id="i-volume" viewBox="0 0 24 24">
+            <path d="M4.2 9.6h3l4.4-3.8v12.4l-4.4-3.8h-3z"/>
+            <path d="M15 9.2a4 4 0 0 1 0 5.6"/>
+            <path d="M17.6 6.8a7.4 7.4 0 0 1 0 10.4"/>
+        </symbol>
+        <symbol id="i-volume-off" viewBox="0 0 24 24">
+            <path d="M4.2 9.6h3l4.4-3.8v12.4l-4.4-3.8h-3z"/>
+            <path d="M15.4 9.8l4.4 4.4M19.8 9.8l-4.4 4.4"/>
+        </symbol>
+        <symbol id="i-play" viewBox="0 0 24 24">
+            <path d="M8.4 5.2 18.4 12 8.4 18.8z"/>
+        </symbol>
+        <symbol id="i-pause" viewBox="0 0 24 24">
+            <path d="M9.4 5.6v12.8M14.6 5.6v12.8"/>
+        </symbol>
+        <symbol id="i-home" viewBox="0 0 24 24">
+            <path d="M3.6 10.6 12 4l8.4 6.6"/>
+            <path d="M5.8 9.4v10.8h12.4V9.4"/>
+            <path d="M10 20.2v-5.4h4v5.4"/>
+        </symbol>
+        <symbol id="i-mouse" viewBox="0 0 24 24">
+            <rect x="7.4" y="3.4" width="9.2" height="17.2" rx="4.6"/>
+            <path d="M12 7v3.4"/>
+        </symbol>
+        <symbol id="i-palette" viewBox="0 0 24 24">
+            <path d="M12 3.4a8.6 8.6 0 0 0 0 17.2c1.3 0 1.9-.9 1.9-1.8 0-1.4-1.3-1.9-1.3-3 0-.9.7-1.6 1.7-1.6h1.7a4.6 4.6 0 0 0 4.6-4.6c0-3.4-3.8-6.2-8.6-6.2z"/>
+            <circle cx="8.4" cy="9" r="1" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="7.4" r="1" fill="currentColor" stroke="none"/>
+            <circle cx="15.6" cy="9.4" r="1" fill="currentColor" stroke="none"/>
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+            <path d="M5.2 12.8 9.8 17.4 18.8 6.6"/>
+        </symbol>
+        <symbol id="i-undo" viewBox="0 0 24 24">
+            <path d="M3.4 4.6v6h6"/>
+            <path d="M4.4 15.2a8.6 8.6 0 1 0 2-9L3.4 10.6"/>
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+            <path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/>
+        </symbol>
+        <symbol id="i-hammer" viewBox="0 0 24 24">
+            <path d="M5.4 5h13.2v4.6H5.4z"/>
+            <path d="M10.6 9.6h2.8v9.2a1.4 1.4 0 0 1-2.8 0z"/>
+        </symbol>
+        <symbol id="i-fire" viewBox="0 0 24 24">
+            <path d="M12 3.2c3 3.4 6 5.8 6 10.2A6 6 0 0 1 6 13.4C6 9 9 6.6 12 3.2z"/>
+            <path d="M12 12.4c1.5 1.7 2.6 2.8 2.6 4.4a2.6 2.6 0 0 1-5.2 0c0-1.6 1.1-2.7 2.6-4.4z"/>
+        </symbol>
+        <symbol id="i-backpack" viewBox="0 0 24 24">
+            <path d="M6.4 9.6a5.6 5.6 0 0 1 11.2 0v9.2a1.6 1.6 0 0 1-1.6 1.6H8a1.6 1.6 0 0 1-1.6-1.6z"/>
+            <path d="M9.4 8.4V6.6a2.6 2.6 0 0 1 5.2 0v1.8"/>
+            <path d="M9.2 13.6h5.6v3.4H9.2z"/>
+        </symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24">
+            <path d="M4.6 7.4h14.8"/>
+            <path d="M9.4 7.4V5a1.4 1.4 0 0 1 1.4-1.4h2.4A1.4 1.4 0 0 1 14.6 5v2.4"/>
+            <path d="M6.6 7.4l.9 12a1.6 1.6 0 0 0 1.6 1.5h5.8a1.6 1.6 0 0 0 1.6-1.5l.9-12"/>
+            <path d="M10.4 11.4v6M13.6 11.4v6"/>
+        </symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24">
+            <rect x="5.4" y="10.6" width="13.2" height="9.4" rx="1.6"/>
+            <path d="M8.4 10.6V8a3.6 3.6 0 0 1 7.2 0v2.6"/>
+        </symbol>
+    </defs></svg>
+
     <!-- Game Canvas -->
     <canvas id="game-canvas"></canvas>
 
     <!-- UI Overlay: Loading Screen -->
     <div id="loading-screen" class="overlay">
         <div class="loader-content">
-            <div class="loader-emblem">⚓</div>
+            <div class="loader-emblem"><svg class="ui-icon" aria-hidden="true"><use href="#i-anchor"/></svg></div>
             <div class="loader-logo">ISLAND SURVIVAL</div>
-            <div class="loader-subtitle">— E S C A P E —</div>
+            <div class="loader-subtitle"><span>ESCAPE</span></div>
             <div class="loader-bar-container">
                 <div id="loader-bar" class="loader-bar"></div>
             </div>
@@ -41,44 +159,53 @@
     <div id="main-menu" class="overlay hidden">
         <div class="menu-content">
             <div class="menu-logo-wrapper">
-                <div class="menu-emblem">🏝️</div>
-                <div class="menu-logo">ISLAND SURVIVAL</div>
-                <div class="menu-subtitle">— E S C A P E —</div>
+                <div class="menu-emblem"><svg class="ui-icon" aria-hidden="true"><use href="#i-island"/></svg></div>
+                <h1 class="menu-logo"><span>ISLAND</span><span>SURVIVAL</span></h1>
+                <div class="menu-subtitle"><span>ESCAPE</span></div>
             </div>
-            <div class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Sinh tồn. Thoát khỏi đảo hoang.</div>
+            <p class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Sinh tồn.<br>Thoát khỏi đảo hoang.</p>
+
+            <!-- Primary actions: one filled CTA per intent, icons in a shared column -->
             <div class="menu-buttons">
-                <button id="menu-continue-btn" class="menu-btn primary hidden">
-                    <span class="btn-icon">💾</span>
+                <button id="menu-continue-btn" class="menu-btn primary hero hidden" aria-label="Chơi tiếp tiến trình đã lưu">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-save"/></svg>
                     <span class="btn-text">CHƠI TIẾP</span>
                     <span id="menu-continue-meta" class="btn-meta"></span>
                 </button>
-                <button id="menu-start-btn" class="menu-btn primary">
-                    <span class="btn-icon">⛵</span>
+                <button id="menu-start-btn" class="menu-btn primary" aria-label="Bắt đầu ván chơi mới">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-sail"/></svg>
                     <span class="btn-text">BẮT ĐẦU</span>
                 </button>
-                <button id="menu-tutorial-btn" class="menu-btn secondary">
-                    <span class="btn-icon">📖</span>
-                    <span class="btn-text">HƯỚNG DẪN + CHƠI</span>
+                <button id="menu-tutorial-btn" class="menu-btn secondary" aria-label="Xem hướng dẫn chơi">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-book"/></svg>
+                    <span class="btn-text">HƯỚNG DẪN</span>
                 </button>
-                <button id="menu-settings-btn" class="menu-btn secondary">
-                    <span class="btn-icon">⚙️</span>
+                <button id="menu-settings-btn" class="menu-btn secondary" aria-label="Mở cài đặt">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg>
                     <span class="btn-text">CÀI ĐẶT</span>
                 </button>
-                <button id="menu-achievements-btn" class="menu-btn tertiary">
-                    <span class="btn-icon">🏅</span>
-                    <span class="btn-text">THÀNH TỰU</span>
-                    <span id="menu-achievements-meta" class="btn-meta"></span>
+            </div>
+
+            <div class="menu-divider"></div>
+
+            <!-- Secondary actions compress into tiles so the menu stays short -->
+            <div class="menu-tiles">
+                <button id="menu-achievements-btn" class="menu-tile" aria-label="Xem thành tựu">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-trophy"/></svg>
+                    <span class="tile-label">THÀNH TỰU</span>
+                    <span id="menu-achievements-meta" class="tile-badge"></span>
                 </button>
-                <button id="menu-credits-btn" class="menu-btn tertiary">
-                    <span class="btn-icon">📜</span>
-                    <span class="btn-text">GIỚI THIỆU</span>
+                <button id="menu-credits-btn" class="menu-tile" aria-label="Xem giới thiệu">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-scroll"/></svg>
+                    <span class="tile-label">GIỚI THIỆU</span>
                 </button>
-                <button id="menu-sound-btn" class="menu-btn tertiary">
-                    <span class="btn-icon">🔊</span>
-                    <span class="btn-text">ÂM THANH: BẬT</span>
+                <button id="menu-sound-btn" class="menu-tile" aria-label="Bật hoặc tắt âm thanh" aria-pressed="false">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg>
+                    <span class="tile-label">ÂM THANH</span>
                 </button>
             </div>
-            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • v1.0</div>
+
+            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • v1.1</div>
         </div>
     </div>
 
@@ -86,13 +213,26 @@
     <div id="settings-menu" class="overlay panel-overlay hidden">
         <div class="panel-content settings-content">
             <div class="panel-header">
-                <div class="panel-title"><span class="panel-icon">⚙️</span> CÀI ĐẶT</div>
-                <button id="settings-close-btn" class="panel-close">&times;</button>
+                <div class="panel-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg> CÀI ĐẶT</div>
+                <button id="settings-close-btn" class="panel-close" aria-label="Đóng">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
             </div>
 
             <div class="panel-body">
-                <div class="settings-section">
-                    <div class="settings-section-title">🔊 ÂM THANH</div>
+                <div class="settings-tab-bar" role="tablist" aria-label="Cài đặt">
+                    <button class="settings-tab active" role="tab" data-tab="audio" aria-selected="true">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg> Âm thanh
+                    </button>
+                    <button class="settings-tab" role="tab" data-tab="controls" aria-selected="false">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#i-mouse"/></svg> Điều khiển
+                    </button>
+                    <button class="settings-tab" role="tab" data-tab="graphics" aria-selected="false">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#i-palette"/></svg> Đồ họa
+                    </button>
+                </div>
+                <div class="settings-section tab-section active" data-tab="audio">
+                    <div class="settings-section-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg> ÂM THANH</div>
                     <div class="setting-row">
                         <label for="set-master-volume">Âm lượng tổng</label>
                         <input type="range" id="set-master-volume" min="0" max="100" step="1">
@@ -109,14 +249,19 @@
                         <span id="val-ambient-volume" class="setting-value">70%</span>
                     </div>
                     <div class="setting-row">
+                        <label for="set-music-volume">Nhạc nền</label>
+                        <input type="range" id="set-music-volume" min="0" max="100" step="1">
+                        <span id="val-music-volume" class="setting-value">60%</span>
+                    </div>
+                    <div class="setting-row">
                         <label for="set-muted">Tắt tiếng</label>
                         <label class="switch"><input type="checkbox" id="set-muted"><span class="slider"></span></label>
                         <span class="setting-value"></span>
                     </div>
                 </div>
 
-                <div class="settings-section">
-                    <div class="settings-section-title">🖱️ ĐIỀU KHIỂN</div>
+                <div class="settings-section tab-section" data-tab="controls">
+                    <div class="settings-section-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-mouse"/></svg> ĐIỀU KHIỂN</div>
                     <div class="setting-row">
                         <label for="set-sensitivity">Độ nhạy chuột</label>
                         <input type="range" id="set-sensitivity" min="20" max="300" step="5">
@@ -134,8 +279,8 @@
                     </div>
                 </div>
 
-                <div class="settings-section">
-                    <div class="settings-section-title">🎨 ĐỒ HỌA</div>
+                <div class="settings-section tab-section" data-tab="graphics">
+                    <div class="settings-section-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-palette"/></svg> ĐỒ HỌA</div>
                     <div class="setting-row">
                         <label>Chất lượng</label>
                         <div class="quality-buttons">
@@ -196,9 +341,11 @@
 
             <div class="panel-footer">
                 <button id="settings-reset-btn" class="menu-btn danger small">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-undo"/></svg>
                     <span class="btn-text">KHÔI PHỤC MẶC ĐỊNH</span>
                 </button>
                 <button id="settings-done-btn" class="menu-btn primary small">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-check"/></svg>
                     <span class="btn-text">XONG</span>
                 </button>
             </div>
@@ -209,8 +356,10 @@
     <div id="achievements-menu" class="overlay panel-overlay hidden">
         <div class="panel-content">
             <div class="panel-header">
-                <div class="panel-title"><span class="panel-icon">🏅</span> THÀNH TỰU</div>
-                <button id="achievements-close-btn" class="panel-close">&times;</button>
+                <div class="panel-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-trophy"/></svg> THÀNH TỰU</div>
+                <button id="achievements-close-btn" class="panel-close" aria-label="Đóng">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
             </div>
             <div class="panel-body">
                 <div id="achievements-progress" class="achievements-progress"></div>
@@ -218,6 +367,7 @@
             </div>
             <div class="panel-footer">
                 <button id="achievements-done-btn" class="menu-btn primary small">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-check"/></svg>
                     <span class="btn-text">ĐÓNG</span>
                 </button>
             </div>
@@ -228,12 +378,14 @@
     <div id="credits-menu" class="overlay panel-overlay hidden">
         <div class="panel-content">
             <div class="panel-header">
-                <div class="panel-title"><span class="panel-icon">📜</span> GIỚI THIỆU</div>
-                <button id="credits-close-btn" class="panel-close">&times;</button>
+                <div class="panel-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-scroll"/></svg> GIỚI THIỆU</div>
+                <button id="credits-close-btn" class="panel-close" aria-label="Đóng">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
             </div>
             <div class="panel-body credits-body">
-                <div class="credits-logo">🏝️ ISLAND SURVIVAL: ESCAPE</div>
-                <div class="credits-version">Phiên bản 1.0 — Release</div>
+                <div class="credits-logo"><svg class="ui-icon" aria-hidden="true"><use href="#i-island"/></svg> ISLAND SURVIVAL: ESCAPE</div>
+                <div class="credits-version">Phiên bản 1.1 — Release</div>
 
                 <div class="credits-block">
                     <div class="credits-role">CÔNG NGHỆ</div>
@@ -252,12 +404,97 @@
 
                 <div class="credits-block">
                     <div class="credits-role">CẢM ƠN</div>
-                    <div class="credits-name">Cảm ơn bạn đã chơi — chúc bạn thoát đảo an toàn! ⛵</div>
+                    <div class="credits-name">Cảm ơn bạn đã chơi — chúc bạn thoát đảo an toàn!</div>
                 </div>
             </div>
             <div class="panel-footer">
                 <button id="credits-done-btn" class="menu-btn primary small">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-check"/></svg>
                     <span class="btn-text">ĐÓNG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Overlay: How to play (v1.1) -->
+    <div id="guide-menu" class="overlay panel-overlay hidden">
+        <div class="panel-content">
+            <div class="panel-header">
+                <div class="panel-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-book"/></svg> HƯỚNG DẪN CHƠI</div>
+                <button id="guide-close-btn" class="panel-close" aria-label="Đóng">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
+            </div>
+            <div class="panel-body guide-body">
+                <div class="guide-block">
+                    <div class="guide-block-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-mouse"/></svg> ĐIỀU KHIỂN</div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd">W</kbd><kbd class="kbd">A</kbd><kbd class="kbd">S</kbd><kbd class="kbd">D</kbd></span>
+                        <span class="guide-desc">Di chuyển (hoặc các phím mũi tên)</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd wide">Giữ chuột trái + kéo</kbd></span>
+                        <span class="guide-desc">Xoay camera quanh nhân vật</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd">Shift</kbd><span class="guide-plus">+</span><kbd class="kbd wide">cuộn chuột</kbd></span>
+                        <span class="guide-desc">Phóng to / thu nhỏ tầm nhìn</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd">E</kbd></span>
+                        <span class="guide-desc">Tương tác: nhặt tài nguyên, nấu ăn ở lửa trại, uống nước, lắp bè</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd">C</kbd><span class="guide-plus">/</span><kbd class="kbd wide">Tab</kbd></span>
+                        <span class="guide-desc">Mở túi đồ &amp; bảng chế tạo</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd">Q</kbd></span>
+                        <span class="guide-desc">Dùng hoặc đặt vật phẩm đang chọn</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd">1</kbd><span class="guide-plus">–</span><kbd class="kbd">8</kbd></span>
+                        <span class="guide-desc">Chọn ô vật phẩm (hoặc cuộn chuột khi túi đồ đang đóng)</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd wide">Chuột trái</kbd></span>
+                        <span class="guide-desc">Tấn công sinh vật hoang dã</span>
+                    </div>
+                    <div class="guide-row">
+                        <span class="guide-keys"><kbd class="kbd wide">Esc</kbd></span>
+                        <span class="guide-desc">Tạm dừng / đóng bảng đang mở</span>
+                    </div>
+                </div>
+
+                <div class="guide-block">
+                    <div class="guide-block-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-sail"/></svg> MỤC TIÊU</div>
+                    <ol class="guide-steps">
+                        <li>Thu thập gỗ, lá, dây và đá quanh đảo bằng phím <kbd class="kbd">E</kbd>.</li>
+                        <li>Mở bảng chế tạo và làm các bộ phận của bè: khung, phao, mái, buồm…</li>
+                        <li>Tìm <b>bãi lắp bè ở bờ biển</b>, đứng gần và lắp từng bộ phận vào.</li>
+                        <li>Hoàn thành chiếc bè và ra khơi để thoát khỏi đảo hoang.</li>
+                    </ol>
+                </div>
+
+                <div class="guide-block">
+                    <div class="guide-block-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-fire"/></svg> MẸO SINH TỒN</div>
+                    <ul class="guide-tips">
+                        <li>Theo dõi các chỉ số máu, no và khát ở góc màn hình — cạn kiệt sẽ mất máu dần.</li>
+                        <li>Nấu thức ăn tươi ở lửa trại trước khi ăn để hồi phục nhiều hơn.</li>
+                        <li>Dựng bể hứng nước để có nước sạch khi trời mưa.</li>
+                        <li>Lợn rừng và cá mập rất nguy hiểm — hãy chuẩn bị vũ khí trước khi đến gần.</li>
+                        <li>Nhớ lưu game trong menu tạm dừng (<kbd class="kbd wide">Esc</kbd>) trước khi mạo hiểm.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button id="guide-done-btn" class="menu-btn secondary small">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                    <span class="btn-text">ĐÓNG</span>
+                </button>
+                <button id="guide-play-btn" class="menu-btn primary small hidden">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-play"/></svg>
+                    <span class="btn-text">BẮT ĐẦU CHƠI</span>
                 </button>
             </div>
         </div>
@@ -266,30 +503,34 @@
     <!-- UI Overlay: Pause Menu -->
     <div id="pause-menu" class="overlay hidden">
         <div class="pause-content">
-            <div class="pause-title">⏸️ TẠM DỪNG</div>
+            <div class="pause-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-pause"/></svg> TẠM DỪNG</div>
             <div class="pause-buttons">
                 <button id="pause-resume-btn" class="menu-btn primary">
-                    <span class="btn-icon">▶️</span>
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-play"/></svg>
                     <span class="btn-text">TIẾP TỤC</span>
                 </button>
                 <button id="pause-save-btn" class="menu-btn secondary">
-                    <span class="btn-icon">💾</span>
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-save"/></svg>
                     <span class="btn-text">LƯU GAME</span>
                 </button>
                 <button id="pause-settings-btn" class="menu-btn secondary">
-                    <span class="btn-icon">⚙️</span>
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg>
                     <span class="btn-text">CÀI ĐẶT</span>
                 </button>
+                <button id="pause-guide-btn" class="menu-btn secondary">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-book"/></svg>
+                    <span class="btn-text">HƯỚNG DẪN</span>
+                </button>
                 <button id="pause-achievements-btn" class="menu-btn tertiary">
-                    <span class="btn-icon">🏅</span>
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-trophy"/></svg>
                     <span class="btn-text">THÀNH TỰU</span>
                 </button>
-                <button id="pause-sound-btn" class="menu-btn tertiary">
-                    <span class="btn-icon">🔊</span>
+                <button id="pause-sound-btn" class="menu-btn tertiary" aria-pressed="false">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg>
                     <span class="btn-text">ÂM THANH: BẬT</span>
                 </button>
                 <button id="pause-menu-btn" class="menu-btn danger">
-                    <span class="btn-icon">🏠</span>
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-home"/></svg>
                     <span class="btn-text">VỀ MENU CHÍNH</span>
                 </button>
             </div>
@@ -308,14 +549,43 @@
         </div>
     </div>
 
-    <!-- Pickup Notification - Top Center Toast -->
-    <div id="pickup-notification" class="pickup-notification hidden"></div>
+    <!-- Pickup Notification - Top Center Stacked Toasts -->
+    <div id="pickup-notification" class="pickup-notification-container"></div>
 
     <!-- Achievement Unlock Toast - Top Right (v1.0) -->
     <div id="achievement-toast" class="achievement-toast hidden"></div>
 
     <!-- Standalone FPS Counter - Top Right (v1.0, toggled in Settings) -->
     <div id="fps-counter" class="fps-counter hidden">60 FPS</div>
+
+    <!-- Time/Weather Widget - Top Right, below FPS -->
+    <div id="time-weather-widget" class="time-weather-widget hidden">
+        <div id="tw-clock" class="tw-clock">12:00</div>
+        <div id="tw-weather" class="tw-weather">☀️</div>
+        <div id="tw-day" class="tw-day">Ngày 1</div>
+    </div>
+
+    <!-- Compass Bar - Top Center -->
+    <div id="compass-bar" class="compass-bar hidden">
+        <!--
+            The fade wrapper must not move: the strip inside it is translated
+            every frame, and a mask on a transformed element travels with it.
+        -->
+        <div class="compass-fade">
+            <div id="compass-strip" class="compass-strip"></div>
+            <div id="compass-markers" class="compass-markers"></div>
+        </div>
+        <div class="compass-center-mark"></div>
+    </div>
+
+    <!-- Crosshair - Center Screen -->
+    <div id="crosshair" class="crosshair hidden">
+        <div class="crosshair-dot"></div>
+        <div class="crosshair-ring"></div>
+    </div>
+
+    <!-- Hit Marker - Flashes when attack connects -->
+    <div id="hit-marker" class="hit-marker hidden">✕</div>
 
     <!-- Vitals HUD - Top Left -->
     <div id="vitals-hud" class="vitals-hud hidden">
@@ -491,17 +761,26 @@
         <div class="inventory-menu-content">
             <div class="inventory-menu-header">
                 <div class="inventory-menu-title">
-                    <span class="menu-header-icon">⚓</span> Sinh Tồn: Kho Đồ & Chế Tạo
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-anchor"/></svg>
+                    Sinh Tồn: Kho Đồ &amp; Chế Tạo
                 </div>
-                <button id="inventory-menu-close" class="inventory-menu-close">&times;</button>
+                <button id="inventory-menu-close" class="inventory-menu-close" aria-label="Đóng">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
             </div>
             <div class="inventory-menu-body">
                 <!-- Left Column: Crafting Panel -->
                 <div class="crafting-column">
                     <div class="crafting-categories">
-                        <button class="cat-btn active" data-category="tool">🪓 CÔNG CỤ</button>
-                        <button class="cat-btn" data-category="structure">🔥 SINH TỒN</button>
-                        <button class="cat-btn" data-category="raft">⛵ CHIẾC BÈ</button>
+                        <button class="cat-btn active" data-category="tool">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#i-hammer"/></svg> CÔNG CỤ
+                        </button>
+                        <button class="cat-btn" data-category="structure">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#i-fire"/></svg> SINH TỒN
+                        </button>
+                        <button class="cat-btn" data-category="raft">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#i-sail"/></svg> CHIẾC BÈ
+                        </button>
                     </div>
                     <div id="crafting-recipes-list" class="crafting-recipes-list">
                         <!-- Recipes populated dynamically -->
@@ -515,7 +794,7 @@
                 <!-- Right Column: Main Inventory Grid -->
                 <div class="inventory-column">
                     <div class="inventory-column-header">
-                        <span class="column-title">🎒 KHO ĐỒ CHÍNH</span>
+                        <span class="column-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-backpack"/></svg> KHO ĐỒ CHÍNH</span>
                         <span id="slot-counter" class="slot-counter">0/20</span>
                     </div>
                     <div class="inventory-grid" id="inventory-grid">
@@ -523,7 +802,7 @@
                     </div>
                     <div class="trash-slot-container">
                         <div id="trash-slot" class="trash-slot" title="Kéo vật phẩm vào đây để vứt bỏ">
-                            <span class="trash-icon">🗑️</span>
+                            <svg class="ui-icon trash-icon" aria-hidden="true"><use href="#i-trash"/></svg>
                             <span class="trash-text">Thả vào đây để vứt bỏ</span>
                         </div>
                     </div>
@@ -547,7 +826,7 @@
     <div id="gameover-screen" class="gameover-screen overlay hidden">
         <div class="gameover-content">
             <div class="gameover-skull">💀</div>
-            <div class="gameover-title">ĐÃ NGỤC TÚ!</div>
+            <div class="gameover-title">ĐÃ GỤC NGÃ!</div>
             <div class="gameover-subtitle">Bạn đã không thể sinh tồn trên đảo hoang...</div>
             <div class="gameover-stats">
                 <div class="stat-row">

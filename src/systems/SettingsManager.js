@@ -54,6 +54,7 @@ const DEFAULTS = {
     masterVolume: 0.8,
     sfxVolume: 0.9,
     ambientVolume: 0.7,
+    musicVolume: 0.6,
     muted: false,
 
     // Controls

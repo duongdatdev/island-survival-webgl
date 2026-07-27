@@ -2,25 +2,29 @@ import { QualityPresets } from './SettingsManager.js';
 import { Achievements } from './AchievementSystem.js';
 
 /**
- * MenuUI (v1.0) — DOM controller for the settings, achievements and credits
- * overlays.
+ * MenuUI (v1.0) — DOM controller for the settings, achievements, credits and
+ * how-to-play overlays.
  *
  * Both the main menu and the in-game pause menu open the same panels, so the
  * binding lives here once instead of being duplicated per scene. A scene
  * constructs one instance, calls `openSettings()` / `openAchievements()` /
- * `openCredits()`, and disposes it on teardown.
+ * `openCredits()` / `openGuide()`, and disposes it on teardown.
  */
 export class MenuUI {
     /**
      * @param {object} engine Engine instance (settings, audio, achievements)
      * @param {object} [hooks]
      * @param {() => void} [hooks.onClose] Called when any panel is dismissed.
+     * @param {() => void} [hooks.onGuidePlay] Start-the-game action for the
+     *   guide panel. Only the main menu supplies it; without it the guide's
+     *   "play" button stays hidden (there is nothing to start mid-run).
      */
     constructor(engine, hooks = {}) {
         this.engine = engine;
         this.settings = engine.settings;
         this.achievements = engine.achievements;
         this.onClose = hooks.onClose || null;
+        this.onGuidePlay = hooks.onGuidePlay || null;
 
         /** @type {Array<{el: Element, type: string, fn: Function}>} */
         this._bound = [];
@@ -28,9 +32,12 @@ export class MenuUI {
         this._settingsEl = document.getElementById('settings-menu');
         this._achievementsEl = document.getElementById('achievements-menu');
         this._creditsEl = document.getElementById('credits-menu');
+        this._guideEl = document.getElementById('guide-menu');
 
         this._bindSettings();
         this._bindPanelButtons();
+        this._bindSettingsTabs();
+        this._bindGuide();
         this.syncSettingsUI();
     }
 
@@ -50,16 +57,23 @@ export class MenuUI {
         this._show(this._creditsEl);
     }
 
+    openGuide() {
+        const playBtn = document.getElementById('guide-play-btn');
+        if (playBtn) playBtn.classList.toggle('hidden', !this.onGuidePlay);
+        this._show(this._guideEl);
+    }
+
     closeAll() {
         this._hide(this._settingsEl);
         this._hide(this._achievementsEl);
         this._hide(this._creditsEl);
+        this._hide(this._guideEl);
         if (this.onClose) this.onClose();
     }
 
     /** True when any v1.0 panel is currently on screen. */
     isAnyOpen() {
-        return [this._settingsEl, this._achievementsEl, this._creditsEl]
+        return [this._settingsEl, this._achievementsEl, this._creditsEl, this._guideEl]
             .some(el => el && !el.classList.contains('hidden'));
     }
 
@@ -84,6 +98,7 @@ export class MenuUI {
             ['set-master-volume', 'masterVolume', 0.01, v => `${Math.round(v * 100)}%`],
             ['set-sfx-volume', 'sfxVolume', 0.01, v => `${Math.round(v * 100)}%`],
             ['set-ambient-volume', 'ambientVolume', 0.01, v => `${Math.round(v * 100)}%`],
+            ['set-music-volume', 'musicVolume', 0.01, v => `${Math.round(v * 100)}%`],
             ['set-sensitivity', 'mouseSensitivity', 0.01, v => `${v.toFixed(2)}x`],
             ['set-fov', 'fov', 1, v => `${Math.round(v)}°`],
             ['set-render-scale', 'renderScale', 0.01, v => `${Math.round(v * 100)}%`],
@@ -154,6 +169,7 @@ export class MenuUI {
             'settings-close-btn', 'settings-done-btn',
             'achievements-close-btn', 'achievements-done-btn',
             'credits-close-btn', 'credits-done-btn',
+            'guide-close-btn', 'guide-done-btn',
         ];
 
         for (const id of closers) {
@@ -162,6 +178,38 @@ export class MenuUI {
             this._on(el, 'click', () => {
                 this.engine.audio.playClick();
                 this.closeAll();
+            });
+        }
+    }
+
+    _bindGuide() {
+        const playBtn = document.getElementById('guide-play-btn');
+        if (!playBtn) return;
+
+        this._on(playBtn, 'click', () => {
+            this.engine.audio.playClick();
+            // Close first: the scene swap tears this controller down, and the
+            // guide is shared DOM that would otherwise stay on screen.
+            this.closeAll();
+            if (this.onGuidePlay) this.onGuidePlay();
+        });
+    }
+
+    _bindSettingsTabs() {
+        const tabs = document.querySelectorAll('.settings-tab');
+        const sections = document.querySelectorAll('.settings-section.tab-section');
+
+        for (const tab of tabs) {
+            this._on(tab, 'click', () => {
+                const target = tab.getAttribute('data-tab');
+                for (const t of tabs) {
+                    t.classList.toggle('active', t === tab);
+                    t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+                }
+                for (const s of sections) {
+                    s.classList.toggle('active', s.getAttribute('data-tab') === target);
+                }
+                this.engine.audio.playClick();
             });
         }
     }
@@ -176,6 +224,7 @@ export class MenuUI {
         this._setSlider('set-master-volume', s.get('masterVolume') * 100, 'val-master-volume', `${Math.round(s.get('masterVolume') * 100)}%`);
         this._setSlider('set-sfx-volume', s.get('sfxVolume') * 100, 'val-sfx-volume', `${Math.round(s.get('sfxVolume') * 100)}%`);
         this._setSlider('set-ambient-volume', s.get('ambientVolume') * 100, 'val-ambient-volume', `${Math.round(s.get('ambientVolume') * 100)}%`);
+        this._setSlider('set-music-volume', s.get('musicVolume') * 100, 'val-music-volume', `${Math.round(s.get('musicVolume') * 100)}%`);
         this._setSlider('set-sensitivity', s.get('mouseSensitivity') * 100, 'val-sensitivity', `${s.get('mouseSensitivity').toFixed(2)}x`);
         this._setSlider('set-fov', s.get('fov'), 'val-fov', `${Math.round(s.get('fov'))}°`);
         this._setSlider('set-render-scale', s.get('renderScale') * 100, 'val-render-scale', `${Math.round(s.get('renderScale') * 100)}%`);
@@ -224,9 +273,13 @@ export class MenuUI {
         let html = '';
         for (const def of Achievements) {
             const unlocked = this.achievements.isUnlocked(def.id);
+            // Locked cards keep their own glyph (dimmed by the card's filter)
+            // with a lock badge, so the list reads as one set of achievements
+            // rather than a row of identical padlocks.
             html += `
                 <div class="achv-card${unlocked ? ' unlocked' : ''}">
-                    <div class="achv-card-icon">${unlocked ? def.icon : '🔒'}</div>
+                    <div class="achv-card-icon">${def.icon}${unlocked ? ''
+                        : '<svg class="ui-icon achv-lock" aria-hidden="true"><use href="#i-lock"/></svg>'}</div>
                     <div>
                         <div class="achv-card-name">${def.name}</div>
                         <div class="achv-card-desc">${def.description}</div>

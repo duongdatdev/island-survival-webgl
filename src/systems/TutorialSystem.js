@@ -43,13 +43,13 @@ export class TutorialSystem {
         this._steps = [
             {
                 id: 'move',
-                text: '🎮 Dùng phím <b>W A S D</b> để di chuyển nhân vật',
+                text: '🎮 Dùng phím <b>W A S D</b> (hoặc mũi tên) để di chuyển nhân vật',
                 autoDismiss: 10,
                 triggerCheck: () => this._playerHasMoved,
             },
             {
                 id: 'camera',
-                text: '🖱️ Giữ <b>chuột trái + kéo</b> để xoay camera. Cuộn chuột để zoom.',
+                text: '🖱️ Giữ <b>chuột trái + kéo</b> để xoay camera. <b>Shift + cuộn chuột</b> để zoom.',
                 autoDismiss: 10,
                 triggerCheck: () => this._cameraHasRotated,
             },
@@ -131,8 +131,11 @@ export class TutorialSystem {
 
         // Track player actions for triggers
         if (inputManager) {
-            if (inputManager.isKeyDown('KeyW') || inputManager.isKeyDown('KeyA') ||
-                inputManager.isKeyDown('KeyS') || inputManager.isKeyDown('KeyD')) {
+            // Mirror Player.update() — the arrow keys move too, so pressing
+            // them must satisfy the movement step.
+            const moveKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD',
+                'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
+            if (moveKeys.some(k => inputManager.isKeyDown(k))) {
                 this._playerHasMoved = true;
             }
             if (inputManager.mouse.deltaX !== 0 || inputManager.mouse.deltaY !== 0) {

@@ -1,5 +1,5 @@
 /* ============================================
-   ISLAND SURVIVAL: ESCAPE — v0.5 Game Theme CSS
+   ISLAND SURVIVAL: ESCAPE — v1.1 Game Theme CSS
    Style: Rustic Survival RPG (Wood, Leather, Rope)
    ============================================ */
 
@@ -62,6 +62,32 @@ body, html {
     color: var(--text-parchment);
 }
 
+/* ============================================
+   UI ICON SYSTEM
+   Stroke icons from the sprite in index.html. `stroke: currentColor` is what
+   makes them consistent: an icon takes the colour, hover state and disabled
+   state of the control it lives in, for free. Size with width/height (or
+   font-size on a parent via the `em` defaults) — never with font-size hacks.
+   ============================================ */
+.ui-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.ui-icon {
+    width: 1.15em;
+    height: 1.15em;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -0.2em;
+}
+
 /* === Canvas === */
 #game-canvas {
     display: block;
@@ -106,29 +132,64 @@ body, html {
 }
 
 .loader-emblem {
-    font-size: 2.5rem;
-    margin-bottom: 8px;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 12px;
+    color: var(--text-gold);
+    background: radial-gradient(circle at 50% 32%, rgba(139, 105, 20, 0.3), rgba(10, 8, 4, 0.5));
+    border: 1px solid var(--wood-border);
+    border-radius: 50%;
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+.loader-emblem .ui-icon {
+    width: 26px;
+    height: 26px;
+    stroke-width: 1.5;
 }
 
 .loader-logo {
     font-family: var(--font-heading);
-    font-size: 2rem;
+    font-size: 1.7rem;
     font-weight: 800;
-    letter-spacing: 4px;
+    letter-spacing: 5px;
+    text-indent: 5px;
     color: var(--text-gold);
     text-shadow: 1px 1px 0px #0a0804, 0 0 12px rgba(196, 163, 90, 0.3);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     text-transform: uppercase;
 }
 
+/* Same rule-flanked treatment as the main menu wordmark. */
 .loader-subtitle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     font-family: var(--font-heading);
-    font-size: 0.8rem;
-    color: var(--text-dim);
-    letter-spacing: 6px;
-    margin-bottom: 28px;
+    font-size: 0.68rem;
+    color: var(--wood-accent);
+    margin-bottom: 26px;
     font-weight: 600;
+}
+
+.loader-subtitle span {
+    letter-spacing: 7px;
+    padding-left: 7px;
+}
+
+.loader-subtitle::before,
+.loader-subtitle::after {
+    content: '';
+    width: 26px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--wood-accent));
+}
+
+.loader-subtitle::after {
+    background: linear-gradient(90deg, var(--wood-accent), transparent);
 }
 
 .loader-bar-container {
@@ -171,174 +232,464 @@ body, html {
    MAIN MENU OVERLAY
    ============================================ */
 #main-menu.overlay {
-    background: rgba(10, 8, 4, 0.7);
+    /* Vignette instead of a flat wash, so the ocean stays visible at the edges
+       and the panel sits in the brightest part of the frame. The old 0.88 edge
+       buried the dusk sky behind it; this keeps enough falloff to hold the
+       panel's contrast while letting the sun and horizon read through. */
+    background:
+        radial-gradient(ellipse 40% 32% at 50% 46%,
+            rgba(139, 105, 20, 0.16) 0%,
+            transparent 72%),
+        radial-gradient(ellipse 92% 72% at 50% 46%,
+            rgba(8, 6, 3, 0.20) 0%,
+            rgba(5, 4, 2, 0.68) 100%);
     z-index: 15;
 }
 
 .menu-content {
+    position: relative;
+    width: min(456px, 92vw);
+    max-height: 94vh;
+    /* Nothing here scrolls — only `.menu-buttons` does — so the decorative
+       corner brackets stay pinned to the frame. */
+    overflow: hidden;
+    padding: 38px 32px 24px;
     text-align: center;
-    max-width: 440px;
-    width: 90%;
-    padding: 44px 36px;
-    background: var(--wood-dark);
+    background:
+        radial-gradient(125% 85% at 50% 0%, rgba(139, 105, 20, 0.14), transparent 60%),
+        linear-gradient(180deg, #241a08 0%, var(--wood-dark) 52%, #100b03 100%);
     border: var(--border-width) solid var(--wood-border);
-    border-radius: var(--panel-radius);
-    box-shadow: var(--panel-shadow), 0 12px 40px rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+    box-shadow:
+        inset 0 1px 0 rgba(232, 213, 163, 0.10),
+        inset 0 0 40px rgba(0, 0, 0, 0.5),
+        0 2px 0 #0a0804,
+        0 24px 60px rgba(0, 0, 0, 0.7);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    animation: menuSlideIn 0.4s ease-out;
+    gap: 16px;
+    animation: menuSlideIn 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* Two diagonal corner brackets — a rustic frame detail that reads as
+   deliberate, unlike an all-round second border. */
+.menu-content::before,
+.menu-content::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(196, 163, 90, 0.30);
+    pointer-events: none;
+}
+
+.menu-content::before {
+    top: 7px;
+    left: 7px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.menu-content::after {
+    right: 7px;
+    bottom: 7px;
+    border-left: none;
+    border-top: none;
 }
 
 @keyframes menuSlideIn {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(18px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .menu-logo-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
 }
 
 .menu-emblem {
-    font-size: 2.8rem;
-    margin-bottom: 4px;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+    display: grid;
+    place-items: center;
+    width: 60px;
+    height: 60px;
+    margin-bottom: 14px;
+    color: var(--text-gold);
+    background: radial-gradient(circle at 50% 32%, rgba(139, 105, 20, 0.32), rgba(10, 8, 4, 0.55));
+    border: 1px solid var(--wood-border);
+    border-radius: 50%;
+    box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.65), 0 0 24px rgba(196, 163, 90, 0.10);
 }
 
+.menu-emblem .ui-icon {
+    width: 30px;
+    height: 30px;
+    stroke-width: 1.5;
+}
+
+/* Two-line wordmark. `text-indent` cancels the trailing letter-space so each
+   line stays optically centred. */
 .menu-logo {
     font-family: var(--font-heading);
-    font-size: 2.4rem;
+    font-size: clamp(1.65rem, 6.4vw, 2.1rem);
     font-weight: 800;
-    letter-spacing: 5px;
-    color: var(--text-gold);
-    text-shadow: 1px 1px 0px #0a0804, 0 0 20px rgba(196, 163, 90, 0.25);
+    line-height: 1.04;
     text-transform: uppercase;
+    background: linear-gradient(180deg, #f4e2ae 0%, var(--text-gold) 52%, #8b6914 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--text-gold);
+    filter: drop-shadow(0 2px 0 #0a0804) drop-shadow(0 0 18px rgba(196, 163, 90, 0.22));
+}
+
+.menu-logo span {
+    display: block;
+    letter-spacing: 7px;
+    text-indent: 7px;
 }
 
 .menu-subtitle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 9px;
     font-family: var(--font-heading);
-    font-size: 0.9rem;
-    color: var(--text-dim);
-    letter-spacing: 10px;
+    font-size: 0.7rem;
     font-weight: 600;
+    color: var(--wood-accent);
+}
+
+.menu-subtitle span {
+    letter-spacing: 8px;
+    padding-left: 8px;
+}
+
+.menu-subtitle::before,
+.menu-subtitle::after {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--wood-accent));
+}
+
+.menu-subtitle::after {
+    background: linear-gradient(90deg, var(--wood-accent), transparent);
 }
 
 .menu-tagline {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-dim);
-    line-height: 1.5;
-    max-width: 320px;
+    line-height: 1.65;
+    max-width: 300px;
+}
+
+.menu-divider {
+    width: 100%;
+    height: 1px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, transparent, rgba(92, 61, 26, 0.9), transparent);
 }
 
 .menu-buttons {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    max-width: 280px;
+    /* The lone scroll region: on a short viewport the CTAs give up height
+       first, and the wordmark/footer never leave the screen. */
+    min-height: 0;
+    overflow: hidden auto;
+    /* Room for the 2px focus ring at 2px offset, which would otherwise be
+       clipped by the scroll container. */
+    padding: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--wood-border) transparent;
 }
 
-/* === Buttons (Game Theme) === */
+.menu-buttons::-webkit-scrollbar {
+    width: 4px;
+}
+
+.menu-buttons::-webkit-scrollbar-thumb {
+    background: var(--wood-border);
+    border-radius: 2px;
+}
+
+/* === Buttons (Game Theme) ===
+   Icon / label / meta in a fixed order, left aligned, so every icon in a
+   stack lands on the same column instead of drifting with the label width. */
 .menu-btn {
     width: 100%;
-    padding: 12px 18px;
-    border-radius: var(--panel-radius);
+    padding: 11px 14px;
+    border-radius: 3px;
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 1.5px;
+    font-size: 0.8rem;
+    letter-spacing: 1.6px;
+    text-align: left;
+    text-transform: uppercase;
     cursor: pointer;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: all 0.15s ease;
-    border: var(--border-width) solid var(--wood-border);
-    text-transform: uppercase;
+    gap: 12px;
+    border: 1px solid var(--wood-border);
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+                box-shadow 0.16s ease, transform 0.1s ease;
 }
 
-.menu-btn .btn-icon {
-    font-size: 1rem;
+.menu-btn .ui-icon {
+    width: 18px;
+    height: 18px;
+    opacity: 0.92;
+}
+
+.menu-btn .btn-text {
+    flex: 1;
+}
+
+/* Save timestamp / achievement count — a pill, so it reads as data and not as
+   part of the label. */
+.btn-meta {
+    margin-left: auto;
+    padding: 2px 8px;
+    border: 1px solid rgba(196, 163, 90, 0.18);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+}
+
+.btn-meta:empty {
+    display: none;
+}
+
+.menu-btn.hidden,
+.menu-tile.hidden {
+    display: none;
 }
 
 .menu-btn.primary {
-    background: var(--green-forest);
-    color: var(--text-bright);
-    border-color: var(--green-bright);
-    box-shadow: var(--panel-shadow);
+    background: linear-gradient(180deg, #5d9169 0%, var(--green-forest) 58%, #3d684a 100%);
+    color: #f2fbf3;
+    border-color: #6fae7f;
+    box-shadow: 0 2px 0 #0f1f0d, inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .menu-btn.primary:hover {
-    background: var(--green-bright);
-    box-shadow: var(--panel-shadow), 0 0 12px rgba(95, 160, 110, 0.3);
+    background: linear-gradient(180deg, #74b384 0%, var(--green-bright) 58%, #47795a 100%);
+    box-shadow: 0 2px 0 #0f1f0d, inset 0 1px 0 rgba(255, 255, 255, 0.22),
+                0 0 16px rgba(95, 160, 110, 0.3);
 }
 
-.menu-btn.primary:active {
-    transform: translateY(1px);
-    box-shadow: none;
+/* The one gold button on screen: resuming a run is the highest-intent action
+   there is, so it gets the treasure treatment. */
+.menu-btn.hero {
+    padding: 13px 14px;
+    font-size: 0.86rem;
+    background: linear-gradient(180deg, #dcb75f 0%, #ab8321 56%, #7a5c12 100%);
+    color: #241a06;
+    border-color: #e8d090;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: 0 2px 0 #2a1f0a, inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
+.menu-btn.hero:hover {
+    background: linear-gradient(180deg, #eecb72 0%, #bd9226 56%, #8a6a16 100%);
+    box-shadow: 0 2px 0 #2a1f0a, inset 0 1px 0 rgba(255, 255, 255, 0.38),
+                0 0 20px rgba(212, 160, 40, 0.35);
+}
+
+.menu-btn.hero .ui-icon {
+    opacity: 1;
+    stroke-width: 1.9;
+}
+
+.menu-btn.hero .btn-meta {
+    background: rgba(255, 255, 255, 0.24);
+    border-color: rgba(0, 0, 0, 0.18);
+    color: #3a2a0a;
+}
+
+/* Outlined rather than filled — supporting actions shouldn't compete with the
+   two CTAs above them. */
 .menu-btn.secondary {
-    background: var(--blue-water);
-    color: var(--text-bright);
-    border-color: var(--blue-bright);
-    box-shadow: var(--panel-shadow);
+    background: linear-gradient(180deg, rgba(58, 124, 165, 0.22), rgba(58, 124, 165, 0.06));
+    color: #c3e4f6;
+    border-color: rgba(90, 173, 219, 0.42);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 
 .menu-btn.secondary:hover {
-    background: var(--blue-bright);
-    box-shadow: var(--panel-shadow), 0 0 12px rgba(90, 173, 219, 0.3);
-}
-
-.menu-btn.secondary:active {
-    transform: translateY(1px);
-    box-shadow: none;
+    background: linear-gradient(180deg, rgba(90, 173, 219, 0.34), rgba(58, 124, 165, 0.12));
+    color: #eaf7ff;
+    border-color: var(--blue-bright);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 14px rgba(90, 173, 219, 0.22);
 }
 
 .menu-btn.tertiary {
-    background: var(--wood-mid);
+    background: linear-gradient(180deg, rgba(61, 46, 22, 0.55), rgba(20, 14, 5, 0.6));
     color: var(--text-dim);
-    border-color: var(--wood-border);
-    box-shadow: var(--panel-shadow);
+    border-color: rgba(92, 61, 26, 0.9);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
 
 .menu-btn.tertiary:hover {
-    background: var(--wood-light);
+    background: linear-gradient(180deg, var(--wood-light), var(--wood-mid));
     color: var(--text-parchment);
-}
-
-.menu-btn.tertiary:active {
-    transform: translateY(1px);
-    box-shadow: none;
+    border-color: var(--wood-accent);
 }
 
 .menu-btn.danger {
-    background: var(--red-dark);
-    color: #f0a0a0;
-    border-color: var(--red-earth);
-    box-shadow: var(--panel-shadow);
+    background: linear-gradient(180deg, rgba(184, 92, 56, 0.28), rgba(138, 58, 34, 0.16));
+    color: #e8a894;
+    border-color: rgba(184, 92, 56, 0.5);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 
 .menu-btn.danger:hover {
-    background: var(--red-earth);
-    color: #ffd0d0;
+    background: linear-gradient(180deg, var(--red-earth), var(--red-dark));
+    color: #ffe0d6;
+    border-color: #d47a55;
 }
 
-.menu-btn.danger:active {
+.menu-btn:active {
+    transform: translateY(2px);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* === Utility tiles (achievements / credits / sound) ===
+   Three low-priority actions as a single compact row — the menu used to run
+   seven full-width buttons deep and scroll on a laptop. */
+.menu-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.menu-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 13px 4px 11px;
+    background: linear-gradient(180deg, rgba(61, 46, 22, 0.45), rgba(18, 13, 4, 0.6));
+    border: 1px solid rgba(92, 61, 26, 0.9);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-family: var(--font-heading);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+                transform 0.12s ease, box-shadow 0.16s ease;
+}
+
+.menu-tile .ui-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.menu-tile:hover {
+    background: linear-gradient(180deg, var(--wood-light), var(--wood-mid));
+    border-color: var(--wood-accent);
+    color: var(--text-gold);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 14px rgba(139, 105, 20, 0.18);
+}
+
+.menu-tile:active {
     transform: translateY(1px);
-    box-shadow: none;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* Muted is a state, not a different button — colour carries it. */
+.menu-tile.is-off {
+    color: var(--red-earth);
+    border-color: rgba(184, 92, 56, 0.45);
+}
+
+.menu-tile.is-off:hover {
+    color: #e8a894;
+    border-color: var(--red-earth);
+}
+
+.tile-badge {
+    position: absolute;
+    top: 5px;
+    right: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    letter-spacing: 0;
+    color: var(--wood-accent);
+}
+
+.tile-badge:empty {
+    display: none;
 }
 
 .menu-footer {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--wood-border);
-    letter-spacing: 1px;
-    margin-top: 8px;
+    font-size: 0.6rem;
+    color: #57411f;
+    letter-spacing: 1.4px;
+    flex-shrink: 0;
+}
+
+/* Short viewports (a 1280×800 window leaves ~650px after browser chrome):
+   tighten the fixed furniture so all four CTAs fit instead of the last one
+   being clipped by the scroll region. */
+@media (max-height: 760px) {
+    .menu-content {
+        padding: 26px 30px 18px;
+        gap: 12px;
+    }
+    .menu-emblem {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 9px;
+    }
+    .menu-emblem .ui-icon {
+        width: 25px;
+        height: 25px;
+    }
+    .menu-logo { font-size: clamp(1.4rem, 5.2vw, 1.7rem); }
+    .menu-subtitle {
+        margin-top: 7px;
+        font-size: 0.64rem;
+    }
+    .menu-tagline {
+        font-size: 0.76rem;
+        line-height: 1.5;
+    }
+    .menu-btn { padding: 9px 13px; }
+    .menu-btn.hero { padding: 10px 13px; }
+    .menu-tile { padding: 9px 4px 8px; }
+}
+
+/* === Keyboard focus — one visible ring across every control === */
+.menu-btn:focus-visible,
+.menu-tile:focus-visible,
+.quality-btn:focus-visible,
+.settings-tab:focus-visible,
+.panel-close:focus-visible,
+.cat-btn:focus-visible,
+.escape-btn:focus-visible,
+.restart-btn:focus-visible,
+.tutorial-skip:focus-visible {
+    outline: 2px solid var(--text-gold);
+    outline-offset: 2px;
 }
 
 /* ============================================
@@ -351,17 +702,21 @@ body, html {
 
 .pause-content {
     text-align: center;
-    max-width: 360px;
-    width: 90%;
-    padding: 36px;
-    background: var(--wood-dark);
+    width: min(340px, 90vw);
+    padding: 30px 26px 26px;
+    background:
+        radial-gradient(125% 85% at 50% 0%, rgba(139, 105, 20, 0.12), transparent 60%),
+        linear-gradient(180deg, #241a08 0%, var(--wood-dark) 52%, #100b03 100%);
     border: var(--border-width) solid var(--wood-border);
-    border-radius: var(--panel-radius);
-    box-shadow: var(--panel-shadow), 0 12px 40px rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+    box-shadow:
+        inset 0 1px 0 rgba(232, 213, 163, 0.08),
+        0 2px 0 #0a0804,
+        0 20px 50px rgba(0, 0, 0, 0.65);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
     animation: pauseSlideIn 0.25s ease-out;
 }
 
@@ -371,20 +726,34 @@ body, html {
 }
 
 .pause-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding-bottom: 14px;
+    width: 100%;
+    border-bottom: 1px solid rgba(92, 61, 26, 0.7);
     font-family: var(--font-heading);
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     font-weight: 800;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
+    text-indent: 4px;
     color: var(--text-gold);
     text-shadow: 1px 1px 0 #0a0804;
+}
+
+.pause-title .ui-icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.2;
+    color: var(--wood-accent);
 }
 
 .pause-buttons {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    max-width: 240px;
 }
 
 /* ============================================
@@ -1130,26 +1499,40 @@ input:checked + .slider:before {
     text-shadow: 1px 1px 0 #0a0804;
 }
 
-.menu-header-icon {
-    font-size: 1.4rem;
+.inventory-menu-title .ui-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--wood-accent);
 }
 
 .inventory-menu-close {
-    background: var(--wood-mid);
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--wood-border);
-    border-radius: 2px;
-    font-size: 1.2rem;
+    border-radius: 3px;
     color: var(--text-dim);
     cursor: pointer;
-    transition: all 0.15s ease;
-    padding: 2px 8px;
-    line-height: 1;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.inventory-menu-close .ui-icon {
+    width: 15px;
+    height: 15px;
+    stroke-width: 2;
 }
 
 .inventory-menu-close:hover {
-    color: var(--text-parchment);
-    border-color: var(--wood-accent);
-    background: var(--wood-light);
+    color: #ffd0d0;
+    border-color: var(--red-earth);
+    background: rgba(184, 92, 56, 0.25);
+}
+
+.inventory-menu-close:focus-visible {
+    outline: 2px solid var(--text-gold);
+    outline-offset: 2px;
 }
 
 .inventory-menu-body {
@@ -1178,7 +1561,11 @@ input:checked + .slider:before {
 
 .cat-btn {
     flex: 1;
-    padding: 6px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 4px;
     background: var(--wood-mid);
     border: 1px solid var(--wood-border);
     border-radius: 2px;
@@ -1188,6 +1575,11 @@ input:checked + .slider:before {
     font-size: 0.65rem;
     cursor: pointer;
     transition: all 0.15s ease;
+}
+
+.cat-btn .ui-icon {
+    width: 14px;
+    height: 14px;
 }
 
 .cat-btn:hover {
@@ -1358,6 +1750,29 @@ input:checked + .slider:before {
     margin-top: 4px;
 }
 
+.ingredient-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--wood-dark);
+    border: 1px solid var(--wood-border);
+    color: var(--text-dim);
+}
+
+.ingredient-badge.met {
+    border-color: var(--green-forest);
+    color: var(--green-bright);
+}
+
+.ingredient-badge.missing {
+    border-color: var(--red-dark);
+    color: var(--red-earth);
+}
+
 .details-craft-btn-row {
     display: flex;
     justify-content: flex-end;
@@ -1380,11 +1795,20 @@ input:checked + .slider:before {
 }
 
 .column-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--font-heading);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 800;
     color: var(--text-dim);
     letter-spacing: 1px;
+}
+
+.column-title .ui-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--wood-accent);
 }
 
 .slot-counter {
@@ -1507,7 +1931,8 @@ input:checked + .slider:before {
 }
 
 .trash-icon {
-    font-size: 1.2rem;
+    width: 18px;
+    height: 18px;
 }
 
 .trash-text {
@@ -1847,31 +2272,47 @@ input:checked + .slider:before {
 }
 
 .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-family: var(--font-heading);
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: 2px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
     color: var(--text-gold);
     text-shadow: 1px 1px 0 #0a0804;
 }
 
-.panel-icon {
-    margin-right: 8px;
+.panel-title .ui-icon {
+    width: 19px;
+    height: 19px;
+    color: var(--wood-accent);
 }
 
 .panel-close {
-    background: none;
-    border: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--wood-border);
+    border-radius: 3px;
     color: var(--text-dim);
-    font-size: 30px;
-    line-height: 1;
     cursor: pointer;
-    padding: 0 6px;
-    transition: color .2s ease;
+    transition: color .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.panel-close .ui-icon {
+    width: 15px;
+    height: 15px;
+    stroke-width: 2;
 }
 
 .panel-close:hover {
-    color: var(--red-earth);
+    color: #ffd0d0;
+    border-color: var(--red-earth);
+    background: rgba(184, 92, 56, 0.25);
 }
 
 .panel-body {
@@ -1890,10 +2331,23 @@ input:checked + .slider:before {
     flex-shrink: 0;
 }
 
+/* Panel footer buttons hug their label instead of filling the row. */
 .menu-btn.small {
-    padding: 8px 18px;
-    font-size: 13px;
-    min-width: auto;
+    width: auto;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.72rem;
+    letter-spacing: 1.2px;
+}
+
+.menu-btn.small .btn-text {
+    flex: 0 0 auto;
+}
+
+.menu-btn.small .ui-icon {
+    width: 15px;
+    height: 15px;
 }
 
 .panel-body::-webkit-scrollbar {
@@ -1919,6 +2373,9 @@ input:checked + .slider:before {
 }
 
 .settings-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--font-heading);
     font-size: 13px;
     letter-spacing: 2px;
@@ -1926,6 +2383,12 @@ input:checked + .slider:before {
     border-bottom: 1px solid var(--wood-border);
     padding-bottom: 6px;
     margin-bottom: 10px;
+}
+
+.settings-section-title .ui-icon {
+    width: 15px;
+    height: 15px;
+    color: var(--wood-accent);
 }
 
 .setting-row {
@@ -2050,9 +2513,39 @@ input:checked + .slider:before {
     background: linear-gradient(135deg, rgba(139, 105, 20, 0.2), var(--wood-dark));
 }
 
+/* Achievement icons stay emoji — they are content, one glyph per achievement.
+   The frame around them is what keeps the list looking like the rest of the UI. */
 .achv-card-icon {
-    font-size: 28px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
     flex-shrink: 0;
+    font-size: 23px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--wood-border);
+    border-radius: 3px;
+}
+
+.achv-card.unlocked .achv-card-icon {
+    background: rgba(139, 105, 20, 0.18);
+    border-color: var(--wood-accent);
+}
+
+.achv-lock {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    width: 13px;
+    height: 13px;
+    padding: 2px;
+    box-sizing: content-box;
+    color: var(--text-parchment);
+    background: var(--wood-dark);
+    border: 1px solid var(--wood-border);
+    border-radius: 50%;
+    stroke-width: 2;
 }
 
 .achv-card-name {
@@ -2128,12 +2621,22 @@ input:checked + .slider:before {
 }
 
 .credits-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     font-family: var(--font-heading);
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 800;
     letter-spacing: 3px;
     color: var(--text-gold);
     margin-bottom: 4px;
+}
+
+.credits-logo .ui-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--wood-accent);
 }
 
 .credits-version {
@@ -2162,21 +2665,120 @@ input:checked + .slider:before {
     line-height: 1.7;
 }
 
-/* The main menu grew from 3 buttons to 7 in v1.0 — keep it scrollable so it
-   still fits on short viewports instead of running off the screen. */
-.menu-content {
-    max-height: 94vh;
-    overflow-y: auto;
-    gap: 16px;
+/* === How-to-play guide === */
+.guide-block {
+    margin-bottom: 22px;
 }
 
-/* === Menu button metadata (save timestamp, achievement count) === */
-.btn-meta {
+.guide-block:last-child {
+    margin-bottom: 0;
+}
+
+.guide-block-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-heading);
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--wood-accent);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--wood-border);
+}
+
+.guide-block-title .ui-icon {
+    width: 15px;
+    height: 15px;
+}
+
+/* Keys sit in a fixed column so every description starts on the same line. */
+.guide-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 5px 0;
+}
+
+.guide-keys {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 190px;
+    flex-wrap: wrap;
+}
+
+.guide-plus {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
-    margin-left: auto;
-    padding-left: 10px;
+}
+
+.guide-desc {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-parchment);
+    line-height: 1.5;
+}
+
+/* Static sibling of .hint-key — no pulse, and it grows with its label. */
+.kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    background: var(--wood-mid);
+    border: 1px solid var(--yellow-fire);
+    border-radius: 2px;
+    color: var(--yellow-fire);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+.kbd.wide {
+    letter-spacing: 0.5px;
+}
+
+.guide-steps,
+.guide-tips {
+    margin: 0;
+    padding-left: 22px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-parchment);
+    line-height: 1.7;
+}
+
+.guide-steps li,
+.guide-tips li {
+    margin-bottom: 4px;
+}
+
+.guide-steps b {
+    color: var(--text-gold);
+}
+
+.guide-steps .kbd,
+.guide-tips .kbd {
+    height: 20px;
+    min-width: 20px;
+    font-size: 0.65rem;
+    vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+    .guide-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .guide-keys {
+        flex: 0 0 auto;
+    }
 }
 
 /* === Pause menu save status line === */
@@ -2234,4 +2836,416 @@ input:checked + .slider:before {
     .setting-row input[type="range"],
     .setting-row .quality-buttons,
     .setting-row .switch { grid-area: control; }
+}
+
+/* ============================================
+   v1.1 — Damage Vignette
+   ============================================ */
+.damage-vignette {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 250;
+    background: radial-gradient(ellipse at center,
+        transparent 40%,
+        rgba(180, 30, 20, 0.0) 60%);
+    opacity: 0;
+    transition: opacity 0.08s ease-in;
+}
+
+.damage-vignette.damage-vignette-fade {
+    opacity: 1;
+    background: radial-gradient(ellipse at center,
+        transparent 35%,
+        rgba(180, 30, 20, 0.55) 100%);
+    animation: damageFlash 0.6s ease-out forwards;
+}
+
+.damage-vignette.hidden {
+    display: none;
+}
+
+@keyframes damageFlash {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ============================================
+   v1.1 — Time/Weather Widget
+   ============================================ */
+.time-weather-widget {
+    position: absolute;
+    top: 52px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: rgba(10, 8, 4, 0.72);
+    border: 1px solid var(--wood-border);
+    border-radius: 3px;
+    z-index: 120;
+    pointer-events: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-parchment);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.time-weather-widget.hidden { display: none; }
+
+.tw-clock {
+    font-variant-numeric: tabular-nums;
+    min-width: 42px;
+    text-align: center;
+}
+
+.tw-weather { font-size: 16px; }
+
+.tw-day {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   v1.1 — Compass Bar
+   ============================================ */
+/* Three stacked lanes, 34px total: POI icons on top, direction labels in the
+   middle, ticks along the bottom where the centre mark reads against them.
+   Separate lanes are what stop a marker from sitting on top of a label. */
+.compass-bar {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 260px;
+    height: 34px;
+    overflow: hidden;
+    background: rgba(10, 8, 4, 0.65);
+    border: 1px solid var(--wood-border);
+    border-radius: 3px;
+    z-index: 120;
+    pointer-events: none;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.compass-bar.hidden { display: none; }
+
+/* Static viewport. Ticks are clipped here and faded at both ends so labels
+   dissolve instead of being chopped off mid-glyph at the border. */
+.compass-fade {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+}
+
+/* Built once, then moved only by `transform` — a sub-pixel translate is what
+   makes the rotation smooth. Never re-render its contents per frame. */
+.compass-strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+}
+
+/* Tick lane */
+.compass-tick {
+    position: absolute;
+    bottom: 4px;
+    width: 1px;
+    height: 4px;
+    background: rgba(232, 213, 163, 0.26);
+}
+
+.compass-tick.major {
+    height: 7px;
+    background: rgba(196, 163, 90, 0.75);
+}
+
+/* Label lane */
+.compass-label {
+    position: absolute;
+    top: 12px;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* North is the anchor you orient against — give it the accent colour. */
+.compass-tick.north {
+    background: var(--yellow-fire);
+    height: 9px;
+}
+
+.compass-label.north {
+    color: var(--yellow-fire);
+}
+
+/* Centre mark reads against the tick lane, so it stays out of the label and
+   marker lanes entirely. */
+.compass-center-mark {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 100%;
+    transform: translateX(-50%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.compass-center-mark::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid var(--yellow-fire);
+}
+
+.compass-center-mark::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 10px;
+    background: var(--yellow-fire);
+    box-shadow: 0 0 4px rgba(212, 160, 40, 0.7);
+}
+
+.compass-markers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+}
+
+/* Marker lane (top). Positioned by transform (see `_updateCompass`), so the
+   -50% centring is folded into the same declaration the script writes. */
+.compass-marker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 11px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.95));
+}
+
+/* ============================================
+   v1.1 — Crosshair
+   ============================================ */
+.crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 110;
+    pointer-events: none;
+}
+
+.crosshair.hidden { display: none; }
+
+.crosshair-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.crosshair-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+}
+
+/* ============================================
+   v1.1 — Hit Marker
+   ============================================ */
+.hit-marker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 6px rgba(255, 80, 30, 0.9);
+    z-index: 115;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.hit-marker.hit-marker-show {
+    animation: hitMarkerPop 0.25s ease-out forwards;
+}
+
+.hit-marker.hit-marker-kill {
+    color: #ff4444;
+    text-shadow: 0 0 8px rgba(255, 30, 30, 1);
+    font-size: 28px;
+}
+
+.hit-marker.hidden { display: none; }
+
+@keyframes hitMarkerPop {
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(1.6); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ============================================
+   v1.1 — Stacked Toast Notifications
+   ============================================ */
+.pickup-notification-container {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 200;
+    pointer-events: none;
+}
+
+.toast-item {
+    padding: 8px 18px;
+    background: linear-gradient(135deg, rgba(42, 31, 14, 0.94), rgba(26, 18, 7, 0.96));
+    border: 1px solid var(--wood-border);
+    border-radius: var(--panel-radius);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-parchment);
+    white-space: nowrap;
+    box-shadow: var(--panel-shadow);
+    animation: toastSlideIn 0.25s ease-out forwards, toastFadeOut 0.3s ease-in 2.5s forwards;
+}
+
+@keyframes toastSlideIn {
+    0%   { opacity: 0; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastFadeOut {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ============================================
+   v1.1 — Settings Tabs
+   ============================================ */
+.settings-tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--wood-border);
+    margin-bottom: 14px;
+}
+
+.settings-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 0;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-heading);
+    font-size: 13px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-tab .ui-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.settings-tab:hover { color: var(--text-parchment); }
+.settings-tab.active {
+    color: var(--text-gold);
+    border-bottom-color: var(--wood-accent);
+}
+
+.settings-section.tab-section {
+    display: none;
+}
+
+.settings-section.tab-section.active {
+    display: block;
+}
+
+/* ============================================
+   v1.1 — Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .vital-bar-fill::after { animation: none !important; }
+    .tutorial-card { animation: none !important; }
+}
+
+/* ============================================
+   v1.1 — Responsive (tablet & small laptop)
+   ============================================ */
+@media (max-width: 900px) {
+    .inventory-menu-body {
+        flex-direction: column;
+    }
+    .crafting-column, .inventory-column {
+        width: 100%;
+        max-height: 45vh;
+    }
+    .compass-bar { width: 200px; }
+    .achievements-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .time-weather-widget {
+        top: 40px;
+        right: 8px;
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    /* Narrower only — the height carries three fixed lanes. */
+    .compass-bar { width: 170px; }
+    .crosshair-ring { width: 14px; height: 14px; }
+    .settings-tab { font-size: 11px; }
 }
