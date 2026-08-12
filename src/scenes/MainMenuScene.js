@@ -304,9 +304,12 @@ export class MainMenuScene extends Scene {
         this.skyShader.setUniform3fv('uCameraPos', this.camera.position);
         this.skyShader.setUniform3fv('uSunDirection', SUN_DIRECTION);
         this.skyShader.setUniform3fv('uSunColor', palette.sun);
+        this.skyShader.setUniform3fv('uMoonDirection', [-SUN_DIRECTION[0], -SUN_DIRECTION[1], -SUN_DIRECTION[2]]);
+        this.skyShader.setUniform3fv('uMoonColor', [0.0, 0.0, 0.0]);
         this.skyShader.setUniform3fv('uSkyHorizon', palette.horizon);
         this.skyShader.setUniform3fv('uSkyMid', palette.mid);
         this.skyShader.setUniform3fv('uSkyZenith', palette.zenith);
+        this.skyShader.setUniform1f('uSunsetAmount', 0.7);
         this.skyShader.setUniform1f('uTime', this.time);
 
         gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -370,6 +373,14 @@ export class MainMenuScene extends Scene {
         this.engine.audio.resume();
         this.engine.audio.playClick();
         this._hideMenu();
+
+        // Request pointer lock during the user gesture click
+        try {
+            this.engine.input.canvas.requestPointerLock();
+        } catch (e) {
+            console.warn('MainMenuScene: requestPointerLock failed', e);
+        }
+
         // Small delay for button click sound
         setTimeout(() => {
             this.engine.scenes.switchScene('Game');

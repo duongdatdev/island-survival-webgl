@@ -28,6 +28,18 @@ export class DayNightCycle {
         return [lx, Math.max(-0.3, ly), lz];
     }
 
+    /**
+     * Moon direction — opposite to the sun on the full circle (no horizon
+     * clamping so the moon can set below the horizon naturally).
+     */
+    getMoonDirection() {
+        const angle = this.timeOfDay * Math.PI * 2;
+        const lx = -Math.cos(angle) * 0.6;
+        const ly = -Math.sin(angle);
+        const lz = -Math.sin(angle) * 0.6;
+        return [lx, Math.max(-0.3, ly), lz];
+    }
+
     getSunColor() {
         const t = this.timeOfDay;
 
@@ -168,6 +180,67 @@ export class DayNightCycle {
             bottom: [0.01 + 0.01 * p, 0.01 + 0.01 * p, 0.03 + 0.03 * p],
             horizon: [0.05 + 0.05 * p, 0.03 + 0.03 * p, 0.07 + 0.07 * p]
         };
+    }
+
+    /**
+     * Returns sky gradient stops in the format expected by SkyShader v2.0:
+     * { horizon, mid, zenith } — each a vec3.
+     *
+     * These are derived from the existing getSkyColors() data, remapped
+     * so `horizon` ≈ bottom/horizon line, `mid` ≈ mid-sky, `zenith` ≈ top.
+     */
+    getSkyGradient() {
+        const c = this.getSkyColors();
+        return {
+            horizon: c.horizon,
+            mid: [
+                (c.top[0] + c.horizon[0]) * 0.5,
+                (c.top[1] + c.horizon[1]) * 0.5,
+                (c.top[2] + c.horizon[2]) * 0.5,
+            ],
+            zenith: c.top,
+        };
+    }
+
+    /**
+     * Returns 0-1 indicating how much sunset/sunrise glow to show.
+     * Peaks at sunrise (~0.15) and sunset (~0.78).
+     */
+    getSunsetAmount() {
+        const t = this.timeOfDay;
+
+        // Dawn glow: 0.10 → 0.22
+        if (t >= 0.10 && t < 0.16) {
+            return (t - 0.10) / 0.06; // ramp up
+        }
+        if (t >= 0.16 && t < 0.22) {
+            return 1.0 - (t - 0.16) / 0.06; // ramp down
+        }
+
+        // Dusk glow: 0.68 → 0.85
+        if (t >= 0.68 && t < 0.76) {
+            return (t - 0.68) / 0.08; // ramp up
+        }
+        if (t >= 0.76 && t < 0.85) {
+            return 1.0 - (t - 0.76) / 0.09; // ramp down
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * Moon color — slightly bluish-white at night, dimmer during the day.
+     */
+    getMoonColor() {
+        const t = this.timeOfDay;
+        const sunIntensity = this.getSunIntensity();
+        // At night the moon is a bright bluish-white; by day it's invisible.
+        const nightness = 1.0 - Math.min(1.0, Math.max(0.0, (sunIntensity - 0.22) / 0.78));
+        return [
+            0.85 * nightness,
+            0.88 * nightness,
+            0.95 * nightness,
+        ];
     }
 
     getTimeLabel() {

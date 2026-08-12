@@ -7,15 +7,7 @@
     <meta name="description" content="Island Survival: Escape - Game sinh tồn đảo hoang WebGL 2. Thu thập tài nguyên, chế tạo bè và thoát khỏi đảo!">
     <!-- Game-Themed Fonts (self-hosted, no CDN dependency) -->
     <link rel="stylesheet" href="assets/fonts/fonts.css">
-    <!--
-        Cache-busting lives ONLY on these two entry points. ES modules are keyed
-        by URL, so a `?v=` on a deep import makes that module a *different*
-        module from the same file imported without one — v0.5 shipped with
-        ResourceDatabase, RecipeDatabase, WorldResource and BiomeGenerator each
-        instantiated twice for exactly that reason. Deep imports stay bare; the
-        static host revalidates them by ETag.
-    -->
-    <link rel="stylesheet" href="index.css?v=9">
+    <link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <!--
@@ -873,6 +865,6 @@
     </div>
 
     <!-- Main Module Loading -->
-    <script type="module" src="src/main.js?v=8"></script>
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>

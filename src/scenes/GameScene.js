@@ -42,6 +42,7 @@ import { Seagull } from '../entities/Seagull.js';
 import { Boar } from '../entities/Boar.js';
 import { Shark } from '../entities/Shark.js';
 import { CreatureState } from '../entities/Creature.js';
+import { SkyShader } from '../shaders/SkyShader.js';
 import { BiomeType } from '../gameplay/world/BiomeGenerator.js';
 import { CollisionLayers } from '../systems/CollisionLayers.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
@@ -114,9 +115,24 @@ export class GameScene extends Scene {
         this.weather = new WeatherSystem();
         this._rainParticleTimer = 0;
 
-        // 3.6 v0.4 - Sun & Moon billboard sprites
+        // 3.6 v0.4 - Sun & Moon billboard sprites (kept for gameplay cues)
         this.sunSprite = new BillboardSprite(gl, [1.0, 0.9, 0.5], 4.0, [1.0, 0.7, 0.15]);
         this.moonSprite = new BillboardSprite(gl, [0.85, 0.85, 0.95], 3.5, [0.5, 0.5, 0.7]);
+
+        // 3.7 v1.1 - Procedural Sky Shader (shared with MainMenuScene)
+        // Renders a fullscreen sky dome with gradient, stars, sun, cirrus, dithering.
+        this.skyShader = null;
+        this.skyVao = null;
+        try {
+            this.skyShader = new ShaderProgram(gl, SkyShader.vertex, SkyShader.fragment);
+            this.skyVao = gl.createVertexArray();
+        } catch (e) {
+            console.error('GameScene: sky shader failed to compile, using flat sky.', e);
+        }
+
+        // Reused matrices for sky pass
+        this._viewProj = Mat4.create();
+        this._invViewProj = Mat4.create();
 
         // 4. Entities Setup
         this.player = new Player();
@@ -497,6 +513,27 @@ export class GameScene extends Scene {
             this._applySave(this._pendingSave);
             this._pendingSave = null;
         }
+
+        // Lock pointer automatically on start
+        try {
+            this.engine.input.canvas.requestPointerLock();
+        } catch (e) {
+            console.warn('GameScene: requestPointerLock failed', e);
+        }
+
+        // Auto-lock pointer on canvas click during active gameplay
+        this._onCanvasClick = () => {
+            if (!this.isPaused && (!this.inventoryMenu || this.inventoryMenu.classList.contains('hidden')) && !this._isGameOver && !this.isEscaping) {
+                if (!document.pointerLockElement) {
+                    try {
+                        this.gl.canvas.requestPointerLock();
+                    } catch (e) {
+                        console.warn('GameScene: requestPointerLock on click failed', e);
+                    }
+                }
+            }
+        };
+        this.gl.canvas.addEventListener('click', this._onCanvasClick);
     }
 
     // ============================================
@@ -761,7 +798,10 @@ export class GameScene extends Scene {
         // Handle ESC — closes an open settings/achievements panel first, so it
         // never skips a step and drops the player straight back into play.
         if (this.engine.input.isKeyPressed('Escape')) {
-            if (this.menuUI && this.menuUI.isAnyOpen()) {
+            const isInventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+            if (isInventoryOpen) {
+                this._closeInventoryMenu();
+            } else if (this.menuUI && this.menuUI.isAnyOpen()) {
                 this.menuUI.closeAll();
             } else if (this.isPaused) {
                 this._resumeGame();
@@ -819,6 +859,9 @@ export class GameScene extends Scene {
 
             const up = [0, 1.0, 0];
             Mat4.lookAt(this.camera.viewMatrix, this.camera.position, this.camera.target, up);
+
+            // Update inverse view-projection for sky shader
+            this._updateInvViewProj();
 
             // Water splash particles during escape
             if (Math.random() < 0.3) {
@@ -1119,6 +1162,9 @@ export class GameScene extends Scene {
 
         // Snap camera tracking around player
         this.camera.update(this.engine.input, this.player.position, 1.2 * this.player.scaleFactor, deltaTime);
+
+        // Update inverse view-projection for sky shader
+        this._updateInvViewProj();
 
         // ---- Campfire proximity (v0.2) ----
         let showCampfirePrompt = false;
@@ -1789,18 +1835,31 @@ export class GameScene extends Scene {
         this.postFx.resize(gl.canvas.width, gl.canvas.height);
         this.postFx.beginScene();
 
-        // v0.4: Dynamic sky color based on day/night and weather
+        // Sky colors from day/night cycle (used by water shader for reflections)
         const skyColors = this.dayNight.getSkyColors();
         const cloudCover = this.weather.cloudCover;
-        const skyTop = skyColors.top;
         const weatherDim = 1.0 - cloudCover * 0.3;
-        gl.clearColor(
-            skyTop[0] * weatherDim,
-            skyTop[1] * weatherDim,
-            skyTop[2] * weatherDim,
-            1.0
-        );
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        // Always clear the depth buffer so geometry drawn after the sky pass
+        // is not discarded by stale depth values from the previous frame.
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+
+        // v1.1 — Procedural sky dome pass (shared SkyShader with MainMenuScene).
+        // Runs first with depth writes OFF so it never occludes the world.
+        this._renderSky();
+
+        // v0.4: Dynamic sky color based on day/night and weather — FALLBACK
+        // Only used if the sky shader failed to compile.
+        if (!this.skyShader) {
+            const skyTop = skyColors.top;
+            gl.clearColor(
+                skyTop[0] * weatherDim,
+                skyTop[1] * weatherDim,
+                skyTop[2] * weatherDim,
+                1.0
+            );
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        }
 
         // --- DRAW TERRAIN & PLAYER & RESOURCES (Solid Geometry, BasicShader) ---
         this.basicShader.use();
@@ -1939,6 +1998,13 @@ export class GameScene extends Scene {
         // v0.4: Lightning flash for water reflections
         this.waterShader.setUniform1f('uLightningFlash', this.weather.getLightningModulation());
 
+        // Sun uniforms for water glitter (dynamic, matching sky shader)
+        const sunDir = this.dayNight.getSunDirection();
+        const sunCol = this.dayNight.getSunColor();
+        this.waterShader.setUniform3fv('uSunDirection', sunDir);
+        this.waterShader.setUniform3fv('uSunColor', sunCol);
+        this.waterShader.setUniform1f('uSunGlitter', 0.6);
+
         // Draw Water Grid
         this.water.draw(this.waterShader);
 
@@ -1952,10 +2018,14 @@ export class GameScene extends Scene {
         // 10.1 Draw Rain streaks (GL_LINES, alpha-blended)
         this.rainSystem.draw(this.camera);
 
-        // 10.5 v0.4: Sun & Moon billboard sprites (using unlit shader)
-        this.unlitShader.use();
-        this.sunSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
-        this.moonSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
+        // 10.5 v0.4→v2.0: Sun & Moon are now rendered procedurally by the sky
+        // shader. Billboard sprites are only drawn as a fallback when the sky
+        // shader failed to compile.
+        if (!this.skyShader) {
+            this.unlitShader.use();
+            this.sunSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
+            this.moonSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
+        }
 
         // 11. Collision Debug Overlay
         if (this.collisionDebug && this.collisionDebug.isEnabled()) {
@@ -2053,6 +2123,13 @@ export class GameScene extends Scene {
         const pauseMenu = document.getElementById('pause-menu');
         if (pauseMenu) pauseMenu.classList.add('hidden');
         this.engine.audio.setDucked(false);
+
+        // Re-lock mouse cursor
+        try {
+            this.engine.input.canvas.requestPointerLock();
+        } catch (e) {
+            console.warn('GameScene: requestPointerLock failed', e);
+        }
     }
 
     _updatePauseSoundButton(isMuted) {
@@ -2498,6 +2575,13 @@ export class GameScene extends Scene {
             this.inventoryMenu.classList.add('hidden');
             this.engine.audio.playClosePanel();
             this.engine.audio.setDucked(false);
+
+            // Re-lock mouse cursor
+            try {
+                this.engine.input.canvas.requestPointerLock();
+            } catch (e) {
+                console.warn('GameScene: requestPointerLock failed', e);
+            }
         }
     }
 
@@ -3115,6 +3199,16 @@ export class GameScene extends Scene {
         if (this.sunSprite) this.sunSprite.delete();
         if (this.moonSprite) this.moonSprite.delete();
 
+        // Cleanup sky shader
+        if (this.skyShader) {
+            this.skyShader.delete();
+            this.skyShader = null;
+        }
+        if (this.skyVao) {
+            this.gl.deleteVertexArray(this.skyVao);
+            this.skyVao = null;
+        }
+
         // Cleanup tutorial
         if (this.tutorial) this.tutorial.destroy();
 
@@ -3198,6 +3292,12 @@ export class GameScene extends Scene {
         // Clear any remaining stacked toasts
         const toastContainer = document.getElementById('pickup-notification');
         if (toastContainer) toastContainer.innerHTML = '';
+
+        // Remove canvas click listener
+        if (this._onCanvasClick) {
+            this.gl.canvas.removeEventListener('click', this._onCanvasClick);
+            this._onCanvasClick = null;
+        }
     }
 
     /**
@@ -3328,5 +3428,56 @@ export class GameScene extends Scene {
 
         const weatherLabel = document.getElementById('debug-weather-label');
         if (weatherLabel) weatherLabel.textContent = this.weather.getWeatherLabel();
+    }
+
+    /**
+     * Rebuild the inverse view-projection the sky pass unprojects with.
+     * Shared with MainMenuScene logic.
+     */
+    _updateInvViewProj() {
+        Mat4.multiply(this._viewProj, this.camera.projectionMatrix, this.camera.viewMatrix);
+        Mat4.invert(this._invViewProj, this._viewProj);
+    }
+
+    /**
+     * Fullscreen sky pass using SkyShader v2.0. Runs first with depth writes
+     * off so it never occludes the world. Now feeds dynamic colours from the
+     * DayNightCycle so the sky transitions through sunrise → day → sunset → night.
+     */
+    _renderSky() {
+        if (!this.skyShader) return;
+
+        const gl = this.gl;
+        const sunDir = this.dayNight.getSunDirection();
+        const moonDir = this.dayNight.getMoonDirection();
+        const sunColor = this.dayNight.getSunColor();
+        const moonColor = this.dayNight.getMoonColor();
+        const skyGrad = this.dayNight.getSkyGradient();
+        const sunsetAmount = this.dayNight.getSunsetAmount();
+
+        gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(false);
+        gl.disable(gl.CULL_FACE);
+        gl.disable(gl.BLEND);
+        gl.bindVertexArray(this.skyVao);
+
+        this.skyShader.use();
+        this.skyShader.setUniformMatrix4fv('uInvViewProj', this._invViewProj);
+        this.skyShader.setUniform3fv('uCameraPos', this.camera.position);
+        this.skyShader.setUniform3fv('uSunDirection', sunDir);
+        this.skyShader.setUniform3fv('uSunColor', sunColor);
+        this.skyShader.setUniform3fv('uMoonDirection', moonDir);
+        this.skyShader.setUniform3fv('uMoonColor', moonColor);
+        this.skyShader.setUniform3fv('uSkyHorizon', skyGrad.horizon);
+        this.skyShader.setUniform3fv('uSkyMid', skyGrad.mid);
+        this.skyShader.setUniform3fv('uSkyZenith', skyGrad.zenith);
+        this.skyShader.setUniform1f('uSunsetAmount', sunsetAmount);
+        this.skyShader.setUniform1f('uTime', this.time);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        gl.bindVertexArray(null);
+        gl.depthMask(true);
+        gl.enable(gl.DEPTH_TEST);
     }
 }
