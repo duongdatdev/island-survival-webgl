@@ -8,6 +8,10 @@ export class Mesh {
         this.indexCount = 0;
         this.hasIndices = false;
 
+        // Local-space bounds are retained so tall meshes (especially trees)
+        // can be culled using their visual extent instead of a trunk collider.
+        this.bounds = this._computeBounds(data.positions);
+
         // Create VAO
         this.vao = gl.createVertexArray();
         gl.bindVertexArray(this.vao);
@@ -76,6 +80,49 @@ export class Mesh {
         gl.bufferData(target, data, usage);
         this.buffers.push(buffer);
         return buffer;
+    }
+
+    _computeBounds(positions) {
+        if (!positions || positions.length < 3) {
+            return {
+                center: [0, 0, 0], radius: 0,
+                min: [0, 0, 0], max: [0, 0, 0],
+            };
+        }
+
+        let minX = Infinity, minY = Infinity, minZ = Infinity;
+        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+        for (let i = 0; i < positions.length; i += 3) {
+            const x = positions[i];
+            const y = positions[i + 1];
+            const z = positions[i + 2];
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            if (z < minZ) minZ = z;
+            if (z > maxZ) maxZ = z;
+        }
+
+        const center = [
+            (minX + maxX) * 0.5,
+            (minY + maxY) * 0.5,
+            (minZ + maxZ) * 0.5,
+        ];
+        let radiusSq = 0;
+        for (let i = 0; i < positions.length; i += 3) {
+            const dx = positions[i] - center[0];
+            const dy = positions[i + 1] - center[1];
+            const dz = positions[i + 2] - center[2];
+            radiusSq = Math.max(radiusSq, dx * dx + dy * dy + dz * dz);
+        }
+
+        return {
+            center,
+            radius: Math.sqrt(radiusSq),
+            min: [minX, minY, minZ],
+            max: [maxX, maxY, maxZ],
+        };
     }
 
     draw(drawMode = this.gl.TRIANGLES) {

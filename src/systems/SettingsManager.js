@@ -70,7 +70,7 @@ const DEFAULTS = {
     vignette: true,
     particleDensity: 1.0,
     viewDistance: 130,
-    fov: 45,                 // degrees
+    fov: 70,                 // degrees; wider first-person default
     frustumCulling: true,
 
     // Interface

@@ -23,7 +23,7 @@ export class CameraDebug {
         }
 
         if (this._distEl) {
-            this._distEl.textContent = `${camera._distance.toFixed(2)}m`;
+            this._distEl.textContent = 'FPS';
         }
 
         if (this._lookTargetEl && camera._lookTarget) {

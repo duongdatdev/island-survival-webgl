@@ -128,7 +128,7 @@ export class InputManager {
             }
         });
 
-        // Mouse Scroll for Camera Zooming
+        // Mouse scroll is consumed by the gameplay hotbar.
         this.canvas.addEventListener('wheel', (e) => {
             // Normalized zoom delta (-1 or 1)
             this.mouse.wheelDelta = Math.sign(e.deltaY);

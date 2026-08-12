@@ -1,22 +1,17 @@
 export class CameraConfig {
     constructor() {
         this.Projection = {
-            fov: 45 * Math.PI / 180,
-            near: 0.1,
+            fov: 70 * Math.PI / 180,
+            near: 0.05,
             far: 1000.0,
             aspect: 1.0,
         };
 
         this.Orbit = {
-            headHeight: 1.2,
-            pivotHeight: 1.8,
-            defaultDistance: 4.0,
-            minDistance: 1.5,
-            maxDistance: 20.0,
-            defaultPitch: 20 * Math.PI / 180,
-            defaultYaw: Math.PI,
-            pitchMin: -35 * Math.PI / 180,
-            pitchMax: 65 * Math.PI / 180,
+            defaultPitch: 0,
+            defaultYaw: 0,
+            pitchMin: -60 * Math.PI / 180,
+            pitchMax: 85 * Math.PI / 180,
             mouseSensitivity: 0.003,
         };
 

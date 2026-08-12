@@ -47,12 +47,18 @@ export const BasicShader = {
         uniform vec3 uAmbientColor;
         uniform float uAmbientIntensity;
 
+        // Used only while drawing the local first-person character. It removes
+        // the head above the neck so the camera can sit at eye level.
+        uniform float uFirstPersonHeadCutoff;
+
         // Camera Uniforms
         uniform vec3 uViewPosition;
 
         out vec4 fragColor;
 
         void main() {
+            if (vWorldPosition.y > uFirstPersonHeadCutoff) discard;
+
             // Re-normalize normal interpolated across polygon face
             vec3 N = normalize(vNormal);
             vec3 L = normalize(uLightDirection);

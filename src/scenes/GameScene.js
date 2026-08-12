@@ -103,7 +103,7 @@ export class GameScene extends Scene {
         this.unlitShader = new ShaderProgram(gl, UnlitShader.vertex, UnlitShader.fragment);
 
         // 2. Camera Setup
-        this.camera = new Camera(45 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000.0);
+        this.camera = new Camera(70 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.05, 1000.0);
 
         // 3. Lighting Setup
         this.dirLight = new DirectionalLight([0, 1.0, 0], [1.0, 0.95, 0.85], 1.0);
@@ -1001,6 +1001,34 @@ export class GameScene extends Scene {
 
         const prevPlayerPos = [this.player.position[0], this.player.position[1], this.player.position[2]];
 
+        // Apply mouse-look before movement so WASD reacts to the camera heading
+        // in the same frame instead of lagging one frame behind a fast turn.
+        // Eye/neck heights come from the actual visual mesh because it is much
+        // taller than the gameplay collider. The camera is also shifted a small
+        // distance toward the face, matching a real pair of eyes instead of the
+        // centre of the skull.
+        let eyeOffset = this.player.collider.height * 0.42;
+        let faceOffset = 0.08;
+        this._firstPersonHeadCutFromBase = Infinity;
+        const characterMesh = this.characterRenderer && this.characterRenderer.mesh;
+        const characterDef = this.characterRenderer && this.characterRenderer.characterDef;
+        if (characterMesh && characterMesh.bounds && characterMesh.bounds.min
+            && characterMesh.bounds.max && characterDef) {
+            const modelMin = (characterDef.offset[1] || 0)
+                + characterMesh.bounds.min[1] * characterDef.scale;
+            const modelMax = (characterDef.offset[1] || 0)
+                + characterMesh.bounds.max[1] * characterDef.scale;
+            const modelHeight = modelMax - modelMin;
+            const eyeFromBase = modelMin + modelHeight * 0.91;
+            eyeOffset = -this.player.collider.height * 0.5 + eyeFromBase;
+            faceOffset = modelHeight * 0.09;
+            // This low-poly character has an oversized head that extends well
+            // below a human-like neck ratio. Cut at the shoulder line so no
+            // cheeks/chin can enter the first-person view when looking down.
+            this._firstPersonHeadCutFromBase = modelMin + modelHeight * 0.72;
+        }
+        this.camera.update(this.engine.input, this.player.position, eyeOffset, deltaTime, faceOffset);
+
         // Update player movements using keyboards and camera reference
         const movementInput = this.isFishing 
             ? { isKeyDown: () => false, isKeyPressed: () => false, keys: {} } 
@@ -1123,8 +1151,7 @@ export class GameScene extends Scene {
         const isMenuOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
         if (!isMenuOpen) {
             const scroll = this.engine.input.mouse.wheelDelta;
-            const isShiftDown = this.engine.input.isKeyDown('ShiftLeft') || this.engine.input.isKeyDown('ShiftRight');
-            if (scroll !== 0 && !isShiftDown) {
+            if (scroll !== 0) {
                 let nextIndex = this.inventory.selectedHotbarIndex + scroll;
                 if (nextIndex < 0) nextIndex = 7;
                 else if (nextIndex > 7) nextIndex = 0;
@@ -1160,8 +1187,13 @@ export class GameScene extends Scene {
         }
 
 
-        // Snap camera tracking around player
-        this.camera.update(this.engine.input, this.player.position, 1.2 * this.player.scaleFactor, deltaTime);
+        // Re-snap the fixed eye camera after movement/collision updates.
+        this.camera.update(null, this.player.position, eyeOffset, deltaTime, faceOffset);
+
+        // Body yaw follows the view even while stationary. This keeps attacks,
+        // placement and the escape cinematic aligned with what the player saw.
+        this.player.rotation[1] = this._getAimYaw();
+        this.player.updateModelMatrix();
 
         // Update inverse view-projection for sky shader
         this._updateInvViewProj();
@@ -1875,15 +1907,23 @@ export class GameScene extends Scene {
         this.basicShader.setUniform1f('uLightIntensity', this.dirLight.intensity);
         this.basicShader.setUniform3fv('uAmbientColor', this.ambientLight.color);
         this.basicShader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity);
+        this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
         // 1. Draw Terrain
         this.terrain.draw(this.basicShader);
 
-        Mat4.identity(this.tempMatrix);
+        // Draw the body below the eyes. Only the head is clipped during normal
+        // FPS play; the escape cinematic still draws the complete character.
         const playerRenderPos = [this.player.position[0], this.player.position[1] - this.player.collider.height * 0.5, this.player.position[2]];
+        const headCutoff = this.isEscaping || !Number.isFinite(this._firstPersonHeadCutFromBase)
+            ? 1000000.0
+            : playerRenderPos[1] + this._firstPersonHeadCutFromBase;
+        this.basicShader.setUniform1f('uFirstPersonHeadCutoff', headCutoff);
+        Mat4.identity(this.tempMatrix);
         Mat4.translate(this.tempMatrix, this.tempMatrix, playerRenderPos);
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, this.player.rotation[1]);
         this.characterRenderer.draw(this.basicShader, this.tempMatrix, drawMode);
+        this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
         // 5. Draw World Resources — pickups are small, so a 1.5m bound is
         //    generous enough to avoid popping at the screen edge.
@@ -1905,10 +1945,10 @@ export class GameScene extends Scene {
         // largest batch, so it's where frustum + distance culling pays off.
         if (this.environmentEntities) {
             for (const entity of this.environmentEntities) {
-                // Collider radius under-describes tall trees, so bias the
-                // bound upward rather than clipping trunks at the frame edge.
-                const radius = (entity.collisionRadius || 1.0) * 2.0 + 1.0;
-                if (!this._isVisible(entity.position, radius)) continue;
+                const cullPosition = entity.cullingCenter || entity.position;
+                const radius = entity.cullingRadius
+                    || ((entity.collisionRadius || 1.0) * 2.0 + 1.0);
+                if (!this._isVisible(cullPosition, radius)) continue;
                 entity.draw(this.basicShader, drawMode);
                 this._drawCalls++;
             }

@@ -34,12 +34,35 @@ export class EnvironmentObject extends Entity {
         this.collisionRadius = this.collider.radius;
 
         this.updateModelMatrix();
+        this._updateCullingBounds();
     }
 
     draw(shaderProgram, drawMode) {
         if (!this.mesh) return;
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
         this.mesh.draw(drawMode);
+    }
+
+    _updateCullingBounds() {
+        const bounds = this.mesh && this.mesh.bounds;
+        if (!bounds || bounds.radius <= 0) {
+            this.cullingCenter = this.position;
+            this.cullingRadius = Math.max(1, this.collisionRadius || 0);
+            return;
+        }
+
+        const c = bounds.center;
+        const m = this.modelMatrix;
+        this.cullingCenter = Vec3.create(
+            m[0] * c[0] + m[4] * c[1] + m[8] * c[2] + m[12],
+            m[1] * c[0] + m[5] * c[1] + m[9] * c[2] + m[13],
+            m[2] * c[0] + m[6] * c[1] + m[10] * c[2] + m[14]
+        );
+        this.cullingRadius = bounds.radius * Math.max(
+            Math.abs(this.scale[0]),
+            Math.abs(this.scale[1]),
+            Math.abs(this.scale[2])
+        );
     }
 
     delete() {

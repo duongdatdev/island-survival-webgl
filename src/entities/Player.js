@@ -43,6 +43,7 @@ export class Player extends Entity {
 
         // 2. Calculate right vector (orthogonal to forward and UP [0, 1, 0])
         const up = Vec3.create(0.0, 1.0, 0.0);
+        // With the renderer looking along +Z, screen-right is forward x up.
         Vec3.cross(right, forward, up);
         Vec3.normalize(right, right);
 
@@ -72,9 +73,6 @@ export class Player extends Entity {
             Vec3.add(this.position, this.position, moveDir);
             this.currentSpeed = this.speed;
 
-            // Turn player model to face the movement vector on the Y-Axis (Yaw)
-            const targetAngle = Math.atan2(targetMoveDir[0], targetMoveDir[2]);
-            this.rotation[1] = targetAngle;
         } else {
             this.currentSpeed = 0.0;
         }

@@ -49,7 +49,7 @@ export class TutorialSystem {
             },
             {
                 id: 'camera',
-                text: '🖱️ Giữ <b>chuột trái + kéo</b> để xoay camera. <b>Shift + cuộn chuột</b> để zoom.',
+                text: '🖱️ Di <b>chuột</b> để nhìn xung quanh. <b>Cuộn chuột</b> để đổi ô trang bị.',
                 autoDismiss: 10,
                 triggerCheck: () => this._cameraHasRotated,
             },

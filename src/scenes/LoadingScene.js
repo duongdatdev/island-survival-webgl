@@ -35,7 +35,7 @@ export class LoadingScene extends Scene {
             '🌊 Tài nguyên cũng trôi trên biển — hãy ra bờ biển để nhặt!',
             '🔨 Bấm C để mở bảng chế tạo và xem công thức.',
             '⛵ Mục tiêu: Xây bè thoát khỏi đảo hoang!',
-            '🖱️ Giữ chuột trái và kéo để xoay camera.',
+            '🖱️ Di chuột để nhìn xung quanh ở góc nhìn thứ nhất.',
             '📦 Bấm E khi đứng gần tài nguyên để nhặt.',
             '🎮 Dùng phím W A S D để di chuyển nhân vật.',
             '🔊 Âm thanh được tạo hoàn toàn bằng Web Audio API!',

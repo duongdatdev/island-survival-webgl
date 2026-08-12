@@ -4,26 +4,23 @@ import { CameraConfig } from './CameraConfig.js';
 import { ExploreState } from './CameraState.js';
 import { CameraCollision } from './CameraCollision.js';
 import { CameraTerrain } from './CameraTerrain.js';
-import { CameraZoomController } from './CameraZoomController.js';
-import { CameraOcclusion } from './CameraOcclusion.js';
 import { CameraDebug } from './CameraDebug.js';
 
 const UP = Vec3.create(0, 1, 0);
-const POS_SNAP_THRESHOLD_SQ = 0.01;
 
-function lerpAngle(current, target, t) {
-    let diff = target - current;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    return current + diff * t;
-}
-
+/**
+ * First-person gameplay camera.
+ *
+ * The public surface is intentionally kept compatible with the old orbit
+ * camera because GameScene also uses position/target for audio, combat,
+ * compass heading and the escape cutscene.
+ */
 export class Camera {
-    constructor(fov = 45 * Math.PI / 180, aspect = 1.0, near = 0.1, far = 1000.0) {
+    constructor(fov = 70 * Math.PI / 180, aspect = 1.0, near = 0.05, far = 1000.0) {
         this.viewMatrix = Mat4.create();
         this.projectionMatrix = Mat4.create();
         this.position = Vec3.create(0, 0, 0);
-        this.target = Vec3.create(0, 1.0, 0);
+        this.target = Vec3.create(0, 0, 1);
 
         this._cfg = new CameraConfig();
         this.config = {};
@@ -33,25 +30,21 @@ export class Camera {
         this.config.near = near;
         this.config.far = far;
 
+        // In first person yaw is the actual view heading: 0 points along +Z.
         this._yaw = this.config.defaultYaw;
         this._pitch = this.config.defaultPitch;
-        this._distance = this.config.defaultDistance;
-
-        this._smoothPos = Vec3.create(0, 0, 0);
         this._smoothYaw = this._yaw;
         this._smoothPitch = this._pitch;
-        this._smoothDistance = this._distance;
 
-        this._lookTarget = Vec3.create();
+        // Retained for the existing debug HUD and camera provider API.
+        this._distance = 0;
+        this._smoothDistance = 0;
+        this._smoothPos = Vec3.create(0, 0, 0);
+        this._lookTarget = Vec3.create(0, 0, 1);
         this._pivot = Vec3.create();
         this._desiredPos = Vec3.create();
-        this._cosYaw = 0;
-        this._sinYaw = 0;
-
         this._collision = new CameraCollision();
         this._terrain = new CameraTerrain();
-        this._zoom = new CameraZoomController(this.config.defaultDistance);
-        this._occlusion = new CameraOcclusion();
         this._debug = new CameraDebug(this.config.debugEnabled);
 
         this._states = new Map();
@@ -80,10 +73,6 @@ export class Camera {
         }
     }
 
-    /**
-     * v1.0 — vertical field of view from the settings menu.
-     * @param {number} fovRadians
-     */
     setFov(fovRadians) {
         if (Math.abs(this.config.fov - fovRadians) > 0.0001) {
             this.config.fov = fovRadians;
@@ -91,12 +80,6 @@ export class Camera {
         }
     }
 
-    /**
-     * v1.0 — look sensitivity as a multiplier over the tuned base value, so
-     * the stored setting stays a readable "1.0 = default" number.
-     * @param {number} multiplier
-     * @param {boolean} [invertY]
-     */
     setLookSettings(multiplier, invertY = false) {
         this.config.mouseSensitivity = this._cfg.Orbit.mouseSensitivity * multiplier;
         this.config.invertY = invertY;
@@ -112,6 +95,7 @@ export class Camera {
         this._emit('onStateChanged', prev.name, next.name);
     }
 
+    // Compatibility no-op: a first-person camera has no shoulder offset.
     setShoulderOffset(x, y) {
         this.config.shoulderOffsetX = x;
         this.config.shoulderOffsetY = y;
@@ -132,20 +116,49 @@ export class Camera {
         this._firstUpdate = true;
     }
 
-    update(input, playerPos, heightOffset = 0.4, deltaTime = 1 / 60) {
-        deltaTime = Math.max(deltaTime, 0.0001);
+    /**
+     * Place the camera at the player's eyes and aim from yaw/pitch.
+     * @param {object} input InputManager-compatible input object.
+     * @param {number[]} playerPos Player capsule centre.
+     * @param {number} eyeOffset Height above the capsule centre in world units.
+     * @param {number} forwardOffset Distance from the head centre toward the face.
+     */
+    update(input, playerPos, eyeOffset = 0.24, deltaTime = 1 / 60, forwardOffset = 0) {
         const config = this._resolveConfig();
-
-        this._computeLookTarget(playerPos, heightOffset);
-        this._computePivot(playerPos, heightOffset);
         this._handleInput(input, config);
-        this._smoothRotation(deltaTime, config);
-        this._computeDesiredPosition();
-        this._applyShoulderOffset(config);
-        this._resolveCollision(config);
-        this._resolveTerrain(config);
-        this._smoothPosition(deltaTime, config);
-        this._generateMatrices();
+
+        // Mouse-look must feel immediate in first person. Position is also
+        // snapped to the player so fast turns and collision corrections never
+        // produce a floating or rubber-band camera.
+        this._smoothYaw = this._yaw;
+        this._smoothPitch = this._pitch;
+
+        Vec3.set(
+            this.position,
+            playerPos[0] + Math.sin(this._smoothYaw) * forwardOffset,
+            playerPos[1] + eyeOffset,
+            playerPos[2] + Math.cos(this._smoothYaw) * forwardOffset
+        );
+
+        const cosPitch = Math.cos(this._smoothPitch);
+        const dirX = Math.sin(this._smoothYaw) * cosPitch;
+        const dirY = Math.sin(this._smoothPitch);
+        const dirZ = Math.cos(this._smoothYaw) * cosPitch;
+
+        Vec3.set(
+            this.target,
+            this.position[0] + dirX,
+            this.position[1] + dirY,
+            this.position[2] + dirZ
+        );
+
+        Vec3.copy(this._smoothPos, this.position);
+        Vec3.copy(this._desiredPos, this.position);
+        Vec3.copy(this._pivot, this.position);
+        Vec3.copy(this._lookTarget, this.target);
+
+        Mat4.lookAt(this.viewMatrix, this.position, this.target, UP);
+        this._firstUpdate = false;
         this._debug.update(this);
     }
 
@@ -155,27 +168,14 @@ export class Camera {
         this.config.near = t.Projection.near;
         this.config.far = t.Projection.far;
         this.config.aspect = t.Projection.aspect;
-        this.config.headHeight = t.Orbit.headHeight;
-        this.config.pivotHeight = t.Orbit.pivotHeight;
-        this.config.defaultDistance = t.Orbit.defaultDistance;
-        this.config.minDistance = t.Orbit.minDistance;
-        this.config.maxDistance = t.Orbit.maxDistance;
         this.config.defaultPitch = t.Orbit.defaultPitch;
         this.config.defaultYaw = t.Orbit.defaultYaw;
         this.config.pitchMin = t.Orbit.pitchMin;
         this.config.pitchMax = t.Orbit.pitchMax;
         this.config.mouseSensitivity = t.Orbit.mouseSensitivity;
         this.config.invertY = false;
-        this.config.collisionRadius = t.Collision.radius;
-        this.config.collisionEnabled = t.Collision.enabled;
-        this.config.terrainOffset = t.Terrain.offset;
-        this.config.terrainEnabled = t.Terrain.enabled;
-        this.config.zoomSpeed = t.Zoom.speed;
-        this.config.shoulderOffsetX = t.Shoulder.offsetX;
-        this.config.shoulderOffsetY = t.Shoulder.offsetY;
-        this.config.rotationSmoothSpeed = t.Smoothing.rotationSmoothSpeed;
-        this.config.positionSmoothSpeed = t.Smoothing.positionSmoothSpeed;
-        this.config.distanceSmoothSpeed = t.Smoothing.distanceSmoothSpeed;
+        this.config.shoulderOffsetX = 0;
+        this.config.shoulderOffsetY = 0;
         this.config.debugEnabled = t.Debug.enabled;
     }
 
@@ -189,141 +189,20 @@ export class Camera {
         return this.config;
     }
 
-    _computeLookTarget(playerPos, heightOffset) {
-        Vec3.set(
-            this._lookTarget,
-            playerPos[0],
-            playerPos[1] + this.config.headHeight * heightOffset,
-            playerPos[2]
-        );
-    }
-
-    _computePivot(playerPos, heightOffset) {
-        Vec3.set(
-            this._pivot,
-            playerPos[0],
-            playerPos[1] + this.config.pivotHeight * heightOffset,
-            playerPos[2]
-        );
-    }
-
     _handleInput(input, config) {
+        if (!input || !input.mouse) return;
         if (input.mouse.isLocked || input.mouse.buttons[0]) {
-            const pitchSign = config.invertY ? -1 : 1;
+            // This renderer's +Z forward axis needs reversed horizontal input,
+            // while vertical mouse-look follows the usual screen-Y direction.
+            const pitchDirection = config.invertY ? 1 : -1;
             this._yaw -= input.mouse.deltaX * config.mouseSensitivity;
-            this._pitch += input.mouse.deltaY * config.mouseSensitivity * pitchSign;
+            this._pitch += input.mouse.deltaY * config.mouseSensitivity * pitchDirection;
             this._pitch = Math.max(config.pitchMin, Math.min(this._pitch, config.pitchMax));
+
+            // Keep yaw bounded so it remains numerically stable during long sessions.
+            if (this._yaw > Math.PI) this._yaw -= Math.PI * 2;
+            else if (this._yaw < -Math.PI) this._yaw += Math.PI * 2;
         }
-
-        const isShiftDown = input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight');
-        if (input.mouse.wheelDelta !== 0 && isShiftDown) {
-            const prev = this._distance;
-            this._zoom.handleScroll(input.mouse.wheelDelta, this.config);
-            this._distance = this._zoom.getTarget();
-            if (this._distance !== prev) {
-                this._emit('onZoomChanged', this._distance);
-            }
-        }
-    }
-
-    _smoothRotation(dt, config) {
-        const dx = this.position[0] - this._smoothPos[0];
-        const dy = this.position[1] - this._smoothPos[1];
-        const dz = this.position[2] - this._smoothPos[2];
-        const posChanged = dx * dx + dy * dy + dz * dz > POS_SNAP_THRESHOLD_SQ;
-        this._firstUpdate = this._firstUpdate || posChanged;
-
-        const rotT = 1 - Math.exp(-config.rotationSmoothSpeed * dt);
-        const distT = 1 - Math.exp(-config.distanceSmoothSpeed * dt);
-
-        if (this._firstUpdate) {
-            this._smoothYaw = this._yaw;
-            this._smoothPitch = this._pitch;
-            this._smoothDistance = this._distance;
-        } else {
-            this._smoothYaw = lerpAngle(this._smoothYaw, this._yaw, rotT);
-            this._smoothPitch = lerpAngle(this._smoothPitch, this._pitch, rotT);
-            this._smoothDistance += (this._distance - this._smoothDistance) * distT;
-        }
-    }
-
-    _computeDesiredPosition() {
-        this._cosYaw = Math.cos(this._smoothYaw);
-        this._sinYaw = Math.sin(this._smoothYaw);
-        const cosPitch = Math.cos(this._smoothPitch);
-        const sinPitch = Math.sin(this._smoothPitch);
-
-        Vec3.set(
-            this._desiredPos,
-            this._pivot[0] + this._smoothDistance * cosPitch * this._sinYaw,
-            this._pivot[1] + this._smoothDistance * sinPitch,
-            this._pivot[2] + this._smoothDistance * cosPitch * this._cosYaw
-        );
-    }
-
-    _applyShoulderOffset(config) {
-        if (config.shoulderOffsetX !== 0 || config.shoulderOffsetY !== 0) {
-            this._desiredPos[0] += this._cosYaw * config.shoulderOffsetX;
-            this._desiredPos[2] -= this._sinYaw * config.shoulderOffsetX;
-            this._desiredPos[1] += config.shoulderOffsetY;
-        }
-    }
-
-    _resolveCollision(config) {
-        if (!config.collisionEnabled) return;
-
-        const result = this._collision.solve(
-            this._pivot,
-            this._desiredPos,
-            config.collisionRadius
-        );
-
-        if (result.hit) {
-            Vec3.copy(this._desiredPos, result.position);
-            this._zoom.applyCollisionPush(result.distance);
-            if (!this._lastCollisionHit) {
-                this._emit('onCollisionBegin', result);
-            }
-        } else {
-            if (this._lastCollisionHit) {
-                this._emit('onCollisionEnd');
-            }
-        }
-        this._lastCollisionHit = result.hit;
-    }
-
-    _resolveTerrain(config) {
-        if (!config.terrainEnabled) return;
-
-        const result = this._terrain.solve(this._desiredPos, config.terrainOffset);
-
-        if (result.isBelow) {
-            Vec3.copy(this._desiredPos, result.corrected);
-            this._terrainYDelta = result.yDelta;
-            this._emit('onTerrainCorrection', result.yDelta);
-        } else {
-            this._terrainYDelta = 0;
-        }
-    }
-
-    _smoothPosition(dt, config) {
-        const posT = 1 - Math.exp(-config.positionSmoothSpeed * dt);
-
-        if (this._firstUpdate) {
-            Vec3.copy(this._smoothPos, this._desiredPos);
-            this._firstUpdate = false;
-        } else {
-            this._smoothPos[0] += (this._desiredPos[0] - this._smoothPos[0]) * posT;
-            this._smoothPos[1] += (this._desiredPos[1] - this._smoothPos[1]) * posT;
-            this._smoothPos[2] += (this._desiredPos[2] - this._smoothPos[2]) * posT;
-        }
-
-        Vec3.copy(this.position, this._smoothPos);
-        Vec3.copy(this.target, this._lookTarget);
-    }
-
-    _generateMatrices() {
-        Mat4.lookAt(this.viewMatrix, this.position, this.target, UP);
     }
 
     _updateProjection() {
@@ -338,8 +217,6 @@ export class Camera {
 
     _emit(eventName, ...args) {
         const handler = this._events[eventName];
-        if (handler) {
-            handler(...args);
-        }
+        if (handler) handler(...args);
     }
 }
