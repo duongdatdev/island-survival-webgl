@@ -6,6 +6,8 @@
  * v0.5: Added meats (crab/seagull/boar), herbs, bandage, spear, bow, arrow
  */
 
+import { AXE_SWING_DURATION } from './CombatConfig.js';
+
 export const ResourceType = {
     WOOD:         'wood',
     STONE:        'stone',
@@ -164,7 +166,8 @@ export const ResourceDatabase = {
         weaponType: 'melee',
         weaponDamage: 10,
         weaponRange: 2.0,
-        weaponCooldown: 0.7
+        // Holding attack starts the next hit exactly when the swing finishes.
+        weaponCooldown: AXE_SWING_DURATION
     },
 
     [ResourceType.CAMPFIRE]: {

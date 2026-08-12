@@ -10,6 +10,7 @@ import { UnlitShader } from '../shaders/UnlitShader.js';
 import { Player } from '../entities/Player.js';
 import { CharacterRenderer } from '../characters/CharacterRenderer.js';
 import { CharacterRegistry } from '../characters/CharacterRegistry.js';
+import { FirstPersonViewModel } from '../characters/FirstPersonViewModel.js';
 import { Terrain } from '../entities/Terrain.js';
 import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
@@ -193,6 +194,8 @@ export class GameScene extends Scene {
         const characterDef = CharacterRegistry.get('casual_male');
         this.characterRenderer = new CharacterRenderer(characterDef);
         this.characterRenderer.load(gl, this.engine.assets);
+        this.firstPersonViewModel = new FirstPersonViewModel(gl);
+        this.firstPersonViewModel.load(this.engine.assets);
 
         // 6. Resource System Initialization
         this.inventory = new Inventory(20);
@@ -467,6 +470,7 @@ export class GameScene extends Scene {
 
         // ── v0.5: Combat System & Wildlife ──
         this.combatSystem = new CombatSystem();
+        this._attackHoldBlocked = false;
         this.creatures = [];
 
         // Spawn creatures
@@ -1120,11 +1124,24 @@ export class GameScene extends Scene {
 
         // ── v0.5: Combat System Update ──
         this.combatSystem.update(deltaTime);
+        this.firstPersonViewModel.update(deltaTime, this.player.currentSpeed > 0.1);
 
-        // Handle left-click attack (one-shot on the press edge, never while
-        // fishing, escaping, or with the inventory panel open)
-        const combatMenuOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
-        if (this.engine.input.isMousePressed(0) && !this.isFishing && !this.isEscaping && !combatMenuOpen) {
+        // Hold left mouse to keep attacking. CombatSystem owns the cooldown,
+        // so each new hit begins only after the previous weapon cycle ends.
+        const attackHeld = !!this.engine.input.mouse.buttons[0];
+        const combatMenuOpen = !!(this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden'));
+        const combatUnavailable = this.isFishing || this.isEscaping || combatMenuOpen
+            || this.isPaused || this._isGameOver;
+
+        if (!attackHeld) {
+            this._attackHoldBlocked = false;
+        } else if (combatUnavailable) {
+            // Require a release after closing a menu instead of attacking by surprise.
+            this._attackHoldBlocked = true;
+        }
+
+        if (attackHeld && !this._attackHoldBlocked && !combatUnavailable
+            && this.combatSystem.canAttack()) {
             this._handleCombatInput();
         }
 
@@ -2076,6 +2093,13 @@ export class GameScene extends Scene {
                 this.camera.projectionMatrix,
                 colliders
             );
+        }
+
+        // Camera-space arms and axe are the final 3D layer, so they remain
+        // readable against the world without clipping through nearby props.
+        const equippedItem = this.inventory.getEquippedItem();
+        if (!this.isEscaping && equippedItem && equippedItem.id === 'stone_axe') {
+            this.firstPersonViewModel.draw(this.basicShader, this.camera.projectionMatrix, drawMode);
         }
 
         // 12. v1.0 — resolve the offscreen target to the screen with bloom and
@@ -3083,12 +3107,19 @@ export class GameScene extends Scene {
         );
 
         if (result.reason === 'no_ammo') {
+            // Ranged attacks without ammo do not start a cooldown. Stop the
+            // held action until release to avoid retrying every rendered frame.
+            this._attackHoldBlocked = true;
             this._showNotification('➵ Hết tên! Chế tạo thêm tên để bắn cung.');
             return;
         }
 
         // Still on cooldown — no swing happened, so stay silent
         if (!result.swung) return;
+
+        if (equippedItem && equippedItem.id === 'stone_axe') {
+            this.firstPersonViewModel.triggerSwing();
+        }
 
         // The weapon left the player's hands — always whoosh.
         // creature can be null on a miss (swing with no target in range)
@@ -3212,6 +3243,7 @@ export class GameScene extends Scene {
         if (this.water) this.water.delete();
 
         if (this.characterRenderer) this.characterRenderer.delete();
+        if (this.firstPersonViewModel) this.firstPersonViewModel.delete();
 
         // Cleanup resource system
         if (this.raftAssembly) this.raftAssembly.delete();

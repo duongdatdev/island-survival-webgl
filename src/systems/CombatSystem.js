@@ -5,6 +5,7 @@ import { getResourceDef } from './ResourceDatabase.js';
  * other weapon does.
  */
 const FIST = { type: 'melee', damage: 5, range: 1.5, cooldown: 0.4 };
+const COOLDOWN_EPSILON = 1e-6;
 
 /**
  * CombatSystem — Handles melee and ranged attacks against creatures.
@@ -183,6 +184,11 @@ export class CombatSystem {
     update(deltaTime) {
         if (this._globalCooldown > 0) {
             this._globalCooldown -= deltaTime;
+            // Avoid a microscopic positive remainder delaying a held attack
+            // by one whole rendered frame at the exact animation boundary.
+            if (this._globalCooldown <= COOLDOWN_EPSILON) {
+                this._globalCooldown = 0;
+            }
         }
     }
 
