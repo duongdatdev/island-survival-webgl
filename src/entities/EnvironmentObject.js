@@ -2,6 +2,11 @@ import { Entity } from './Entity.js';
 import { Vec3 } from '../math/Vec3.js';
 import { ColliderFactory } from '../systems/ColliderFactory.js';
 
+export const TREE_HITS_TO_FELL = 3;
+const TREE_FALL_SPEED = Math.PI * 0.42;
+const TREE_MAX_FALL_ANGLE = Math.PI * 0.5;
+const TREE_GROUND_EPSILON = 0.08;
+
 /**
  * EnvironmentObject - Represents placed environment props (trees, bushes, rocks)
  * Collider settings are data-driven via ColliderFactory from asset category metadata.
@@ -33,6 +38,17 @@ export class EnvironmentObject extends Entity {
         this.collider = ColliderFactory.createCollider(category, scale);
         this.collisionRadius = this.collider.radius;
 
+        // Harvestable trees stay as ordinary environment props until struck.
+        // Keeping the state on the prop lets the same rendered mesh become the
+        // falling trunk instead of swapping to a duplicate model.
+        this.isHarvestableTree = category === 'Tree' || category === 'Palm';
+        this.treeHitsRemaining = this.isHarvestableTree ? TREE_HITS_TO_FELL : 0;
+        this.treeState = this.isHarvestableTree ? 'standing' : 'none';
+        this.woodDropsSpawned = false;
+        this._fallAngle = 0;
+        this._fallYaw = this.rotation[1];
+        this._fallHeight = this._getTreeHeight();
+
         this.updateModelMatrix();
         this._updateCullingBounds();
     }
@@ -41,6 +57,89 @@ export class EnvironmentObject extends Entity {
         if (!this.mesh) return;
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
         this.mesh.draw(drawMode);
+    }
+
+    /**
+     * Apply an axe hit. The final hit starts the fall away from the attacker.
+     * @returns {{hit: boolean, felled: boolean, hitsRemaining: number}}
+     */
+    chop(attackerPosition) {
+        if (!this.isHarvestableTree || this.treeState !== 'standing') {
+            return { hit: false, felled: false, hitsRemaining: this.treeHitsRemaining };
+        }
+
+        this.treeHitsRemaining = Math.max(0, this.treeHitsRemaining - 1);
+        const felled = this.treeHitsRemaining === 0;
+
+        if (felled) {
+            const dx = this.position[0] - attackerPosition[0];
+            const dz = this.position[2] - attackerPosition[2];
+            if (dx * dx + dz * dz > 0.0001) {
+                this._fallYaw = Math.atan2(dx, dz);
+            }
+            this.rotation[0] = 0;
+            this.rotation[1] = this._fallYaw;
+            this.rotation[2] = 0;
+            this.treeState = 'falling';
+
+            // The scene unregisters the tree from CollisionSystem as well, but
+            // disabling the collider here makes any cached reference harmless.
+            this.collider.type = 'none';
+            this.collider.radius = 0;
+            this.collider.height = 0;
+            this.collisionRadius = 0;
+        }
+
+        return { hit: true, felled, hitsRemaining: this.treeHitsRemaining };
+    }
+
+    /**
+     * Advance the fall until the tree tip reaches the sampled terrain.
+     * Returns true exactly once, on the frame the tree lands.
+     */
+    updateTreeFall(deltaTime, terrain) {
+        if (this.treeState !== 'falling') return false;
+
+        this._fallAngle = Math.min(
+            TREE_MAX_FALL_ANGLE,
+            this._fallAngle + TREE_FALL_SPEED * Math.max(0, deltaTime)
+        );
+        this.rotation[0] = this._fallAngle;
+        this.updateModelMatrix();
+        this._updateCullingBounds();
+
+        const tip = this.getTreePoint(1);
+        const groundY = terrain && typeof terrain.getHeight === 'function'
+            ? terrain.getHeight(tip[0], tip[2])
+            : this.position[1];
+        const touchedGround = tip[1] <= groundY + TREE_GROUND_EPSILON;
+
+        if (touchedGround || this._fallAngle >= TREE_MAX_FALL_ANGLE) {
+            this.treeState = 'fallen';
+            return true;
+        }
+        return false;
+    }
+
+    /** World-space point along the trunk, from stump (0) to crown (1). */
+    getTreePoint(fraction) {
+        const t = Math.max(0, Math.min(1, fraction));
+        const alongGround = Math.sin(this._fallAngle) * this._fallHeight * t;
+        return [
+            this.position[0] + Math.sin(this._fallYaw) * alongGround,
+            this.position[1] + Math.cos(this._fallAngle) * this._fallHeight * t,
+            this.position[2] + Math.cos(this._fallYaw) * alongGround,
+        ];
+    }
+
+    _getTreeHeight() {
+        const bounds = this.mesh && this.mesh.bounds;
+        if (!bounds) return Math.max(2, this.collider.height || 2);
+
+        // Environment OBJ pivots sit at the base. The span fallback also keeps
+        // custom tree assets useful if their local minimum dips below zero.
+        const localHeight = Math.max(bounds.max[1], bounds.max[1] - bounds.min[1]);
+        return Math.max(2, localHeight * Math.abs(this.scale[1]));
     }
 
     _updateCullingBounds() {

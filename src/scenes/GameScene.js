@@ -59,6 +59,10 @@ const AUTOSAVE_INTERVAL = 60.0;
 /** How often achievement predicates are re-evaluated, in seconds. */
 const ACHIEVEMENT_CHECK_INTERVAL = 1.0;
 
+/** Axe targeting and the number of pickup logs produced by one tree. */
+const TREE_CHOP_HALF_ARC = Math.PI * 0.28;
+const TREE_WOOD_DROP_FRACTIONS = [0.28, 0.52, 0.76];
+
 /**
  * Compass strip scale. Shared by the ticks, the direction labels and the POI
  * markers so an icon lands exactly over the bearing it points at. At 2.9px per
@@ -1135,6 +1139,7 @@ export class GameScene extends Scene {
         // ── v0.5: Combat System Update ──
         this.combatSystem.update(deltaTime);
         this.firstPersonViewModel.update(deltaTime, this.player.currentSpeed > 0.1);
+        this._updateFallingTrees(deltaTime);
 
         // Hold left mouse to keep attacking. CombatSystem owns the cooldown,
         // so each new hit begins only after the previous weapon cycle ends.
@@ -3131,8 +3136,14 @@ export class GameScene extends Scene {
         // Still on cooldown — no swing happened, so stay silent
         if (!result.swung) return;
 
+        let treeResult = null;
         if (equippedItem && equippedItem.id === 'stone_axe') {
             this.firstPersonViewModel.triggerSwing();
+            // Creatures take priority when they are in the swing. A missed axe
+            // swing can then connect with the closest standing tree in its arc.
+            if (!result.hit) {
+                treeResult = this._tryChopTree(this.player.position, aimYaw, equippedItem);
+            }
         }
 
         // The weapon left the player's hands — always whoosh.
@@ -3140,9 +3151,13 @@ export class GameScene extends Scene {
         const weaponType = equippedItem
             ? (getResourceDef(equippedItem.id) || {}).weaponType
             : 'melee';
-        const swingPos = result.creature ? result.creature.position : null;
+        const swingPos = result.creature
+            ? result.creature.position
+            : (treeResult && treeResult.tree ? treeResult.tree.position : null);
         if (weaponType === 'ranged') {
             this.engine.audio.playBowRelease(swingPos);
+        } else if (treeResult && treeResult.hit) {
+            this.engine.audio.playChop(swingPos);
         } else {
             this.engine.audio.playSwing(swingPos);
         }
@@ -3172,10 +3187,121 @@ export class GameScene extends Scene {
                 result.creature.position,
                 { count: 8, color: [1.0, 0.5, 0.1], colorVariance: 0.15, size: 5, sizeVariance: 3, speed: 3.0, speedVariance: 1.5, lifetime: 0.4, lifetimeVariance: 0.15, gravity: -2.0, spread: 0.6, yBias: 2.0 }
             );
+        } else if (treeResult && treeResult.hit) {
+            const hitPoint = treeResult.tree.getTreePoint(0.14);
+            this.particleSystem.emit(hitPoint, {
+                count: 11,
+                color: [0.58, 0.34, 0.14],
+                colorVariance: 0.12,
+                size: 5,
+                sizeVariance: 3,
+                speed: 2.7,
+                speedVariance: 1.2,
+                lifetime: 0.55,
+                lifetimeVariance: 0.2,
+                gravity: -5.0,
+                spread: 0.65,
+                yBias: 1.5,
+            });
+
         } else if (equippedItem && (equippedItem.id === 'spear' || equippedItem.id === 'bow')) {
             // Only nag about misses when an actual weapon is equipped —
             // otherwise every stray click spams the notification bar.
             this._showNotification('💨 Đánh trượt!');
+        }
+    }
+
+    /** Find the closest tree intersecting the axe swing and apply one hit. */
+    _tryChopTree(playerPosition, playerYaw, equippedItem) {
+        const weaponDef = getResourceDef(equippedItem.id);
+        const range = weaponDef && weaponDef.weaponRange ? weaponDef.weaponRange : 2.0;
+        const facingX = Math.sin(playerYaw);
+        const facingZ = Math.cos(playerYaw);
+        let closestTree = null;
+        let closestDistance = Infinity;
+
+        for (const tree of this.environmentEntities) {
+            if (!tree.isHarvestableTree || tree.treeState !== 'standing') continue;
+
+            const dx = tree.position[0] - playerPosition[0];
+            const dz = tree.position[2] - playerPosition[2];
+            const distance = Math.sqrt(dx * dx + dz * dz);
+            const hitRange = range + (tree.collisionRadius || 0);
+            if (distance > hitRange || distance >= closestDistance) continue;
+
+            if (distance > 0.0001) {
+                const dot = (dx / distance) * facingX + (dz / distance) * facingZ;
+                const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+                if (angle > TREE_CHOP_HALF_ARC) continue;
+            }
+
+            closestTree = tree;
+            closestDistance = distance;
+        }
+
+        if (!closestTree) return { hit: false, tree: null };
+
+        const chopResult = closestTree.chop(playerPosition);
+        if (chopResult.felled && this.collisionSystem) {
+            this.collisionSystem.unregister(closestTree);
+        }
+        return { ...chopResult, tree: closestTree };
+    }
+
+    /** Animate every falling tree and create wood only after terrain contact. */
+    _updateFallingTrees(deltaTime) {
+        if (!this.environmentEntities || !this.resourceManager) return;
+
+        for (let treeIndex = this.environmentEntities.length - 1; treeIndex >= 0; treeIndex--) {
+            const tree = this.environmentEntities[treeIndex];
+            if (tree.treeState !== 'falling') continue;
+            const landed = tree.updateTreeFall(deltaTime, this.terrain);
+            if (!landed || tree.woodDropsSpawned) continue;
+
+            tree.woodDropsSpawned = true;
+            const sideX = Math.cos(tree._fallYaw);
+            const sideZ = -Math.sin(tree._fallYaw);
+            const dropPositions = TREE_WOOD_DROP_FRACTIONS.map((fraction, index) => {
+                const point = tree.getTreePoint(fraction);
+                const sideOffset = (index - 1) * 0.32;
+                return [
+                    point[0] + sideX * sideOffset,
+                    point[2] + sideZ * sideOffset,
+                ];
+            });
+            const impactPoint = tree.getTreePoint(0.72);
+
+            // Remove the fallen model first. The wood pickups are created only
+            // after the tree has touched terrain and left the render list.
+            this.environmentEntities.splice(treeIndex, 1);
+            tree.delete();
+
+            for (const [x, z] of dropPositions) {
+                this.resourceManager.spawnResource(
+                    this.gl,
+                    'wood',
+                    x,
+                    z,
+                    this.terrain,
+                    { allowWater: true }
+                );
+            }
+
+            this.engine.audio.playTreeFall(impactPoint);
+            this.particleSystem.emit(impactPoint, {
+                count: 18,
+                color: [0.50, 0.42, 0.28],
+                colorVariance: 0.10,
+                size: 8,
+                sizeVariance: 5,
+                speed: 2.2,
+                speedVariance: 1.0,
+                lifetime: 0.8,
+                lifetimeVariance: 0.3,
+                gravity: -2.5,
+                spread: 1.25,
+                yBias: 0.8,
+            });
         }
     }
 

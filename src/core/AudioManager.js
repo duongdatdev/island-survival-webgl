@@ -758,6 +758,26 @@ export class AudioManager {
         });
     }
 
+    /** Heavy trunk impact followed by a short rustling tail. */
+    playTreeFall(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position, SpatialProfiles.prop);
+        const now = this.ctx.currentTime;
+
+        this._playBuffer(this._impactBuffer(), {
+            destination, when: now, gain: 0.46, playbackRate: 0.58, decay: 0.42,
+            filters: [{ type: 'lowpass', frequency: 520, Q: 1.1 }],
+        });
+        this._playBuffer(this._softBuffer(), {
+            destination, when: now + 0.04, gain: 0.18, playbackRate: 0.72, decay: 0.55,
+            filters: [{ type: 'bandpass', frequency: 1450, Q: 0.7 }],
+        });
+        this._tone({
+            freq: 92, freqTo: 42, glide: 0.36, type: 'triangle',
+            gain: 0.18, attack: 0.008, decay: 0.42, when: now, destination,
+        });
+    }
+
     /** Stone struck by a tool — brighter and shorter than a chop. */
     playMine(position = null) {
         if (!this._ensureContext()) return;
