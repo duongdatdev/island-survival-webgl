@@ -17,7 +17,8 @@ export class Crab extends Creature {
             attackDamage: 0,
             attackCooldown: 0,
             color: [0.85, 0.3, 0.15],
-            meshScale: [0.177, 0.105, 0.096],
+            // Slightly oversized for gameplay readability along the shoreline.
+            meshScale: [0.531, 0.315, 0.288],
             modelAsset,
             bobAmplitude: 0.02,
             bobSpeed: 5.0,
@@ -36,7 +37,6 @@ export class Crab extends Creature {
 
         // Rebuild mesh with the gl context
         this._buildMesh();
-        this.collider.radius = 0.15;
         this.updateModelMatrix();
     }
 

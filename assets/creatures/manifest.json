@@ -12,7 +12,7 @@
     {
       "id": "crab",
       "path": "assets/creatures/crab.glb",
-      "targetSize": [0.177, 0.105, 0.096],
+      "targetSize": [0.531, 0.315, 0.288],
       "preserveAspect": true,
       "yawOffset": 0,
       "sourceTitle": "Crab Enemy",
