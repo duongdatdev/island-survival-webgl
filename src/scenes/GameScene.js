@@ -279,7 +279,11 @@ export class GameScene extends Scene {
         if (hotbarHud) hotbarHud.classList.remove('hidden');
 
         // 11. Campfire Entity (v0.2) — placed near island center
-        this.campfire = new Campfire(gl, [5.0, 0.0, 5.0]);
+        this.campfire = new Campfire(
+            gl,
+            [5.0, 0.0, 5.0],
+            this.engine.assets.getModel('survival:bonfire_fire')
+        );
         // Position campfire on terrain
         const campfireY = this.terrain.getHeight(5.0, 5.0);
         this.campfire.position[1] = campfireY;
@@ -1939,6 +1943,13 @@ export class GameScene extends Scene {
         this.basicShader.setUniform1f('uLightIntensity', this.dirLight.intensity);
         this.basicShader.setUniform3fv('uAmbientColor', this.ambientLight.color);
         this.basicShader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity);
+        this.basicShader.setUniform3fv('uPointLightPosition', this.campfire.getLightPosition());
+        this.basicShader.setUniform3fv('uPointLightColor', this.campfire.lightColor);
+        this.basicShader.setUniform1f(
+            'uPointLightIntensity',
+            this.campfire.isBuilt ? this.campfire.lightIntensity : 0.0
+        );
+        this.basicShader.setUniform1f('uPointLightRange', this.campfire.lightRange);
         this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
         // 1. Draw Terrain

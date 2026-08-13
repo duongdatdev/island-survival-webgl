@@ -47,6 +47,13 @@ export const BasicShader = {
         uniform vec3 uAmbientColor;
         uniform float uAmbientIntensity;
 
+        // Local campfire point light. Range-limited attenuation keeps the glow
+        // concentrated around the fire instead of brightening the whole island.
+        uniform vec3 uPointLightPosition;
+        uniform vec3 uPointLightColor;
+        uniform float uPointLightIntensity;
+        uniform float uPointLightRange;
+
         // Optional glTF base-color texture. Procedural meshes leave this off
         // and continue using vertex colors only.
         uniform sampler2D uBaseColorTexture;
@@ -80,6 +87,21 @@ export const BasicShader = {
             vec3 H = normalize(L + V); // Halfway vector
             float spec = pow(max(dot(N, H), 0.0), 32.0); // Shininess factor
             vec3 specular = spec * uLightColor * uLightIntensity * 0.25; // 0.25 specular factor
+
+            // Range-limited point light following the standard WebGL lighting
+            // model: direction comes from fragment → light, then its strength
+            // falls off smoothly with distance. A small fill term lets the
+            // orange glow wrap naturally around low-poly surfaces.
+            vec3 toPointLight = uPointLightPosition - vWorldPosition;
+            float pointDistance = length(toPointLight);
+            vec3 pointDirection = toPointLight / max(pointDistance, 0.0001);
+            float pointDiffuse = max(dot(N, pointDirection), 0.0);
+            float pointFalloff = max(1.0 - pointDistance / max(uPointLightRange, 0.0001), 0.0);
+            pointFalloff *= pointFalloff;
+            vec3 pointLight = uPointLightColor
+                * uPointLightIntensity
+                * pointFalloff
+                * (0.16 + pointDiffuse * 0.84);
             
             vec4 surfaceColor = vColor;
             if (uUseBaseColorTexture == 1) {
@@ -87,7 +109,7 @@ export const BasicShader = {
             }
 
             // Combine lighting contributions with vertex/material colors and texture
-            vec3 finalColor = (ambient + diffuse + specular) * surfaceColor.rgb;
+            vec3 finalColor = (ambient + diffuse + specular + pointLight) * surfaceColor.rgb;
             
             fragColor = vec4(finalColor, surfaceColor.a);
         }

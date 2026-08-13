@@ -98,7 +98,8 @@ export class LoadingScene extends Scene {
                 console.log(`LoadingScene: Compiling ${uniquePaths.length} unique environment models...`);
                 await this.engine.assets.compileUniqueModels(uniquePaths);
 
-                // Compile Survival Pack OBJ models and register them as drifting debris
+                // Compile Survival Pack OBJ models. Most become drifting debris;
+                // static entries (such as the campfire) are only cached for reuse.
                 await this._loadSurvivalPack(this.gl);
 
                 this._targetProgress = 1.0;
@@ -214,6 +215,14 @@ export class LoadingScene extends Scene {
                     }
                 }
 
+                // Optional per-model palette tweaks are applied after MTL parsing.
+                // The campfire uses this to keep its flame readable under world lighting.
+                if (item.materialColors) {
+                    for (const [matName, color] of Object.entries(item.materialColors)) {
+                        ObjParser.registerColor(matName, color);
+                    }
+                }
+
                 if (!objText) continue;
 
                 const parsed = ObjParser.parse(objText);
@@ -224,6 +233,9 @@ export class LoadingScene extends Scene {
                 const mesh = new Mesh(gl, parsed);
                 const key = 'survival:' + item.id;
                 this.engine.assets.models[key] = mesh;
+
+                // Static props share this loader but must not enter the ocean-debris pool.
+                if (item.registerAsDebris === false) continue;
 
                 // Register as a drifting debris type (reuses full pickup → inventory pipeline)
                 DebrisDatabase[key] = {

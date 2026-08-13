@@ -7,8 +7,7 @@ import { Mesh } from '../renderer/Mesh.js';
  * Campfire Entity — Placeable cooking structure on the island.
  * Built from Stone + Wood. Allows cooking raw food into Cooked Meals.
  * 
- * Visual: Ring of gray stone blocks with an orange/red fire glow center.
- * Procedural mesh — no external assets required.
+ * Visual: Survival Pack Bonfire_Fire OBJ, with a procedural fallback if loading fails.
  */
 const CAMPFIRE_SCALE = 0.4;
 
@@ -16,10 +15,12 @@ export class Campfire extends Entity {
     /**
      * @param {WebGL2RenderingContext} gl
      * @param {number[]} position - World position [x, y, z]
+     * @param {Mesh|null} modelMesh - Shared Survival Pack campfire mesh
      */
-    constructor(gl, position) {
+    constructor(gl, position, modelMesh = null) {
         super();
         this.gl = gl;
+        this.modelMesh = modelMesh;
         Vec3.set(this.position, position[0], position[1], position[2]);
 
         this.isBuilt = false;       // Must be crafted before appearing
@@ -29,8 +30,16 @@ export class Campfire extends Entity {
         this._fireTime = 0;
         this._fireFlicker = 1.0;
 
-        // Build meshes
-        this._buildMeshes(gl);
+        // Warm, compact point light consumed by BasicShader. Keeping these
+        // values on the entity makes the visual and its light share one source.
+        this.lightPosition = Vec3.create(position[0], position[1] + 0.45, position[2]);
+        this.lightColor = Vec3.create(1.0, 0.45, 0.12);
+        this.lightRange = 4.5;
+        this.lightIntensity = 2.8;
+
+        // Only allocate the old procedural geometry when the external model
+        // could not be loaded. Shared OBJ meshes are owned by AssetManager.
+        if (!this.modelMesh) this._buildMeshes(gl);
 
         this.updateModelMatrix();
     }
@@ -62,6 +71,23 @@ export class Campfire extends Entity {
         if (!this.isBuilt) return;
         this._fireTime += deltaTime;
         this._fireFlicker = 0.7 + Math.sin(this._fireTime * 8) * 0.15 + Math.sin(this._fireTime * 13) * 0.1;
+        this.lightIntensity = 2.75
+            + Math.sin(this._fireTime * 7.0) * 0.12
+            + Math.sin(this._fireTime * 13.0) * 0.06;
+    }
+
+    /**
+     * Update and return the world-space light origin just above the flames.
+     * @returns {Float32Array}
+     */
+    getLightPosition() {
+        Vec3.set(
+            this.lightPosition,
+            this.position[0],
+            this.position[1] + 0.45,
+            this.position[2]
+        );
+        return this.lightPosition;
     }
 
     /**
@@ -83,6 +109,12 @@ export class Campfire extends Entity {
      */
     draw(shader, drawMode) {
         if (!this.isBuilt) return;
+
+        if (this.modelMesh) {
+            shader.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
+            this.modelMesh.draw(drawMode);
+            return;
+        }
 
         const tempMatrix = Mat4.create();
 
@@ -178,8 +210,10 @@ export class Campfire extends Entity {
     }
 
     delete() {
+        // modelMesh is shared and disposed by AssetManager.
         if (this.stoneMesh) this.stoneMesh.delete();
         if (this.fireMesh) this.fireMesh.delete();
         if (this.logMesh) this.logMesh.delete();
+        this.modelMesh = null;
     }
 }

@@ -139,6 +139,19 @@
       "lifetime": [50, 90],
       "driftSpeed": [0.9, 1.8],
       "spawnWeight": 2
+    },
+    {
+      "id": "bonfire_fire",
+      "objPath": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.obj",
+      "mtlPath": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.mtl",
+      "name": "Lửa Trại",
+      "nameEn": "Campfire",
+      "icon": "🔥",
+      "modelScale": 1.25,
+      "materialColors": {
+        "Fire": [3.0, 0.65, 0.05]
+      },
+      "registerAsDebris": false
     }
   ]
 }

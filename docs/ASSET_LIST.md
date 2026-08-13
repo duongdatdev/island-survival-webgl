@@ -37,7 +37,7 @@ Other meshes are generated programmatically using algorithms or built by combini
     -   *Barrel Floats:* Three barrels placed horizontally underneath the frame.
     -   *Paddle:* A long steering paddle attached to the rear.
 -   **Survival Structures:**
-    -   *Campfire:* A ring of gray stone blocks with an animated warm orange fire center scale and log base.
+    -   *Campfire:* Uses the Survival Pack `Bonfire_Fire.obj` model; retains the procedural campfire as a load-failure fallback.
     -   *Water Collector:* A wooden support frame catching drips into a collector container with an animated falling water drop.
 -   **New Collectibles/Consumables:**
     -   *Coconut:* A small green/brown cube shape.
