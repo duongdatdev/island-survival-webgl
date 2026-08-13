@@ -9,6 +9,7 @@ Stranded on a small tropical island, your goal is to survive long enough to gath
 | Key / Control | Action | Notes |
 | :--- | :--- | :--- |
 | **W, A, S, D** | Character Movement | Relative to the camera's orientation. |
+| **Shift + Movement** | Sprint | 4.4 m/s while stamina lasts; walking regenerates stamina. |
 | **Left Click + Drag** | Orbit Camera | Rotates the camera view around the player character. |
 | **Mouse Wheel** | Zoom Camera | Adjusts distance between camera and player. |
 | **E Key** | Pick Up / Interact | Collects nearby resources or installs raft modules. |

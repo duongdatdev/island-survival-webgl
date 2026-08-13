@@ -27,38 +27,39 @@ export class Creature extends Entity {
         super();
 
         // Core stats
-        this.maxHealth = opts.maxHealth || 30;
+        this.maxHealth = opts.maxHealth ?? 30;
         this.health = this.maxHealth;
-        this.baseSpeed = opts.baseSpeed || 2.0;
+        this.baseSpeed = opts.baseSpeed ?? 2.0;
         this.speed = this.baseSpeed;
-        this.detectionRadius = opts.detectionRadius || 8.0;
-        this.attackRange = opts.attackRange || 2.0;
-        this.attackDamage = opts.attackDamage || 5;
-        this.attackCooldown = opts.attackCooldown || 1.0;
+        this.detectionRadius = opts.detectionRadius ?? 8.0;
+        this.attackRange = opts.attackRange ?? 2.0;
+        this.attackDamage = opts.attackDamage ?? 5;
+        this.attackCooldown = opts.attackCooldown ?? 1.0;
         this._attackTimer = 0;
 
         // AI state
         this.state = CreatureState.IDLE;
         this._stateTimer = 0;
-        this._idleDuration = opts.idleDuration || (2 + Math.random() * 3);
-        this._patrolRadius = opts.patrolRadius || 8.0;
+        this._idleDuration = opts.idleDuration ?? (2 + Math.random() * 3);
+        this._patrolRadius = opts.patrolRadius ?? 8.0;
         this._spawnPosition = Vec3.create(this.position[0], this.position[1], this.position[2]);
         this._targetDir = Vec3.create(1, 0, 0);
         this._fleeTimer = 0;
-        this._fleeDuration = opts.fleeDuration || 4.0;
+        this._fleeDuration = opts.fleeDuration ?? 4.0;
+        this.fleeSpeedMultiplier = opts.fleeSpeedMultiplier ?? 1.3;
 
         // Flee threshold: null = never flees, number = HP threshold
         this.fleeThreshold = opts.fleeThreshold !== undefined ? opts.fleeThreshold : null;
 
         // Visual
-        this.color = opts.color || [0.5, 0.5, 0.5];
-        this.meshScale = opts.meshScale || [0.3, 0.3, 0.3];
+        this.color = opts.color ?? [0.5, 0.5, 0.5];
+        this.meshScale = opts.meshScale ?? [0.3, 0.3, 0.3];
         Vec3.set(this.scale, this.meshScale[0], this.meshScale[1], this.meshScale[2]);
 
         // Death state
         this.deadTimer = 0;
-        this.deadDuration = opts.deadDuration || 8.0;
-        this.lootTable = opts.lootTable || [];
+        this.deadDuration = opts.deadDuration ?? 8.0;
+        this.lootTable = opts.lootTable ?? [];
         this.onDeath = null; // callback: (lootTable, position) => {}
 
         // Creature collider. `height` drives the vertical overlap test in
@@ -74,8 +75,8 @@ export class Creature extends Entity {
 
         // Animation
         this.animTime = Math.random() * Math.PI * 2;
-        this.bobAmplitude = opts.bobAmplitude || 0.03;
-        this.bobSpeed = opts.bobSpeed || 3.0;
+        this.bobAmplitude = opts.bobAmplitude ?? 0.03;
+        this.bobSpeed = opts.bobSpeed ?? 3.0;
 
         // NOTE: Subclasses must call this._buildMesh() after setting this.gl
         this.updateModelMatrix();
@@ -273,8 +274,8 @@ export class Creature extends Entity {
         const awayZ = this.position[2] - playerPosition[2];
         const awayLen = Math.sqrt(awayX * awayX + awayZ * awayZ);
         if (awayLen > 0.01) {
-            this.position[0] += (awayX / awayLen) * this.baseSpeed * 1.3 * deltaTime;
-            this.position[2] += (awayZ / awayLen) * this.baseSpeed * 1.3 * deltaTime;
+            this.position[0] += (awayX / awayLen) * this.baseSpeed * this.fleeSpeedMultiplier * deltaTime;
+            this.position[2] += (awayZ / awayLen) * this.baseSpeed * this.fleeSpeedMultiplier * deltaTime;
             this.rotation[1] = Math.atan2(awayX, awayZ);
         }
 

@@ -51,6 +51,7 @@ import { MenuUI } from '../systems/MenuUI.js';
 import { createStats } from '../systems/AchievementSystem.js';
 import { PostProcessing } from '../renderer/PostProcessing.js';
 import { Frustum } from '../renderer/Frustum.js';
+import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
 
 /** How long between background autosaves, in seconds. */
 const AUTOSAVE_INTERVAL = 60.0;
@@ -996,12 +997,21 @@ export class GameScene extends Scene {
             }
         }
 
-        // Update Vitals System (v0.2)
-        const isPlayerMoving = this.player.currentSpeed > 0.1;
-        this.vitals.update(deltaTime, isPlayerMoving);
+        // Walking is free; holding Shift spends stamina for a short sprint.
+        // Read current input rather than last frame's currentSpeed so stamina
+        // and movement begin/end together.
+        const input = this.engine.input;
+        const hasMovementInput = input.isKeyDown('KeyW') || input.isKeyDown('ArrowUp')
+            || input.isKeyDown('KeyS') || input.isKeyDown('ArrowDown')
+            || input.isKeyDown('KeyA') || input.isKeyDown('ArrowLeft')
+            || input.isKeyDown('KeyD') || input.isKeyDown('ArrowRight');
+        const sprintHeld = input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight');
+        const isSprinting = !this.isFishing && hasMovementInput && sprintHeld
+            && this.vitals.canSprint();
+        this.vitals.update(deltaTime, isSprinting);
 
-        // Apply stamina speed modifier to player
-        this.player.speed = this.isFishing ? 0.0 : 3.2 * this.vitals.getSpeedMultiplier();
+        this.player.speed = this.isFishing ? 0.0
+            : (isSprinting ? PLAYER_BALANCE.sprintSpeed : PLAYER_BALANCE.walkSpeed);
 
         const prevPlayerPos = [this.player.position[0], this.player.position[1], this.player.position[2]];
 
@@ -1051,7 +1061,7 @@ export class GameScene extends Scene {
         // underfoot, running makes the steps louder and brighter.
         if (this.player.currentSpeed > 0.1) {
             this._footstepTimer += deltaTime;
-            const running = this.player.currentSpeed > 2.0;
+            const running = this.player.currentSpeed > PLAYER_BALANCE.walkSpeed + 0.1;
             if (this._footstepTimer >= (running ? this._footstepInterval * 0.7 : this._footstepInterval)) {
                 this._footstepTimer = 0;
                 const px = this.player.position[0];

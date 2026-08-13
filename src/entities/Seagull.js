@@ -1,5 +1,6 @@
 import { Creature, CreatureState } from './Creature.js';
 import { Vec3 } from '../math/Vec3.js';
+import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
 /**
  * Seagull — Passive sky creature.
@@ -8,9 +9,9 @@ import { Vec3 } from '../math/Vec3.js';
 export class Seagull extends Creature {
     constructor(gl, position) {
         super({
-            maxHealth: 15,
-            baseSpeed: 4.0,
-            detectionRadius: 6.0,
+            maxHealth: CREATURE_BALANCE.seagull.maxHealth,
+            baseSpeed: CREATURE_BALANCE.seagull.baseSpeed,
+            detectionRadius: CREATURE_BALANCE.seagull.detectionRadius,
             attackRange: 0,
             attackDamage: 0,
             attackCooldown: 0,
@@ -146,7 +147,11 @@ export class Seagull extends Creature {
      * Circular orbiting movement
      */
     _circle(deltaTime) {
-        this._circleAngle += deltaTime * 0.5;
+        // Convert the configured linear speed into angular speed. A fixed
+        // angular rate made wide 15 m circles fly three times faster than
+        // tight 5 m circles even though both reported the same baseSpeed.
+        const angularSpeed = this.baseSpeed / Math.max(this._circleRadius, 1.0);
+        this._circleAngle += deltaTime * angularSpeed;
         this.position[0] = this._circleCenterX + Math.cos(this._circleAngle) * this._circleRadius;
         this.position[2] = this._circleCenterZ + Math.sin(this._circleAngle) * this._circleRadius;
 

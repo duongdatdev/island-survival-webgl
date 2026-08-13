@@ -101,10 +101,10 @@ This document outlines the milestones and release plan for **Island Survival: Es
 ### v0.5 Combat Balance
 | Creature | HP | Damage | Attack CD | Speed | Detection | Behaviour |
 |---|---|---|---|---|---|---|
-| Crab | 20 | – | – | 1.5 | 2.5 | Passive, flees on sight |
+| Crab | 10 | – | – | 1.5 | 2.5 | Passive, flees on sight |
 | Seagull | 15 | – | – | 4.0 | 6.0 | Passive, flees and climbs |
-| Boar | 45 | 12 | 2.0s | 2.8 (charge 6.0) | 7.0 | Hostile, flees below 15 HP |
-| Shark | 50 | 15 | 2.5s | 4.5 | 8.0 | Hostile in water only, flees below 15 HP |
+| Boar | 55 | 12 | 2.4s | 2.6 (charge 5.2) | 6.5 | Hostile, telegraphed non-homing charge, flees below 15 HP |
+| Shark | 60 | 14 | 3.0s | 3.6 (rush 5.2) | 7.0 | Hostile in water only, flees below 18 HP |
 
 Detection radii are deliberately short so the island stays explorable — the
 chase leash (`detectionRadius × 2`) and flee cut-off (`× 3`) scale from them, so
@@ -120,6 +120,10 @@ a boar disengages at 14 units instead of hounding the player across the map.
 Player has 100 HP with no passive regeneration, so a Bandage (+25 HP) is the
 only heal. Melee is capped to a ±63° cone with a vertical reach limit — only the
 Bow can bring down a circling seagull.
+
+Player movement is 3.2 m/s while walking and 4.4 m/s while holding Shift.
+Sprinting drains 18 stamina/s; walking or standing regenerates 14/s. Exhaustion
+locks sprint until 20 stamina, preventing rapid speed flicker while Shift is held.
 
 ---
 

@@ -1,6 +1,7 @@
 import { Entity } from './Entity.js';
 import { Vec3 } from '../math/Vec3.js';
 import { CollisionLayers } from '../systems/CollisionLayers.js';
+import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
 
 /**
  * Player Entity controlled by the keyboard relative to camera orientation
@@ -8,7 +9,7 @@ import { CollisionLayers } from '../systems/CollisionLayers.js';
 export class Player extends Entity {
     constructor() {
         super();
-        this.speed = 3.2; // units/sec
+        this.speed = PLAYER_BALANCE.walkSpeed; // units/sec
         this.currentSpeed = 0.0;
 
         const PLAYER_SCALE = 0.32;

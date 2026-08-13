@@ -43,7 +43,7 @@ export class TutorialSystem {
         this._steps = [
             {
                 id: 'move',
-                text: '🎮 Dùng phím <b>W A S D</b> (hoặc mũi tên) để di chuyển nhân vật',
+                text: '🎮 Dùng <b>W A S D</b> để di chuyển, giữ <b>Shift</b> để chạy nước rút',
                 autoDismiss: 10,
                 triggerCheck: () => this._playerHasMoved,
             },

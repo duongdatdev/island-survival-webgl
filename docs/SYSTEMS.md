@@ -122,6 +122,7 @@ master ─┬─ sfx ──────────── one-shots (AudioManage
 *Classes:* [Creature](file:///d:/Project/webgl/island-survival/src/entities/Creature.js) and its subclasses [Crab](file:///d:/Project/webgl/island-survival/src/entities/Crab.js), [Seagull](file:///d:/Project/webgl/island-survival/src/entities/Seagull.js), [Boar](file:///d:/Project/webgl/island-survival/src/entities/Boar.js), [Shark](file:///d:/Project/webgl/island-survival/src/entities/Shark.js)
 * Shared state machine: `IDLE → PATROL → CHASE → ATTACK → FLEE → DEAD`. Subclasses override individual handlers rather than the whole loop — the Boar replaces `_updateChase` with a rate-limited charge, the Seagull and Shark replace `update` outright because they move in 3D / at a fixed water plane.
 * Damage to the player is applied by `GameScene`, not by the creature: the creature only reports readiness via `canDamagePlayer()`, which is also what arms its attack cooldown. Arming the cooldown inside `_updateAttack` made every swing self-cancel.
+* Movement match-ups are tuned against a 3.2 m/s walk and 4.4 m/s stamina sprint. Boars telegraph and lock their 5.2 m/s charge direction; sharks choose either a 3.6 m/s circle step or a capped 5.2 m/s rush, never both in one frame.
 * Corpses set `collider.type = 'none'` so they stop shoving things while they fade out, then are unregistered and deleted once `deadDuration` elapses.
 * **Spawn placement** (all counts are targets; the loops retry and may fall short on a hostile seed):
 

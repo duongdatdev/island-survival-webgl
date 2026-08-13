@@ -1,6 +1,7 @@
 import { Creature, CreatureState } from './Creature.js';
 import { Vec3 } from '../math/Vec3.js';
 import { WaveField } from '../shaders/WaterWaves.js';
+import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
 /**
  * How far past the shelf edge a shark may roam. GameScene seeds sharks on a
@@ -18,20 +19,19 @@ const FALLBACK_OUTER_RADIUS = 46.0;
  */
 export class Shark extends Creature {
     constructor(gl, position) {
+        const balance = CREATURE_BALANCE.shark;
         super({
-            // v0.5 balance: 20 dmg every 2s from a 15u detection radius was
-            // an unavoidable death sentence for anyone wading offshore.
-            maxHealth: 50,
-            baseSpeed: 4.5,
-            detectionRadius: 8.0,
-            attackRange: 2.5,
-            attackDamage: 15,
-            attackCooldown: 2.5,
+            maxHealth: balance.maxHealth,
+            baseSpeed: balance.baseSpeed,
+            detectionRadius: balance.detectionRadius,
+            attackRange: balance.attackRange,
+            attackDamage: balance.attackDamage,
+            attackCooldown: balance.attackCooldown,
             color: [0.35, 0.38, 0.4],
             meshScale: [0.5, 0.12, 0.2],
             bobAmplitude: 0.05,
             bobSpeed: 2.0,
-            fleeThreshold: 15,
+            fleeThreshold: balance.fleeThreshold,
             fleeDuration: 6.0,
             patrolRadius: 20.0,
             idleDuration: 2.0 + Math.random() * 3.0,
@@ -49,6 +49,8 @@ export class Shark extends Creature {
 
         // Water Y level — sharks stay at this height
         this._waterLevel = position[1];
+        this._rushTriggerRange = balance.rushTriggerRange;
+        this._rushSpeed = balance.rushSpeed;
 
         // Fin animation
         this._finAngle = 0;
@@ -128,25 +130,30 @@ export class Shark extends Creature {
                     this._stateTimer = 0;
                     break;
                 }
-                // Circle around player
-                const angleToPlayer = Math.atan2(dx, dz);
-                const circleOffset = 0.5;
-                const targetX = playerPosition[0] + Math.cos(angleToPlayer + circleOffset) * 4.0;
-                const targetZ = playerPosition[2] + Math.sin(angleToPlayer + circleOffset) * 4.0;
-                const toTargetX = targetX - this.position[0];
-                const toTargetZ = targetZ - this.position[2];
-                const toTargetLen = Math.sqrt(toTargetX*toTargetX + toTargetZ*toTargetZ);
-                if (toTargetLen > 0.1) {
-                    this.position[0] += (toTargetX/toTargetLen) * this.speed * deltaTime;
-                    this.position[2] += (toTargetZ/toTargetLen) * this.speed * deltaTime;
-                    this.rotation[1] = Math.atan2(toTargetX, toTargetZ);
-                }
-                // Close in for attack
-                if (distToPlayer < 6.0 && this._attackTimer <= 0) {
+                // Choose one movement velocity per frame. The previous logic
+                // applied the 4.5 m/s circle step and a 9 m/s rush together,
+                // producing an accidental ~13.5 m/s unavoidable lunge.
+                if (distToPlayer < this._rushTriggerRange && this._attackTimer <= 0
+                    && distToPlayer > 0.0001) {
                     const rushX = dx / distToPlayer;
                     const rushZ = dz / distToPlayer;
-                    this.position[0] += rushX * this.baseSpeed * 2.0 * deltaTime;
-                    this.position[2] += rushZ * this.baseSpeed * 2.0 * deltaTime;
+                    this.position[0] += rushX * this._rushSpeed * deltaTime;
+                    this.position[2] += rushZ * this._rushSpeed * deltaTime;
+                    this.rotation[1] = Math.atan2(rushX, rushZ);
+                } else {
+                    // Circle while waiting for the next bite window.
+                    const angleToPlayer = Math.atan2(dx, dz);
+                    const circleOffset = 0.5;
+                    const targetX = playerPosition[0] + Math.cos(angleToPlayer + circleOffset) * 4.0;
+                    const targetZ = playerPosition[2] + Math.sin(angleToPlayer + circleOffset) * 4.0;
+                    const toTargetX = targetX - this.position[0];
+                    const toTargetZ = targetZ - this.position[2];
+                    const toTargetLen = Math.hypot(toTargetX, toTargetZ);
+                    if (toTargetLen > 0.1) {
+                        this.position[0] += (toTargetX / toTargetLen) * this.speed * deltaTime;
+                        this.position[2] += (toTargetZ / toTargetLen) * this.speed * deltaTime;
+                        this.rotation[1] = Math.atan2(toTargetX, toTargetZ);
+                    }
                 }
                 break;
 

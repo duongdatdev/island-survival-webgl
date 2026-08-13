@@ -1,5 +1,6 @@
 import { Creature, CreatureState } from './Creature.js';
 import { Vec3 } from '../math/Vec3.js';
+import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
 /**
  * Crab — Passive beach creature.
@@ -8,9 +9,10 @@ import { Vec3 } from '../math/Vec3.js';
 export class Crab extends Creature {
     constructor(gl, position) {
         super({
-            maxHealth: 20,
-            baseSpeed: 1.5,
-            detectionRadius: 2.5,
+            maxHealth: CREATURE_BALANCE.crab.maxHealth,
+            baseSpeed: CREATURE_BALANCE.crab.baseSpeed,
+            detectionRadius: CREATURE_BALANCE.crab.detectionRadius,
+            fleeSpeedMultiplier: CREATURE_BALANCE.crab.fleeSpeedMultiplier,
             attackRange: 0,
             attackDamage: 0,
             attackCooldown: 0,

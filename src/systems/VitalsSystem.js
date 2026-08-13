@@ -1,11 +1,13 @@
+import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
+
 /**
  * VitalsSystem — Manages player survival vitals (Hunger, Thirst, Stamina, Health)
  * 
  * Each vital ranges 0–100, starting at 100.
  * - Hunger drains 1 every 30s. Eating Cooked Meal restores +40.
  * - Thirst drains 1 every 20s. Drinking Fresh Water restores +50.
- * - Stamina drains -15/s while moving, regenerates +8/s while idle.
- *   When stamina = 0, player move speed is halved.
+ * - Stamina drains only while sprinting and regenerates otherwise.
+ *   Empty stamina locks sprint until a small recovery threshold is reached.
  * - Health drains 1 every 5s when hunger OR thirst = 0.
  *   When health = 0, game over.
  */
@@ -28,8 +30,10 @@ export class VitalsSystem {
         this.healthDrainInterval = 5;
 
         // Stamina rates (units per second)
-        this.staminaDrainRate = 10;
-        this.staminaRegenRate = 15;
+        this.staminaDrainRate = PLAYER_BALANCE.staminaDrainPerSecond;
+        this.staminaRegenRate = PLAYER_BALANCE.staminaRegenPerSecond;
+        this.sprintRecoveryThreshold = PLAYER_BALANCE.sprintRecoveryThreshold;
+        this._sprintLocked = false;
 
         /** @type {Function|null} Callback fired when any vital changes: (vitalId, newValue, maxValue) */
         this.onChange = null;
@@ -43,9 +47,9 @@ export class VitalsSystem {
     /**
      * Update vitals based on elapsed time and player state
      * @param {number} deltaTime - Seconds since last frame
-     * @param {boolean} isMoving - Whether the player is currently moving
+     * @param {boolean} isSprinting - Whether the player is sprinting this frame
      */
-    update(deltaTime, isMoving) {
+    update(deltaTime, isSprinting) {
         if (this._isGameOver) return;
 
         // --- Hunger drain ---
@@ -63,11 +67,17 @@ export class VitalsSystem {
         }
 
         // --- Stamina ---
-        if (isMoving) {
+        if (this.stamina <= 0) this._sprintLocked = true;
+
+        if (isSprinting && !this._sprintLocked) {
             this._setVital('stamina', this.stamina - this.staminaDrainRate * deltaTime);
+            if (this.stamina <= 0) this._sprintLocked = true;
         } else {
             if (this.stamina < 100) {
                 this._setVital('stamina', this.stamina + this.staminaRegenRate * deltaTime);
+            }
+            if (this._sprintLocked && this.stamina >= this.sprintRecoveryThreshold) {
+                this._sprintLocked = false;
             }
         }
 
@@ -116,11 +126,12 @@ export class VitalsSystem {
     }
 
     /**
-     * Check if player speed should be reduced (stamina depleted)
-     * @returns {number} Speed multiplier (0.5 when exhausted, 1.0 otherwise)
+     * Whether sprinting is currently available.
+     * A recovery threshold avoids rapid walk/sprint flicker while Shift is held.
+     * @returns {boolean}
      */
-    getSpeedMultiplier() {
-        return this.stamina <= 0 ? 0.5 : 1.0;
+    canSprint() {
+        return !this._sprintLocked && this.stamina > 0;
     }
 
     /**
@@ -141,6 +152,7 @@ export class VitalsSystem {
      */
     reset() {
         this._isGameOver = false;
+        this._sprintLocked = false;
         this._hungerTimer = 0;
         this._thirstTimer = 0;
         this._healthDrainTimer = 0;
