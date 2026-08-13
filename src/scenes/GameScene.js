@@ -2556,7 +2556,7 @@ export class GameScene extends Scene {
             }
         } else {
             if (activeItem.id === 'stone_axe') {
-                this._showNotification('🪓 Đang trang bị Rìu Đá! Tăng gấp đôi tài nguyên thu hoạch.');
+                this._showNotification('🪓 Đang trang bị Rìu Đá! Nhấn chuột trái để chặt cây hoặc tấn công.');
             } else {
                 this._showNotification(`📦 Không thể sử dụng trực tiếp ${resDef.name}!`);
             }

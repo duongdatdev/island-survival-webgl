@@ -188,10 +188,7 @@ export class DebrisManager {
     _pickupDebris(debris, inventory) {
         const def = debris.debrisDef;
         const gives = def.gives;
-
-        const equipped = inventory.getEquippedItem();
-        const hasAxe = equipped && equipped.id === 'stone_axe';
-        const finalAmount = gives.amount * (hasAxe ? 2 : 1);
+        const finalAmount = gives.amount;
 
         // Refuse the pickup when the bag can't hold it, so the debris keeps
         // drifting instead of being silently destroyed.
@@ -205,9 +202,9 @@ export class DebrisManager {
         debris.collect();
 
         // Show pickup notification
-        this._showNotification(def, gives, hasAxe);
+        this._showNotification(def, gives);
 
-        console.log(`DebrisManager: Picked up ${def.name} → +${finalAmount} ${gives.resourceId} (hasAxe: ${hasAxe})`);
+        console.log(`DebrisManager: Picked up ${def.name} → +${finalAmount} ${gives.resourceId}`);
     }
 
     /**
@@ -241,16 +238,14 @@ export class DebrisManager {
      * @param {object} debrisDef
      * @param {object} gives - { resourceId, amount }
      */
-    _showNotification(debrisDef, gives, hasAxe = false) {
+    _showNotification(debrisDef, gives) {
         const el = document.getElementById('pickup-notification');
         if (!el) return;
 
         const resDef = getResourceDef(gives.resourceId);
         const resourceName = resDef ? resDef.name : gives.resourceId;
-        const finalAmount = gives.amount * (hasAxe ? 2 : 1);
-        const axeMultiplierText = hasAxe ? ' (Rìu Đá x2!)' : '';
 
-        el.innerHTML = `${debrisDef.icon} ${debrisDef.name} → +${finalAmount} ${resourceName}${axeMultiplierText}`;
+        el.innerHTML = `${debrisDef.icon} ${debrisDef.name} → +${gives.amount} ${resourceName}`;
         el.classList.remove('hidden');
         el.classList.remove('animate-out');
 

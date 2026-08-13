@@ -174,10 +174,7 @@ export class ResourceManager {
      */
     _pickupResource(resource, inventory) {
         const def = resource.resourceDef;
-
-        const equipped = inventory.getEquippedItem();
-        const hasAxe = equipped && equipped.id === 'stone_axe';
-        const amount = hasAxe ? 2 : 1;
+        const amount = 1;
 
         // Refuse the pickup when the bag can't hold it, so the resource stays in
         // the world instead of being silently destroyed. addItem returns true
@@ -192,7 +189,7 @@ export class ResourceManager {
         resource.collect();
 
         // Show pickup notification
-        this._showNotification(def, hasAxe);
+        this._showNotification(def);
 
         console.log(`ResourceManager: Picked up ${def.name} (${def.nameEn}) (x${amount})`);
     }
@@ -216,14 +213,11 @@ export class ResourceManager {
     /**
      * Show a toast notification for a picked up resource
      */
-    _showNotification(resourceDef, hasAxe = false) {
+    _showNotification(resourceDef) {
         const el = document.getElementById('pickup-notification');
         if (!el) return;
 
-        const axeMultiplierText = hasAxe ? ' (Rìu Đá x2!)' : '';
-        const amountText = hasAxe ? '+2' : '+1';
-
-        el.innerHTML = `${resourceDef.icon} ${amountText} ${resourceDef.name}${axeMultiplierText}`;
+        el.innerHTML = `${resourceDef.icon} +1 ${resourceDef.name}`;
         el.classList.remove('hidden');
         el.classList.remove('animate-out');
 
