@@ -8,6 +8,11 @@
 
 import { AXE_SWING_DURATION } from './CombatConfig.js';
 
+// Shared detailed mesh used anywhere raw wood appears in the world. The asset
+// is compiled by LoadingScene before gameplay starts; renderers still keep a
+// procedural fallback for failed or incomplete asset loads.
+export const WOOD_LOG_MODEL_ID = 'survival:wood_log';
+
 export const ResourceType = {
     WOOD:         'wood',
     STONE:        'stone',
@@ -52,6 +57,8 @@ export const ResourceDatabase = {
         icon: '🪵',
         color: [0.55, 0.35, 0.18],       // Warm brown (log)
         meshScale: [0.15, 0.35, 0.15],    // Tall narrow log shape
+        modelId: WOOD_LOG_MODEL_ID,
+        modelScale: 1.0,
         pickupRadius: 2.5,
         stackSize: 99,
         spawnWeight: 4,                    // Higher = more common

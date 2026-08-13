@@ -18,6 +18,8 @@
  *   spawnWeight  - Higher = more likely to spawn
  */
 
+import { WOOD_LOG_MODEL_ID } from './ResourceDatabase.js';
+
 export const DebrisType = {
     WOOD:     'wood',
     STONE:    'stone',
@@ -34,6 +36,8 @@ export const DebrisDatabase = {
         icon: '🪵',
         color: [0.55, 0.35, 0.18],
         meshScale: [0.33, 0.08, 0.11],
+        modelId: WOOD_LOG_MODEL_ID,
+        modelScale: 1.0,
         pickupRadius: 2.8,
         gives: { resourceId: 'wood', amount: 2 },
         lifetime: [50, 80],

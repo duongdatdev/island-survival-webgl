@@ -5,15 +5,17 @@ import { Mat4 } from '../math/Mat4.js';
 
 /**
  * WorldResource - A collectible resource entity placed in the 3D world.
- * Renders as a colored cube with bobbing + rotation animation.
+ * Renders with a shared detailed model when available, otherwise falls back to
+ * a colored cube. Both visual paths keep the same bobbing + rotation animation.
  */
 export class WorldResource extends Entity {
     /**
      * @param {WebGL2RenderingContext} gl
      * @param {object} resourceDef - Definition from ResourceDatabase
      * @param {Float32Array|number[]} worldPos - [x, y, z] spawn position
+     * @param {Mesh|null} modelMesh - Shared mesh owned by AssetManager
      */
-    constructor(gl, resourceDef, worldPos) {
+    constructor(gl, resourceDef, worldPos, modelMesh = null) {
         super();
         this.gl = gl;
         this.resourceDef = resourceDef;
@@ -23,8 +25,19 @@ export class WorldResource extends Entity {
         Vec3.set(this.position, worldPos[0], worldPos[1], worldPos[2]);
         this.baseY = worldPos[1]; // Store base Y for bobbing animation
 
-        // Set scale from database definition
-        Vec3.set(this.scale, resourceDef.meshScale[0], resourceDef.meshScale[1], resourceDef.meshScale[2]);
+        // A loaded OBJ has already been normalized to world size. Procedural
+        // fallbacks still use the per-axis box dimensions from the database.
+        this.useModel = Boolean(modelMesh);
+        if (this.useModel) {
+            const modelScale = resourceDef.modelScale ?? 1;
+            if (Array.isArray(modelScale)) {
+                Vec3.set(this.scale, modelScale[0], modelScale[1], modelScale[2]);
+            } else {
+                Vec3.set(this.scale, modelScale, modelScale, modelScale);
+            }
+        } else {
+            Vec3.set(this.scale, resourceDef.meshScale[0], resourceDef.meshScale[1], resourceDef.meshScale[2]);
+        }
 
         // Animation state
         this.animTime = Math.random() * Math.PI * 2; // Random phase offset
@@ -32,9 +45,12 @@ export class WorldResource extends Entity {
         this.bobSpeed = 2.0;
         this.rotSpeed = 1.2;
 
-        // Build colored mesh
-        const [r, g, b] = resourceDef.color;
-        this.mesh = new Mesh(gl, this._createCubeData(r, g, b));
+        if (this.useModel) {
+            this.mesh = modelMesh;
+        } else {
+            const [r, g, b] = resourceDef.color;
+            this.mesh = new Mesh(gl, this._createCubeData(r, g, b));
+        }
 
         // State flags
         this.isCollected = false;
@@ -111,10 +127,11 @@ export class WorldResource extends Entity {
      * Free GPU resources
      */
     delete() {
-        if (this.mesh) {
+        // Detailed OBJ meshes are shared and disposed by AssetManager.
+        if (this.mesh && !this.useModel) {
             this.mesh.delete();
-            this.mesh = null;
         }
+        this.mesh = null;
     }
 
     /**

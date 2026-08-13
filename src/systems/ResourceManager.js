@@ -11,7 +11,10 @@ const SHORE_HEIGHT = 0.15;
  * ResourceManager - Orchestrates world resource spawning, pickup detection, and UI feedback.
  */
 export class ResourceManager {
-    constructor() {
+    constructor(assetManager = null) {
+        // Used to resolve optional detailed models declared by resource defs.
+        this._assetManager = assetManager;
+
         /** @type {WorldResource[]} Active resources in the world */
         this.worldResources = [];
 
@@ -21,6 +24,14 @@ export class ResourceManager {
         // Pickup notification state
         this._notificationTimer = 0;
         this._notificationDuration = 2.0; // seconds
+    }
+
+    /** Create a resource entity with its declared model, if that model loaded. */
+    createResourceEntity(gl, resourceDef, worldPos) {
+        const model = resourceDef.modelId && this._assetManager
+            ? this._assetManager.getModel(resourceDef.modelId)
+            : null;
+        return new WorldResource(gl, resourceDef, worldPos, model);
     }
 
     /**
@@ -57,7 +68,7 @@ export class ResourceManager {
         // Offset Y so the resource floats slightly above ground
         y += def.meshScale[1] * 0.5 + 0.3;
 
-        const resource = new WorldResource(gl, def, [x, y, z]);
+        const resource = this.createResourceEntity(gl, def, [x, y, z]);
         this.worldResources.push(resource);
         return resource;
     }

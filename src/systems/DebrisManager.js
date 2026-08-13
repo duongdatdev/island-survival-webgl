@@ -80,7 +80,7 @@ export class DebrisManager {
         let meshScale = 1;
         if (def.modelId && this._assetManager) {
             mesh = this._assetManager.models[def.modelId];
-            meshScale = def.meshScale[1];
+            meshScale = def.modelScale ?? def.meshScale[1];
         }
 
         const debris = new DriftingDebris(gl, def, pos, mesh, meshScale);

@@ -30,7 +30,6 @@ import { WaterCollector } from '../entities/WaterCollector.js';
 import { Waterfall } from '../entities/Waterfall.js';
 import { WorldGenerator } from '../gameplay/world/WorldGenerator.js';
 import { EnvironmentObject } from '../entities/EnvironmentObject.js';
-import { WorldResource } from '../entities/WorldResource.js';
 import { CollisionSystem } from '../systems/CollisionSystem.js';
 import { CollisionDebug } from '../systems/CollisionDebug.js';
 import { BillboardSprite } from '../renderer/BillboardSprite.js';
@@ -204,7 +203,7 @@ export class GameScene extends Scene {
 
         // 6. Resource System Initialization
         this.inventory = new Inventory(20);
-        this.resourceManager = new ResourceManager();
+        this.resourceManager = new ResourceManager(this.engine.assets);
         this.debrisManager = new DebrisManager(this.engine.assets);
 
         // Spawn resources from procedural generator nodes list
@@ -215,7 +214,11 @@ export class GameScene extends Scene {
                 const terrainY = this.terrain.getHeight(node.position[0], node.position[2]);
                 const y = terrainY + def.meshScale[1] * 0.5 + 0.3;
 
-                const resource = new WorldResource(gl, def, [node.position[0], y, node.position[2]]);
+                const resource = this.resourceManager.createResourceEntity(
+                    gl,
+                    def,
+                    [node.position[0], y, node.position[2]]
+                );
                 this.resourceManager.worldResources.push(resource);
             }
         }
@@ -754,7 +757,11 @@ export class GameScene extends Scene {
         for (const entry of save.resources || []) {
             const def = getResourceDef(entry.id);
             if (!def) continue;
-            const resource = new WorldResource(this.gl, def, [entry.position[0], entry.position[1], entry.position[2]]);
+            const resource = this.resourceManager.createResourceEntity(
+                this.gl,
+                def,
+                [entry.position[0], entry.position[1], entry.position[2]]
+            );
             if (entry.rewardType) resource.rewardType = entry.rewardType;
             this.resourceManager.worldResources.push(resource);
         }
@@ -3575,7 +3582,11 @@ export class GameScene extends Scene {
                     const terrainY = this.terrain.getHeight(node.position[0], node.position[2]);
                     const y = terrainY + def.meshScale[1] * 0.5 + 0.3;
 
-                    const resource = new WorldResource(gl, def, [node.position[0], y, node.position[2]]);
+                    const resource = this.resourceManager.createResourceEntity(
+                        gl,
+                        def,
+                        [node.position[0], y, node.position[2]]
+                    );
                     this.resourceManager.worldResources.push(resource);
                 }
             }
