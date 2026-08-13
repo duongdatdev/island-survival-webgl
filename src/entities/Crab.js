@@ -7,7 +7,7 @@ import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
  * Scuttles along shoreline, flees from the player, drops raw crab meat.
  */
 export class Crab extends Creature {
-    constructor(gl, position) {
+    constructor(gl, position, modelAsset = null) {
         super({
             maxHealth: CREATURE_BALANCE.crab.maxHealth,
             baseSpeed: CREATURE_BALANCE.crab.baseSpeed,
@@ -17,7 +17,8 @@ export class Crab extends Creature {
             attackDamage: 0,
             attackCooldown: 0,
             color: [0.85, 0.3, 0.15],
-            meshScale: [0.18, 0.08, 0.16],
+            meshScale: [0.177, 0.105, 0.096],
+            modelAsset,
             bobAmplitude: 0.02,
             bobSpeed: 5.0,
             fleeThreshold: null, // Flees immediately on detection

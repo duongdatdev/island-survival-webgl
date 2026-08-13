@@ -1,0 +1,40 @@
+{
+  "models": [
+    {
+      "id": "boar",
+      "path": "assets/creatures/boar.glb",
+      "targetSize": [0.433, 0.7, 1.247],
+      "preserveAspect": true,
+      "yawOffset": 0,
+      "sourceTitle": "Boar",
+      "author": "Poly by Google"
+    },
+    {
+      "id": "crab",
+      "path": "assets/creatures/crab.glb",
+      "targetSize": [0.177, 0.105, 0.096],
+      "preserveAspect": true,
+      "yawOffset": 0,
+      "sourceTitle": "Crab Enemy",
+      "author": "Quaternius"
+    },
+    {
+      "id": "seagull",
+      "path": "assets/creatures/seagull.glb",
+      "targetSize": [0.2, 0.154, 0.172],
+      "preserveAspect": true,
+      "yawOffset": 0,
+      "sourceTitle": "Pigeon",
+      "author": "Quaternius"
+    },
+    {
+      "id": "shark",
+      "path": "assets/creatures/shark.glb",
+      "targetSize": [0.184, 0.164, 0.5],
+      "preserveAspect": true,
+      "yawOffset": 0,
+      "sourceTitle": "Shark",
+      "author": "Quaternius"
+    }
+  ]
+}

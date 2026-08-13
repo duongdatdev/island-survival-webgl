@@ -1,11 +1,25 @@
 # Asset List
 
-The **Island Survival: Escape** project uses a low-poly, stylized art direction built entirely on **Procedural Content Generation & Real-time Synthesis**. Aside from a minimal 1x1 base64 fallback texture embedded in the code to avoid CORS/loading issues, there are no external asset files (such as `.obj`, `.gltf`, `.mp3`, or `.png`). Everything is generated at runtime.
+The **Island Survival: Escape** project uses a low-poly, stylized art direction combining imported runtime assets with **Procedural Content Generation & Real-time Synthesis**. Environment props, survival items, characters, and creatures may be loaded from OBJ/GLB files, while terrain, water, weather, effects, and audio remain generated at runtime.
 
 ---
 
-## 📐 3D Models (Procedural Meshes)
-Meshes are generated programmatically using algorithms or built by combining primary geometric shapes:
+## 📐 3D Models
+
+### Creature GLB assets
+
+Creature models are loaded from `assets/creatures/manifest.json`, compiled once, and shared by all instances. Skeletal animations remain embedded in the source GLBs but are not played yet.
+
+| Game creature | File | Source title | Author |
+| --- | --- | --- | --- |
+| Boar | `boar.glb` | Boar | Poly by Google |
+| Crab | `crab.glb` | Crab Enemy | Quaternius |
+| Seagull | `seagull.glb` | Pigeon | Quaternius |
+| Shark | `shark.glb` | Shark | Quaternius |
+
+### Procedural meshes
+
+Other meshes are generated programmatically using algorithms or built by combining primary geometric shapes:
 
 -   **Player Character:** Built using color-coded box shapes (Cubes) representing the torso (red), head (flesh-toned), and visor (dark black).
 -   **Island Terrain:** Programmatically built on a radial 80x80 height grid, featuring noise-based slopes and valleys that naturally descend toward sea level.
@@ -33,10 +47,11 @@ Meshes are generated programmatically using algorithms or built by combining pri
 ---
 
 ## 🎨 Image Textures
-No external image files are requested, minimizing I/O overhead:
+
+GLB creature models may contain embedded base-color textures. Procedural geometry continues to use vertex colors:
 
 -   **Player Skin (Data URL):** A 1x1 base64 encoded transparent PNG texture loaded as a default WebGL Texture.
--   **Vertex Colors & Shaders:** All other objects use vertex-colored geometry coupled with Blinn-Phong lighting calculations inside the shader program to achieve a clean, modern low-poly look.
+-   **Vertex Colors & Shaders:** Procedural objects use vertex-colored geometry coupled with Blinn-Phong lighting calculations inside the shader program to achieve a clean, modern low-poly look.
 
 ---
 

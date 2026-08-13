@@ -2967,7 +2967,7 @@ export class GameScene extends Scene {
 
             // Only spawn in beach zone
             if (y > 0.0 && y <= 0.35) {
-                const crab = new Crab(gl, [x, y, z]);
+                const crab = new Crab(gl, [x, y, z], this.engine.assets.getModel('creature:crab'));
                 crab.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
                 this.creatures.push(crab);
                 spawned++;
@@ -2992,7 +2992,11 @@ export class GameScene extends Scene {
             const z = Math.sin(angle) * radius;
             const altitude = 10 + Math.random() * 5;
 
-            const seagull = new Seagull(gl, [x, altitude, z]);
+            const seagull = new Seagull(
+                gl,
+                [x, altitude, z],
+                this.engine.assets.getModel('creature:seagull')
+            );
             seagull.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
             this.creatures.push(seagull);
         }
@@ -3034,7 +3038,7 @@ export class GameScene extends Scene {
             }
             if (tooClose) continue;
 
-            const boar = new Boar(gl, [x, y, z]);
+            const boar = new Boar(gl, [x, y, z], this.engine.assets.getModel('creature:boar'));
             boar.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
             this.creatures.push(boar);
             spawned++;
@@ -3058,7 +3062,7 @@ export class GameScene extends Scene {
             const z = Math.sin(angle) * radius;
             const waterY = 0.1; // Water surface level
 
-            const shark = new Shark(gl, [x, waterY, z]);
+            const shark = new Shark(gl, [x, waterY, z], this.engine.assets.getModel('creature:shark'));
             shark.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
             this.creatures.push(shark);
         }

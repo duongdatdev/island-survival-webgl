@@ -1,5 +1,7 @@
+import { WebIO } from '@gltf-transform/core';
 import { Texture } from '../renderer/Texture.js';
 import { Mesh } from '../renderer/Mesh.js';
+import { ModelAsset } from '../renderer/ModelAsset.js';
 import { ObjParser } from './ObjParser.js';
 
 /**
@@ -11,8 +13,11 @@ export class AssetManager {
         this.textures = {};
         this.shaders = {};
         this.models = {};
+        this.modelPromises = {};
         this.texts = {};
         this.environmentMetadata = {}; // Cache for metadata JSONs
+        this.creatureMetadata = {};
+        this.gltfIO = new WebIO();
         
         this.totalAssets = 0;
         this.loadedAssets = 0;
@@ -136,6 +141,70 @@ export class AssetManager {
         return this.texts[name] || '';
     }
 
+    getModel(name) {
+        return this.models[name] || null;
+    }
+
+    /**
+     * Load the creature model manifest and compile every GLB independently.
+     * A broken model resolves to null so the corresponding creature can use
+     * its procedural fallback without blocking the rest of the game.
+     */
+    async loadCreatureModels(manifestUrl) {
+        this.totalAssets++;
+
+        let manifest;
+        try {
+            const response = await fetch(manifestUrl);
+            if (!response.ok) throw new Error(`HTTP status: ${response.status}`);
+            manifest = await response.json();
+            this.creatureMetadata = Object.fromEntries(
+                (manifest.models || []).map(definition => [definition.id, definition])
+            );
+        } catch (error) {
+            console.error(`AssetManager: Failed to load creature manifest at '${manifestUrl}':`, error);
+            this.creatureMetadata = {};
+            return [];
+        } finally {
+            this.loadedAssets++;
+        }
+
+        return Promise.all((manifest.models || []).map(definition => {
+            const key = `creature:${definition.id}`;
+            return this.loadGLTFModel(key, definition.path, {
+                targetSize: definition.targetSize,
+                preserveAspect: definition.preserveAspect,
+                yawOffset: definition.yawOffset,
+            });
+        }));
+    }
+
+    /**
+     * Load and cache a renderer-native glTF model.
+     */
+    loadGLTFModel(name, src, options) {
+        if (this.models[name]) return Promise.resolve(this.models[name]);
+        if (this.modelPromises[name]) return this.modelPromises[name];
+
+        this.totalAssets++;
+        this.modelPromises[name] = this.gltfIO.read(src)
+            .then(document => ModelAsset.fromDocument(this.gl, document, options))
+            .then(model => {
+                this.models[name] = model;
+                return model;
+            })
+            .catch(error => {
+                console.error(`AssetManager: Failed to load glTF model '${name}' at '${src}':`, error);
+                return null;
+            })
+            .finally(() => {
+                this.loadedAssets++;
+                delete this.modelPromises[name];
+            });
+
+        return this.modelPromises[name];
+    }
+
     /**
      * Parse cached raw text assets of unique OBJ models into WebGL meshes
      * @param {string[]} uniqueObjPaths List of unique paths to OBJ files
@@ -196,8 +265,11 @@ export class AssetManager {
             this.models[key].delete();
         }
         this.models = {};
+        this.modelPromises = {};
         
         this.texts = {};
+        this.environmentMetadata = {};
+        this.creatureMetadata = {};
         this.totalAssets = 0;
         this.loadedAssets = 0;
     }

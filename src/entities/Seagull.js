@@ -7,7 +7,7 @@ import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
  * Circles above the island, flees when approached, drops raw seagull meat.
  */
 export class Seagull extends Creature {
-    constructor(gl, position) {
+    constructor(gl, position, modelAsset = null) {
         super({
             maxHealth: CREATURE_BALANCE.seagull.maxHealth,
             baseSpeed: CREATURE_BALANCE.seagull.baseSpeed,
@@ -16,7 +16,8 @@ export class Seagull extends Creature {
             attackDamage: 0,
             attackCooldown: 0,
             color: [0.9, 0.9, 0.85],
-            meshScale: [0.2, 0.06, 0.15],
+            meshScale: [0.2, 0.154, 0.172],
+            modelAsset,
             bobAmplitude: 0.1,
             bobSpeed: 2.0,
             fleeThreshold: null,

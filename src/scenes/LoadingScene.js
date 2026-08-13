@@ -53,6 +53,7 @@ export class LoadingScene extends Scene {
 
         // Queue environment metadata loading
         const metadataPromise = this.engine.assets.loadEnvironmentMetadata('assets/environment/manifest.json');
+        const creatureModelsPromise = this.engine.assets.loadCreatureModels('assets/creatures/manifest.json');
 
         // 2. Queue simulated heavy loads (2s delay) to showcase the UI animation smoothly
         this.loadingDelay = new Promise(resolve => setTimeout(resolve, 2000));
@@ -70,7 +71,7 @@ export class LoadingScene extends Scene {
         this._stageTimer = 0;
 
         // Wait for all assets to resolve
-        Promise.all([this.loadingDelay, metadataPromise])
+        Promise.all([this.loadingDelay, metadataPromise, creatureModelsPromise])
             .then(async () => {
                 const seed = new URLSearchParams(window.location.search).get('seed') || Math.floor(Math.random() * 1000000).toString();
                 this.engine.worldSeed = seed;

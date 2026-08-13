@@ -18,7 +18,7 @@ const FALLBACK_OUTER_RADIUS = 46.0;
  * Patrols deep water, attacks if the player is swimming, drops raw fish.
  */
 export class Shark extends Creature {
-    constructor(gl, position) {
+    constructor(gl, position, modelAsset = null) {
         const balance = CREATURE_BALANCE.shark;
         super({
             maxHealth: balance.maxHealth,
@@ -28,7 +28,8 @@ export class Shark extends Creature {
             attackDamage: balance.attackDamage,
             attackCooldown: balance.attackCooldown,
             color: [0.35, 0.38, 0.4],
-            meshScale: [0.5, 0.12, 0.2],
+            meshScale: [0.184, 0.164, 0.5],
+            modelAsset,
             bobAmplitude: 0.05,
             bobSpeed: 2.0,
             fleeThreshold: balance.fleeThreshold,

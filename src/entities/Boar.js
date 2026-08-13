@@ -7,7 +7,7 @@ import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
  * Approaches the player, then uses a telegraphed, dodgeable charge.
  */
 export class Boar extends Creature {
-    constructor(gl, position) {
+    constructor(gl, position, modelAsset = null) {
         const balance = CREATURE_BALANCE.boar;
         super({
             maxHealth: balance.maxHealth,
@@ -17,7 +17,8 @@ export class Boar extends Creature {
             attackDamage: balance.attackDamage,
             attackCooldown: balance.attackCooldown,
             color: [0.35, 0.2, 0.1],
-            meshScale: [0.35, 0.25, 0.4],
+            meshScale: [0.433, 0.7, 1.247],
+            modelAsset,
             bobAmplitude: 0.04,
             bobSpeed: 4.0,
             fleeThreshold: balance.fleeThreshold,
@@ -48,6 +49,8 @@ export class Boar extends Creature {
 
         this._buildMesh();
         this.collider.radius = 0.35;
+        // Keep the original gameplay collision volume; this change is visual only.
+        this.collider.height = 0.25;
         this.updateModelMatrix();
     }
 

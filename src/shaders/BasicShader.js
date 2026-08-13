@@ -47,6 +47,11 @@ export const BasicShader = {
         uniform vec3 uAmbientColor;
         uniform float uAmbientIntensity;
 
+        // Optional glTF base-color texture. Procedural meshes leave this off
+        // and continue using vertex colors only.
+        uniform sampler2D uBaseColorTexture;
+        uniform int uUseBaseColorTexture;
+
         // Used only while drawing the local first-person character. It removes
         // the head above the neck so the camera can sit at eye level.
         uniform float uFirstPersonHeadCutoff;
@@ -76,10 +81,15 @@ export const BasicShader = {
             float spec = pow(max(dot(N, H), 0.0), 32.0); // Shininess factor
             vec3 specular = spec * uLightColor * uLightIntensity * 0.25; // 0.25 specular factor
             
-            // Combine lighting contributions with vertex colors
-            vec3 finalColor = (ambient + diffuse + specular) * vColor.rgb;
+            vec4 surfaceColor = vColor;
+            if (uUseBaseColorTexture == 1) {
+                surfaceColor *= texture(uBaseColorTexture, vTexCoord);
+            }
+
+            // Combine lighting contributions with vertex/material colors and texture
+            vec3 finalColor = (ambient + diffuse + specular) * surfaceColor.rgb;
             
-            fragColor = vec4(finalColor, vColor.a);
+            fragColor = vec4(finalColor, surfaceColor.a);
         }
     `
 };

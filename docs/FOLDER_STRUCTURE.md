@@ -4,10 +4,12 @@ Here is the actual folder structure of the **Island Survival: Escape** project:
 
 ```text
 island-survival/
+├── assets/
+│   └── creatures/                  # Shared GLB wildlife models and manifest
 ├── docs/                           # Design documents and development guidelines
 ├── src/                            # Application source code
 │   ├── core/                       # Core engine module managers
-│   │   ├── AssetManager.js         # Asynchronous asset loading (Textures, Text)
+│   │   ├── AssetManager.js         # Asynchronous OBJ/GLB/texture loading and caching
 │   │   ├── AudioManager.js         # Procedural audio facade (SFX/Ambient/Music)
 │   │   ├── Engine.js               # WebGL initialization, loop & scene orchestration
 │   │   ├── GameLoop.js             # Logic updates and rendering tick loop
@@ -37,6 +39,7 @@ island-survival/
 │   │   ├── Frustum.js              # v1.0 — clip-plane extraction & sphere culling
 │   │   ├── Light.js                # Ambient & directional light management (Day/Night)
 │   │   ├── Mesh.js                 # Geometry buffers wrapper (Vertex, Index, UV, Normal)
+│   │   ├── ModelAsset.js           # Shared multi-primitive GLB renderer asset
 │   │   ├── PostProcessing.js       # v1.0 — HDR target, bloom chain, composite pass
 │   │   ├── ShaderProgram.js        # Compiles and links Vertex & Fragment Shaders
 │   │   └── Texture.js              # WebGL Texture initialization and properties setup

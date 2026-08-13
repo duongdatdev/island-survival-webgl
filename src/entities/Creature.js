@@ -54,7 +54,13 @@ export class Creature extends Entity {
         // Visual
         this.color = opts.color ?? [0.5, 0.5, 0.5];
         this.meshScale = opts.meshScale ?? [0.3, 0.3, 0.3];
-        Vec3.set(this.scale, this.meshScale[0], this.meshScale[1], this.meshScale[2]);
+        this.modelAsset = opts.modelAsset ?? null;
+        if (this.modelAsset) {
+            // ModelAsset already fits the source model into meshScale dimensions.
+            Vec3.set(this.scale, 1, 1, 1);
+        } else {
+            Vec3.set(this.scale, this.meshScale[0], this.meshScale[1], this.meshScale[2]);
+        }
 
         // Death state
         this.deadTimer = 0;
@@ -86,7 +92,7 @@ export class Creature extends Entity {
      * Build procedural colored cube mesh
      */
     _buildMesh() {
-        if (!this.gl) return;
+        if (!this.gl || this.modelAsset) return;
         const [r, g, b] = this.color;
         this.mesh = new Mesh(this.gl, this._createCubeData(r, g, b));
     }
@@ -367,6 +373,10 @@ export class Creature extends Entity {
      */
     draw(shaderProgram, drawMode) {
         if (this.state === CreatureState.DEAD && this.deadTimer > this.deadDuration * 0.5) return;
+        if (this.modelAsset) {
+            this.modelAsset.draw(shaderProgram, this.modelMatrix, drawMode);
+            return;
+        }
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
         this.mesh.draw(drawMode);
     }
@@ -379,6 +389,8 @@ export class Creature extends Entity {
             this.mesh.delete();
             this.mesh = null;
         }
+        // Shared ModelAssets are owned and disposed by AssetManager.
+        this.modelAsset = null;
     }
 
     /**
