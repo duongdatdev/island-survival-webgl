@@ -64,6 +64,9 @@ export class MenuUI {
     }
 
     closeAll() {
+        if (this.engine.input) {
+            this.engine.input.cancelListeningForRebind();
+        }
         this._hide(this._settingsEl);
         this._hide(this._achievementsEl);
         this._hide(this._creditsEl);
@@ -158,6 +161,57 @@ export class MenuUI {
             this._on(resetBtn, 'click', () => {
                 this.settings.resetToDefaults();
                 this.engine.audio.applySettings(this.settings);
+                if (this.engine.input) {
+                    this.engine.input.setBindings(this.settings.get('keyBindings'));
+                }
+                this.syncSettingsUI();
+                this.engine.audio.playClick();
+            });
+        }
+
+        // Key Rebinding Buttons
+        const keybindButtons = document.querySelectorAll('.keybind-btn');
+        keybindButtons.forEach(btn => {
+            this._on(btn, 'click', () => {
+                const action = btn.getAttribute('data-action');
+                const slot = parseInt(btn.getAttribute('data-slot') || '0', 10);
+                if (!action || !this.engine.input) return;
+
+                // Reset all other listening buttons
+                keybindButtons.forEach(b => {
+                    b.classList.remove('listening');
+                    const a = b.getAttribute('data-action');
+                    const s = parseInt(b.getAttribute('data-slot') || '0', 10);
+                    b.textContent = this.engine.input.getBindingDisplayName(a, s);
+                });
+
+                btn.classList.add('listening');
+                btn.textContent = '... Bấm phím ...';
+
+                this.engine.input.startListeningForRebind((keyCode) => {
+                    btn.classList.remove('listening');
+                    if (keyCode) {
+                        const bindings = JSON.parse(JSON.stringify(this.settings.get('keyBindings') || {}));
+                        if (!bindings[action]) bindings[action] = [];
+                        if (!Array.isArray(bindings[action])) bindings[action] = [bindings[action]];
+                        bindings[action][slot] = keyCode;
+
+                        this.settings.set('keyBindings', bindings);
+                        this.engine.input.setBindings(bindings);
+                        this.engine.audio.playClick();
+                    }
+                    this.syncSettingsUI();
+                });
+            });
+        });
+
+        const keybindResetBtn = document.getElementById('keybind-reset-btn');
+        if (keybindResetBtn) {
+            this._on(keybindResetBtn, 'click', () => {
+                this.settings.resetKeyBindings();
+                if (this.engine.input) {
+                    this.engine.input.setBindings(this.settings.get('keyBindings'));
+                }
                 this.syncSettingsUI();
                 this.engine.audio.playClick();
             });
@@ -239,6 +293,17 @@ export class MenuUI {
         this._setToggle('set-vignette', s.get('vignette'));
         this._setToggle('set-culling', s.get('frustumCulling'));
         this._setToggle('set-show-fps', s.get('showFps'));
+
+        // Sync keybinding buttons
+        const keybindButtons = document.querySelectorAll('.keybind-btn');
+        keybindButtons.forEach(btn => {
+            btn.classList.remove('listening');
+            const action = btn.getAttribute('data-action');
+            const slot = parseInt(btn.getAttribute('data-slot') || '0', 10);
+            if (action && this.engine.input) {
+                btn.textContent = this.engine.input.getBindingDisplayName(action, slot);
+            }
+        });
 
         this._syncQualityButtons();
     }

@@ -12,6 +12,7 @@ import { AXE_SWING_DURATION } from './CombatConfig.js';
 // is compiled by LoadingScene before gameplay starts; renderers still keep a
 // procedural fallback for failed or incomplete asset loads.
 export const WOOD_LOG_MODEL_ID = 'survival:wood_log';
+export const CHEST_MODEL_ID = 'environment:chest';
 
 export const ResourceType = {
     WOOD:         'wood',
@@ -313,7 +314,9 @@ export const ResourceDatabase = {
         nameEn: 'Treasure Chest',
         icon: '📦',
         color: [0.8, 0.5, 0.2],
-        meshScale: [0.6, 0.5, 0.5],
+        meshScale: [0.75, 0.55, 0.55],
+        modelId: CHEST_MODEL_ID,
+        modelScale: 1.0,
         pickupRadius: 2.8,
         stackSize: 1,
         spawnWeight: 0,

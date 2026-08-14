@@ -253,7 +253,7 @@
                 </div>
 
                 <div class="settings-section tab-section" data-tab="controls">
-                    <div class="settings-section-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-mouse"/></svg> ĐIỀU KHIỂN</div>
+                    <div class="settings-section-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-mouse"/></svg> ĐIỀU KHIỂN CHUỘT &amp; GÓC NHÌN</div>
                     <div class="setting-row">
                         <label for="set-sensitivity">Độ nhạy chuột</label>
                         <input type="range" id="set-sensitivity" min="20" max="300" step="5">
@@ -268,6 +268,96 @@
                         <label for="set-fov">Góc nhìn (FOV)</label>
                         <input type="range" id="set-fov" min="40" max="90" step="1">
                         <span id="val-fov" class="setting-value">70°</span>
+                    </div>
+
+                    <div class="settings-section-title" style="margin-top: 18px;"><svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg> TÙY CHỈNH PHÍM BÀN PHÍM</div>
+                    <p class="keybind-tip">Nhấp vào nút phím để đổi phím mới (nhấn <kbd class="kbd">Esc</kbd> để hủy).</p>
+
+                    <div class="keybind-group-header">Di chuyển</div>
+                    <div class="keybind-grid">
+                        <div class="keybind-row">
+                            <span class="keybind-label">Tiến lên</span>
+                            <button class="keybind-btn" data-action="moveForward" data-slot="0">W</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Lùi lại</span>
+                            <button class="keybind-btn" data-action="moveBackward" data-slot="0">S</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Sang trái</span>
+                            <button class="keybind-btn" data-action="moveLeft" data-slot="0">A</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Sang phải</span>
+                            <button class="keybind-btn" data-action="moveRight" data-slot="0">D</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Chạy nhanh (Sprint)</span>
+                            <button class="keybind-btn" data-action="sprint" data-slot="0">Shift Trái</button>
+                        </div>
+                    </div>
+
+                    <div class="keybind-group-header">Tương tác &amp; Sinh tồn</div>
+                    <div class="keybind-grid">
+                        <div class="keybind-row">
+                            <span class="keybind-label">Tương tác / Nhặt đồ</span>
+                            <button class="keybind-btn" data-action="interact" data-slot="0">E</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Túi đồ &amp; Chế tạo</span>
+                            <button class="keybind-btn" data-action="inventory" data-slot="0">C</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Dùng / Đặt vật phẩm</span>
+                            <button class="keybind-btn" data-action="useItem" data-slot="0">Q</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Bật/Tắt Debug Panel</span>
+                            <button class="keybind-btn" data-action="toggleDebug" data-slot="0">F3</button>
+                        </div>
+                    </div>
+
+                    <div class="keybind-group-header">Chọn nhanh Hotbar (1–8)</div>
+                    <div class="keybind-grid hotbar-grid">
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 1</span>
+                            <button class="keybind-btn" data-action="hotbar1" data-slot="0">1</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 2</span>
+                            <button class="keybind-btn" data-action="hotbar2" data-slot="0">2</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 3</span>
+                            <button class="keybind-btn" data-action="hotbar3" data-slot="0">3</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 4</span>
+                            <button class="keybind-btn" data-action="hotbar4" data-slot="0">4</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 5</span>
+                            <button class="keybind-btn" data-action="hotbar5" data-slot="0">5</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 6</span>
+                            <button class="keybind-btn" data-action="hotbar6" data-slot="0">6</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 7</span>
+                            <button class="keybind-btn" data-action="hotbar7" data-slot="0">7</button>
+                        </div>
+                        <div class="keybind-row">
+                            <span class="keybind-label">Ô Hotbar 8</span>
+                            <button class="keybind-btn" data-action="hotbar8" data-slot="0">8</button>
+                        </div>
+                    </div>
+
+                    <div class="keybind-actions" style="margin-top: 14px; text-align: right;">
+                        <button id="keybind-reset-btn" class="menu-btn secondary small" type="button">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#i-undo"/></svg>
+                            <span class="btn-text">KHÔI PHỤC PHÍM MẶC ĐỊNH</span>
+                        </button>
                     </div>
                 </div>
 

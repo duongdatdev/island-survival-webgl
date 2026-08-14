@@ -1012,15 +1012,15 @@ export class GameScene extends Scene {
             }
         }
 
-        // Walking is free; holding Shift spends stamina for a short sprint.
+        // Walking is free; holding Sprint spends stamina for a short sprint.
         // Read current input rather than last frame's currentSpeed so stamina
         // and movement begin/end together.
         const input = this.engine.input;
-        const hasMovementInput = input.isKeyDown('KeyW') || input.isKeyDown('ArrowUp')
-            || input.isKeyDown('KeyS') || input.isKeyDown('ArrowDown')
-            || input.isKeyDown('KeyA') || input.isKeyDown('ArrowLeft')
-            || input.isKeyDown('KeyD') || input.isKeyDown('ArrowRight');
-        const sprintHeld = input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight');
+        const hasMovementInput = input.isActionDown('moveForward')
+            || input.isActionDown('moveBackward')
+            || input.isActionDown('moveLeft')
+            || input.isActionDown('moveRight');
+        const sprintHeld = input.isActionDown('sprint') || input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight');
         const isSprinting = !this.isFishing && hasMovementInput && sprintHeld
             && this.vitals.canSprint();
         this.vitals.update(deltaTime, isSprinting);
@@ -1060,7 +1060,7 @@ export class GameScene extends Scene {
 
         // Update player movements using keyboards and camera reference
         const movementInput = this.isFishing 
-            ? { isKeyDown: () => false, isKeyPressed: () => false, keys: {} } 
+            ? { isKeyDown: () => false, isKeyPressed: () => false, isActionDown: () => false, isActionPressed: () => false, keys: {} } 
             : this.engine.input;
         this.player.update(deltaTime, movementInput, this.camera, this.terrain);
 
@@ -1078,15 +1078,13 @@ export class GameScene extends Scene {
             this._footstepTimer += deltaTime;
             const running = this.player.currentSpeed > PLAYER_BALANCE.walkSpeed + 0.1;
             if (this._footstepTimer >= (running ? this._footstepInterval * 0.7 : this._footstepInterval)) {
-                this._footstepTimer = 0;
+                this._footstepTimer = 0.0;
                 const px = this.player.position[0];
                 const pz = this.player.position[2];
-                const h = this.terrain.getHeight(px, pz);
-                const biome = this.world.biomeGenerator ? this.world.biomeGenerator.getBiome(px, pz, h) : null;
-                this.engine.audio.playFootstep(
-                    biomeToSurface(biome),
-                    running
-                );
+                const h = this.terrain ? this.terrain.getHeight(px, pz) : 0;
+                const biomeGen = this.world ? this.world.biomeGenerator : null;
+                const biome = biomeGen ? biomeGen.getBiome(px, pz, h) : null;
+                this.engine.audio.playFootstep(biomeToSurface(biome), running);
 
                 // Dust particles at player feet
                 const dustPos = [
@@ -1171,22 +1169,27 @@ export class GameScene extends Scene {
             this._handleCombatInput();
         }
 
-        // Toggle Inventory & Crafting Menu via 'C' or 'Tab' key
-        if (this.engine.input.isKeyPressed('KeyC') || this.engine.input.isKeyPressed('Tab')) {
+        // Toggle Inventory & Crafting Menu via 'inventory' action ('C' or 'Tab')
+        if (this.engine.input.isKeyPressed('inventory')) {
             this._toggleInventoryMenu();
         }
 
-        // Consume or place item via 'Q' key
-        if (this.engine.input.isKeyPressed('KeyQ')) {
+        // Consume or place item via 'useItem' action ('Q')
+        if (this.engine.input.isKeyPressed('useItem')) {
             this._useActiveItem();
         }
 
-        // Hotbar selection keys 1 to 8
+        // Hotbar selection keys 1 to 8 (actions 'hotbar1'..'hotbar8', 'Digit1'..'Digit8', 'Numpad1'..'Numpad8')
         for (let i = 0; i < 8; i++) {
-            if (this.engine.input.isKeyPressed('Digit' + (i + 1))) {
-                this.inventory.selectedHotbarIndex = i;
-                this.engine.audio.playClick();
-                this._updateGridInventory();
+            const action = 'hotbar' + (i + 1);
+            if (this.engine.input.isKeyPressed(action) ||
+                this.engine.input.isKeyPressed('Digit' + (i + 1)) ||
+                this.engine.input.isKeyPressed('Numpad' + (i + 1))) {
+                if (this.inventory.selectedHotbarIndex !== i) {
+                    this.inventory.selectedHotbarIndex = i;
+                    this.engine.audio.playClick();
+                    this._updateGridInventory();
+                }
             }
         }
 
@@ -1242,6 +1245,7 @@ export class GameScene extends Scene {
         this._updateInvViewProj();
 
         // ---- Campfire proximity (v0.2) ----
+        const interactKey = this.engine.input ? this.engine.input.getBindingDisplayName('interact') : 'E';
         let showCampfirePrompt = false;
         let campfirePromptText = '';
         if (this.campfire.isPlayerNear(this.player.position)) {
@@ -1249,14 +1253,14 @@ export class GameScene extends Scene {
                 || this.inventory.hasItem('raw_crab_meat') || this.inventory.hasItem('raw_seagull_meat')
                 || this.inventory.hasItem('raw_boar_meat');
             if (hasRawFood) {
-                campfirePromptText = '<span class="hint-key">E</span> Nấu thức ăn 🔥';
+                campfirePromptText = `<span class="hint-key">${interactKey}</span> Nấu thức ăn 🔥`;
                 showCampfirePrompt = true;
             }
         }
 
-        // Handle campfire cooking via 'E' key (v0.5: also cook new meat types)
-        if (showCampfirePrompt && this.engine.input.isKeyPressed('KeyE')) {
-            this.engine.input.keys['KeyE'] = false;
+        // Handle campfire cooking via 'interact' action (v0.5: also cook new meat types)
+        if (showCampfirePrompt && this.engine.input.isKeyPressed('interact')) {
+            this.engine.input.consumeAction('interact');
             const rawMeats = ['raw_fish', 'raw_crab_meat', 'raw_seagull_meat', 'raw_boar_meat', 'coconut'];
             let cooked = false;
             for (const meat of rawMeats) {
@@ -1285,7 +1289,7 @@ export class GameScene extends Scene {
         let waterPromptText = '';
         if (this.waterCollector.isPlayerNear(this.player.position)) {
             if (this.waterCollector.waterStored > 0) {
-                waterPromptText = `<span class="hint-key">E</span> Lấy nước (${this.waterCollector.waterStored}/${this.waterCollector.maxWater}) 💧`;
+                waterPromptText = `<span class="hint-key">${interactKey}</span> Lấy nước (${this.waterCollector.waterStored}/${this.waterCollector.maxWater}) 💧`;
                 showWaterPrompt = true;
             } else {
                 waterPromptText = 'Bẫy nước đang hứng... (0/' + this.waterCollector.maxWater + ') 💧';
@@ -1293,9 +1297,9 @@ export class GameScene extends Scene {
             }
         }
 
-        // Handle water collection via 'E' key
-        if (showWaterPrompt && this.waterCollector.waterStored > 0 && this.engine.input.isKeyPressed('KeyE')) {
-            this.engine.input.keys['KeyE'] = false;
+        // Handle water collection via 'interact' action
+        if (showWaterPrompt && this.waterCollector.waterStored > 0 && this.engine.input.isKeyPressed('interact')) {
+            this.engine.input.consumeAction('interact');
             if (this.waterCollector.collectWater()) {
                 this.inventory.addItem('fresh_water', 1);
                 this._showNotification('💧 Đã lấy: Nước Ngọt!');
@@ -1314,34 +1318,34 @@ export class GameScene extends Scene {
             if (!this.raftAssembly.framePlaced) {
                 targetModule = 'raft_frame';
                 hasModule = this.inventory.hasItem('raft_frame');
-                raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Khung Bè 🧱' : 'Cần chế tạo Khung Bè 🧱 để lắp ráp';
+                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Lắp Khung Bè 🧱` : 'Cần chế tạo Khung Bè 🧱 để lắp ráp';
                 showRaftPrompt = true;
             } else if (!this.raftAssembly.floatsPlaced) {
                 targetModule = 'barrel_floats';
                 hasModule = this.inventory.hasItem('barrel_floats');
-                raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Phao Thùng 🛢️' : 'Cần chế tạo Phao Thùng 🛢️ để lắp ráp';
+                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Lắp Phao Thùng 🛢️` : 'Cần chế tạo Phao Thùng 🛢️ để lắp ráp';
                 showRaftPrompt = true;
             } else if (!this.raftAssembly.paddlePlaced) {
                 targetModule = 'paddle';
                 hasModule = this.inventory.hasItem('paddle');
-                raftPromptText = hasModule ? '<span class="hint-key">E</span> Lắp Mái Chèo 🛶' : 'Cần chế tạo Mái Chèo 🛶 để lắp ráp';
+                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Lắp Mái Chèo 🛶` : 'Cần chế tạo Mái Chèo 🛶 để lắp ráp';
                 showRaftPrompt = true;
             } else if (!this.raftAssembly.sailPlaced) {
                 targetModule = 'raft_sail';
                 hasModule = this.inventory.hasItem('raft_sail');
-                raftPromptText = hasModule ? '<span class="hint-key">E</span> Nâng Cấp: Lắp Cánh Buồm ⛵' : 'Chế tạo Cánh Buồm ⛵ giúp di chuyển nhanh hơn';
+                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Nâng Cấp: Lắp Cánh Buồm ⛵` : 'Chế tạo Cánh Buồm ⛵ giúp di chuyển nhanh hơn';
                 showRaftPrompt = true;
             } else if (!this.raftAssembly.motorPlaced) {
                 targetModule = 'raft_motor';
                 hasModule = this.inventory.hasItem('raft_motor');
-                raftPromptText = hasModule ? '<span class="hint-key">E</span> Nâng Cấp: Lắp Động Cơ Bè 🚀' : 'Chế tạo Động Cơ Bè 🚀 để đạt tốc độ tối đa!';
+                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Nâng Cấp: Lắp Động Cơ Bè 🚀` : 'Chế tạo Động Cơ Bè 🚀 để đạt tốc độ tối đa!';
                 showRaftPrompt = true;
             }
         }
 
-        // Intercept KeyE to place modules on the raft assembly
-        if (showRaftPrompt && hasModule && this.engine.input.isKeyPressed('KeyE')) {
-            this.engine.input.keys['KeyE'] = false; // consume key
+        // Intercept interact action to place modules on the raft assembly
+        if (showRaftPrompt && hasModule && this.engine.input.isKeyPressed('interact')) {
+            this.engine.input.consumeAction('interact');
             
             if (targetModule === 'raft_frame') {
                 this.inventory.removeItem('raft_frame', 1);
@@ -1377,8 +1381,8 @@ export class GameScene extends Scene {
         let showWaterfallPrompt = false;
         if (this.waterfall && this.waterfall.isPlayerInPond(this.player.position)) {
             showWaterfallPrompt = true;
-            if (this.engine.input.isKeyPressed('KeyE')) {
-                this.engine.input.keys['KeyE'] = false; // Consume key
+            if (this.engine.input.isKeyPressed('interact')) {
+                this.engine.input.consumeAction('interact');
                 this.vitals.drink(100); // Fully restore thirst
                 this._showNotification('💧 Đã uống nước thác! Khôi phục hết Thối Khát.');
                 this.engine.audio.playDrink();
@@ -1400,8 +1404,8 @@ export class GameScene extends Scene {
 
         if (fishingTerrainHeight <= 0.15 && hasFishingRod && !this.isFishing) {
             showFishingPrompt = true;
-            if (this.engine.input.isKeyPressed('KeyE')) {
-                this.engine.input.keys['KeyE'] = false; // Consume key
+            if (this.engine.input.isKeyPressed('interact')) {
+                this.engine.input.consumeAction('interact');
                 this.isFishing = true;
                 this.fishingTimer = 4.0; // 4 seconds channel
                 this.engine.audio.playSplash(this.player.position);
@@ -1412,8 +1416,8 @@ export class GameScene extends Scene {
         let showChestPrompt = false;
         if (this.resourceManager.nearestPickable && this.resourceManager.nearestPickable.resourceId === 'treasure_chest') {
             showChestPrompt = true;
-            if (this.engine.input.isKeyPressed('KeyE')) {
-                this.engine.input.keys['KeyE'] = false; // Consume key
+            if (this.engine.input.isKeyPressed('interact')) {
+                this.engine.input.consumeAction('interact');
                 this._openTreasureChest(this.resourceManager.nearestPickable);
             }
         }
@@ -1445,13 +1449,13 @@ export class GameScene extends Scene {
         // Override pickup hint text — priority: waterfall > fishing > chest > campfire > water collector > raft > default
         const hintEl = this._domCache.pickupHint;
         if (showWaterfallPrompt && hintEl) {
-            hintEl.innerHTML = `<span class="hint-key">E</span> Uống nước thác ngọt mát 💧`;
+            hintEl.innerHTML = `<span class="hint-key">${interactKey}</span> Uống nước thác ngọt mát 💧`;
             hintEl.classList.remove('hidden');
         } else if (showFishingPrompt && hintEl) {
-            hintEl.innerHTML = `<span class="hint-key">E</span> Thả cần câu cá 🎣`;
+            hintEl.innerHTML = `<span class="hint-key">${interactKey}</span> Thả cần câu cá 🎣`;
             hintEl.classList.remove('hidden');
         } else if (showChestPrompt && hintEl) {
-            hintEl.innerHTML = `<span class="hint-key">E</span> Mở Rương Kho Báu 📦`;
+            hintEl.innerHTML = `<span class="hint-key">${interactKey}</span> Mở Rương Kho Báu 📦`;
             hintEl.classList.remove('hidden');
         } else if (showCampfirePrompt && hintEl) {
             hintEl.innerHTML = campfirePromptText;

@@ -164,10 +164,10 @@ export class ResourceManager {
         }
 
         // Show/hide pickup hint in the UI
-        this._updatePickupHint(this.nearestPickable);
+        this._updatePickupHint(this.nearestPickable, inputManager);
 
-        // Handle pickup on E key press
-        if (this.nearestPickable && inputManager && inputManager.isKeyPressed('KeyE')) {
+        // Handle pickup on interact action press
+        if (this.nearestPickable && inputManager && (inputManager.isActionPressed('interact') || inputManager.isKeyPressed('KeyE'))) {
             this._pickupResource(this.nearestPickable, inventory);
         }
 
@@ -208,13 +208,14 @@ export class ResourceManager {
     /**
      * Show pickup hint near the closest resource
      */
-    _updatePickupHint(nearestResource) {
+    _updatePickupHint(nearestResource, inputManager) {
         const hintEl = document.getElementById('pickup-hint');
         if (!hintEl) return;
 
         if (nearestResource) {
             const def = nearestResource.resourceDef;
-            hintEl.innerHTML = `<span class="hint-key">E</span> Nhặt ${def.icon} ${def.name}`;
+            const keyName = inputManager && inputManager.getBindingDisplayName ? inputManager.getBindingDisplayName('interact') : 'E';
+            hintEl.innerHTML = `<span class="hint-key">${keyName}</span> Nhặt ${def.icon} ${def.name}`;
             hintEl.classList.remove('hidden');
         } else {
             hintEl.classList.add('hidden');

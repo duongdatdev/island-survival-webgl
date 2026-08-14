@@ -119,15 +119,19 @@ export class WorldResource extends Entity {
     draw(shaderProgram, drawMode) {
         if (this.isCollected) return;
 
-        shaderProgram.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
-        this.mesh.draw(drawMode);
+        if (this.mesh && this.mesh.drawables) {
+            this.mesh.draw(shaderProgram, this.modelMatrix, drawMode);
+        } else if (this.mesh) {
+            shaderProgram.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
+            this.mesh.draw(drawMode);
+        }
     }
 
     /**
      * Free GPU resources
      */
     delete() {
-        // Detailed OBJ meshes are shared and disposed by AssetManager.
+        // Detailed OBJ meshes and glTF ModelAssets are shared and disposed by AssetManager.
         if (this.mesh && !this.useModel) {
             this.mesh.delete();
         }

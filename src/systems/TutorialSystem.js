@@ -131,12 +131,19 @@ export class TutorialSystem {
 
         // Track player actions for triggers
         if (inputManager) {
-            // Mirror Player.update() — the arrow keys move too, so pressing
-            // them must satisfy the movement step.
-            const moveKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD',
-                'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
-            if (moveKeys.some(k => inputManager.isKeyDown(k))) {
+            if (inputManager.isActionDown && (
+                inputManager.isActionDown('moveForward') ||
+                inputManager.isActionDown('moveBackward') ||
+                inputManager.isActionDown('moveLeft') ||
+                inputManager.isActionDown('moveRight')
+            )) {
                 this._playerHasMoved = true;
+            } else {
+                const moveKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD',
+                    'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
+                if (moveKeys.some(k => inputManager.isKeyDown(k))) {
+                    this._playerHasMoved = true;
+                }
             }
             if (inputManager.mouse.deltaX !== 0 || inputManager.mouse.deltaY !== 0) {
                 if (inputManager.mouse.buttons[0] || inputManager.mouse.isLocked) {

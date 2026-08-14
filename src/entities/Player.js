@@ -51,11 +51,11 @@ export class Player extends Entity {
         let moveX = 0;
         let moveZ = 0;
 
-        // Process WASD keyboard commands and Arrow keys
-        if (inputManager.isKeyDown('KeyW') || inputManager.isKeyDown('ArrowUp')) moveZ += 1;
-        if (inputManager.isKeyDown('KeyS') || inputManager.isKeyDown('ArrowDown')) moveZ -= 1;
-        if (inputManager.isKeyDown('KeyA') || inputManager.isKeyDown('ArrowLeft')) moveX -= 1;
-        if (inputManager.isKeyDown('KeyD') || inputManager.isKeyDown('ArrowRight')) moveX += 1;
+        // Process movement keyboard commands via InputManager actions
+        if (inputManager.isKeyDown('moveForward')) moveZ += 1;
+        if (inputManager.isKeyDown('moveBackward')) moveZ -= 1;
+        if (inputManager.isKeyDown('moveLeft')) moveX -= 1;
+        if (inputManager.isKeyDown('moveRight')) moveX += 1;
 
         if (moveX !== 0 || moveZ !== 0) {
             const targetMoveDir = Vec3.create();

@@ -150,13 +150,13 @@ export class DebrisManager {
 
         // If a WorldResource is in pickup range, defer to ResourceManager
         if (resourcePickable) {
-            this._updatePickupHint(null);
+            this._updatePickupHint(null, inputManager);
         } else {
             // Show/hide pickup hint
-            this._updatePickupHint(this.nearestPickable);
+            this._updatePickupHint(this.nearestPickable, inputManager);
 
-            // Handle pickup on E key press
-            if (this.nearestPickable && inputManager && inputManager.isKeyPressed('KeyE')) {
+            // Handle pickup on interact action press
+            if (this.nearestPickable && inputManager && (inputManager.isActionPressed('interact') || inputManager.isKeyPressed('KeyE'))) {
                 this._pickupDebris(this.nearestPickable, inventory);
             }
         }
@@ -213,8 +213,9 @@ export class DebrisManager {
      * (resource hints take priority, debris is secondary).
      * Uses a data attribute to track ownership of the hint element.
      * @param {DriftingDebris|null} nearestDebris
+     * @param {object} [inputManager]
      */
-    _updatePickupHint(nearestDebris) {
+    _updatePickupHint(nearestDebris, inputManager) {
         const hintEl = document.getElementById('pickup-hint');
         if (!hintEl) return;
 
@@ -223,7 +224,8 @@ export class DebrisManager {
             const gives = def.gives;
             const resDef = getResourceDef(gives.resourceId);
             const resourceName = resDef ? resDef.name : gives.resourceId;
-            hintEl.innerHTML = `<span class="hint-key">E</span> Nhặt ${def.icon} ${def.name} <span class="hint-gives">(+${gives.amount} ${resourceName})</span>`;
+            const keyName = inputManager && inputManager.getBindingDisplayName ? inputManager.getBindingDisplayName('interact') : 'E';
+            hintEl.innerHTML = `<span class="hint-key">${keyName}</span> Nhặt ${def.icon} ${def.name} <span class="hint-gives">(+${gives.amount} ${resourceName})</span>`;
             hintEl.classList.remove('hidden');
             hintEl.dataset.hintOwner = 'debris';
         } else if (hintEl.dataset.hintOwner === 'debris') {

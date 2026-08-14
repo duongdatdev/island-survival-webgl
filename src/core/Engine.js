@@ -54,6 +54,9 @@ export class Engine {
         this.settings = new SettingsManager();
         this.achievements = new AchievementSystem();
 
+        // Apply stored key bindings to input manager
+        this.input.setBindings(this.settings.get('keyBindings'));
+
         // Audio levels come straight from the stored settings; the AudioContext
         // itself is created lazily on the first user gesture.
         this.audio.applySettings(this.settings);
@@ -80,6 +83,9 @@ export class Engine {
             if (key === 'renderScale' || key === '*') this._resize(true);
             if (key === 'masterVolume' || key === 'sfxVolume' || key === 'ambientVolume' || key === '*') {
                 this.audio.applySettings(this.settings);
+            }
+            if (key === 'keyBindings' || key === '*') {
+                this.input.setBindings(this.settings.get('keyBindings'));
             }
         });
 

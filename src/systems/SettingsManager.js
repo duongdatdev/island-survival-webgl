@@ -9,6 +9,8 @@
 
 const STORAGE_KEY = 'island_survival_settings_v1';
 
+import { DEFAULT_KEY_BINDINGS } from '../core/InputManager.js';
+
 /**
  * Graphics presets. `custom` is what the quality selector falls back to once
  * the player toggles an individual switch, so their tweak isn't silently
@@ -60,6 +62,7 @@ const DEFAULTS = {
     // Controls
     mouseSensitivity: 1.0,   // multiplier over CameraConfig.Orbit.mouseSensitivity
     invertY: false,
+    keyBindings: DEFAULT_KEY_BINDINGS,
 
     // Graphics
     quality: 'high',
@@ -91,7 +94,7 @@ const CLAMPS = {
 
 export class SettingsManager {
     constructor() {
-        this.values = Object.assign({}, DEFAULTS);
+        this.values = JSON.parse(JSON.stringify(DEFAULTS));
 
         /** @type {Set<Function>} Listeners notified after any change */
         this._listeners = new Set();
@@ -108,7 +111,14 @@ export class SettingsManager {
                 const parsed = JSON.parse(raw);
                 for (const key of Object.keys(DEFAULTS)) {
                     if (parsed[key] !== undefined) {
-                        this.values[key] = parsed[key];
+                        if (key === 'keyBindings' && typeof parsed[key] === 'object') {
+                            this.values[key] = Object.assign(
+                                JSON.parse(JSON.stringify(DEFAULT_KEY_BINDINGS)),
+                                parsed[key]
+                            );
+                        } else {
+                            this.values[key] = parsed[key];
+                        }
                     }
                 }
             }
@@ -187,9 +197,13 @@ export class SettingsManager {
     }
 
     resetToDefaults() {
-        this.values = Object.assign({}, DEFAULTS);
+        this.values = JSON.parse(JSON.stringify(DEFAULTS));
         this.save();
         this._notify('*', null);
+    }
+
+    resetKeyBindings() {
+        this.set('keyBindings', JSON.parse(JSON.stringify(DEFAULT_KEY_BINDINGS)));
     }
 
     // ── Change notification ──────────────────────────────────────
