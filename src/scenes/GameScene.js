@@ -209,18 +209,13 @@ export class GameScene extends Scene {
         // Spawn resources from procedural generator nodes list
         this.resourceManager.worldResources = [];
         for (const node of this.world.resourceNodes) {
-            const def = getResourceDef(node.id);
-            if (def) {
-                const terrainY = this.terrain.getHeight(node.position[0], node.position[2]);
-                const y = terrainY + def.meshScale[1] * 0.5 + 0.3;
-
-                const resource = this.resourceManager.createResourceEntity(
-                    gl,
-                    def,
-                    [node.position[0], y, node.position[2]]
-                );
-                this.resourceManager.worldResources.push(resource);
-            }
+            this.resourceManager.spawnResource(
+                gl,
+                node.id,
+                node.position[0],
+                node.position[2],
+                this.terrain
+            );
         }
 
         // Bind inventory changes to UI updates
@@ -3581,18 +3576,13 @@ export class GameScene extends Scene {
             this.resourceManager.delete();
             this.resourceManager.worldResources = [];
             for (const node of this.world.resourceNodes) {
-                const def = getResourceDef(node.id);
-                if (def) {
-                    const terrainY = this.terrain.getHeight(node.position[0], node.position[2]);
-                    const y = terrainY + def.meshScale[1] * 0.5 + 0.3;
-
-                    const resource = this.resourceManager.createResourceEntity(
-                        gl,
-                        def,
-                        [node.position[0], y, node.position[2]]
-                    );
-                    this.resourceManager.worldResources.push(resource);
-                }
+                this.resourceManager.spawnResource(
+                    gl,
+                    node.id,
+                    node.position[0],
+                    node.position[2],
+                    this.terrain
+                );
             }
         }
 

@@ -6,6 +6,7 @@ import { ResourceDatabase, getResourceDef, getWeightedRandomType, getAllResource
  * water/beach. Kept as a single constant so land checks stay consistent.
  */
 const SHORE_HEIGHT = 0.15;
+const RESOURCE_BOB_AMPLITUDE = 0.15;
 
 /**
  * ResourceManager - Orchestrates world resource spawning, pickup detection, and UI feedback.
@@ -28,10 +29,42 @@ export class ResourceManager {
 
     /** Create a resource entity with its declared model, if that model loaded. */
     createResourceEntity(gl, resourceDef, worldPos) {
-        const model = resourceDef.modelId && this._assetManager
+        const model = this._getResourceModel(resourceDef);
+        return new WorldResource(gl, resourceDef, worldPos, model);
+    }
+
+    /** Resolve the shared model exactly as WorldResource will use it. */
+    _getResourceModel(resourceDef) {
+        return resourceDef.modelId && this._assetManager
             ? this._assetManager.getModel(resourceDef.modelId)
             : null;
-        return new WorldResource(gl, resourceDef, worldPos, model);
+    }
+
+    /**
+     * Return the entity origin required to keep a resource resting on a surface.
+     * OBJ pickups are normalized with their base at y=0, whereas glTF ModelAssets
+     * are normalized about their center. Procedural fallback meshes are centered
+     * at the origin. Sampling the loaded model avoids applying fallback-box
+     * dimensions to a model that has a different local origin.
+     */
+    getGroundedSpawnY(resourceDef, surfaceY) {
+        const model = this._getResourceModel(resourceDef);
+        const declaredScale = resourceDef.modelScale ?? 1;
+        const scaleY = Array.isArray(declaredScale) ? declaredScale[1] : declaredScale;
+        let baseOffset = resourceDef.meshScale[1] * 0.5;
+
+        if (model && Array.isArray(model.targetSize)) {
+            // ModelAsset centers glTF geometry around its entity origin.
+            baseOffset = model.targetSize[1] * scaleY * 0.5;
+        } else if (model && model.bounds && model.bounds.min) {
+            // Survival Pack OBJ models are normalized with their base at y=0.
+            baseOffset = -model.bounds.min[1] * scaleY;
+        }
+
+        // The resource animation moves down by this amount at its lowest point.
+        // Adding it here keeps that low point flush with the terrain instead of
+        // letting the model clip through the ground.
+        return surfaceY + baseOffset + RESOURCE_BOB_AMPLITUDE;
     }
 
     /**
@@ -65,8 +98,7 @@ export class ResourceManager {
             y = SHORE_HEIGHT; // Float the drop at the surface so it stays pickable
         }
 
-        // Offset Y so the resource floats slightly above ground
-        y += def.meshScale[1] * 0.5 + 0.3;
+        y = this.getGroundedSpawnY(def, y);
 
         const resource = this.createResourceEntity(gl, def, [x, y, z]);
         this.worldResources.push(resource);
