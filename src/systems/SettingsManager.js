@@ -1,21 +1,8 @@
-/**
- * SettingsManager (v1.0) — persistent user preferences.
- *
- * Everything the settings menu can change lives here so gameplay code reads a
- * single source of truth instead of poking at localStorage. Values are clamped
- * on load, so a hand-edited or stale save can never push the renderer into an
- * invalid state.
- */
 
 const STORAGE_KEY = 'island_survival_settings_v1';
 
 import { DEFAULT_KEY_BINDINGS } from '../core/InputManager.js';
 
-/**
- * Graphics presets. `custom` is what the quality selector falls back to once
- * the player toggles an individual switch, so their tweak isn't silently
- * overwritten the next time a preset value is read.
- */
 export const QualityPresets = {
     low: {
         label: 'Thấp',
@@ -52,19 +39,16 @@ export const QualityPresets = {
 };
 
 const DEFAULTS = {
-    // Audio (0..1)
     masterVolume: 0.8,
     sfxVolume: 0.9,
     ambientVolume: 0.7,
     musicVolume: 0.6,
     muted: false,
 
-    // Controls
-    mouseSensitivity: 1.0,   // multiplier over CameraConfig.Orbit.mouseSensitivity
+    mouseSensitivity: 1.0,
     invertY: false,
     keyBindings: DEFAULT_KEY_BINDINGS,
 
-    // Graphics
     quality: 'high',
     renderScale: 1.0,
     postProcessing: true,
@@ -73,10 +57,9 @@ const DEFAULTS = {
     vignette: true,
     particleDensity: 1.0,
     viewDistance: 130,
-    fov: 70,                 // degrees; wider first-person default
+    fov: 70,
     frustumCulling: true,
 
-    // Interface
     showFps: false,
 };
 
@@ -96,13 +79,11 @@ export class SettingsManager {
     constructor() {
         this.values = JSON.parse(JSON.stringify(DEFAULTS));
 
-        /** @type {Set<Function>} Listeners notified after any change */
         this._listeners = new Set();
 
         this.load();
     }
 
-    // ── Persistence ──────────────────────────────────────────────
 
     load() {
         try {
@@ -126,14 +107,12 @@ export class SettingsManager {
             console.warn('SettingsManager: could not read stored settings, using defaults.', e);
         }
 
-        // Migrate the standalone mute flag written by pre-v1.0 builds so the
-        // sound button doesn't appear to reset itself on upgrade.
         try {
             const legacyMute = localStorage.getItem('island_survival_muted');
             if (legacyMute !== null) {
                 this.values.muted = legacyMute === 'true';
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
 
         this._clampAll();
     }
@@ -146,19 +125,11 @@ export class SettingsManager {
         }
     }
 
-    // ── Access ───────────────────────────────────────────────────
 
     get(key) {
         return this.values[key];
     }
 
-    /**
-     * Set a single value, persist, and notify listeners.
-     * @param {string} key
-     * @param {*} value
-     * @param {boolean} [fromPreset] Internal flag — preset application should
-     *        not flip the quality selector to "custom".
-     */
     set(key, value, fromPreset = false) {
         if (!(key in DEFAULTS)) {
             console.warn(`SettingsManager: unknown setting '${key}'`);
@@ -167,8 +138,6 @@ export class SettingsManager {
 
         this.values[key] = this._clamp(key, value);
 
-        // Any manual graphics tweak means the active preset no longer describes
-        // the configuration — mark it custom so the UI stays honest.
         if (!fromPreset && GRAPHICS_KEYS.includes(key) && this.values.quality !== 'custom') {
             this.values.quality = 'custom';
         }
@@ -177,9 +146,6 @@ export class SettingsManager {
         this._notify(key, this.values[key]);
     }
 
-    /**
-     * Apply a named quality preset (low | medium | high | ultra).
-     */
     applyQualityPreset(name) {
         const preset = QualityPresets[name];
         if (!preset) return;
@@ -206,12 +172,7 @@ export class SettingsManager {
         this.set('keyBindings', JSON.parse(JSON.stringify(DEFAULT_KEY_BINDINGS)));
     }
 
-    // ── Change notification ──────────────────────────────────────
 
-    /**
-     * @param {(key: string, value: *) => void} fn
-     * @returns {() => void} unsubscribe
-     */
     onChange(fn) {
         this._listeners.add(fn);
         return () => this._listeners.delete(fn);
@@ -227,7 +188,6 @@ export class SettingsManager {
         }
     }
 
-    // ── Internals ────────────────────────────────────────────────
 
     _clamp(key, value) {
         const range = CLAMPS[key];
@@ -245,7 +205,6 @@ export class SettingsManager {
     }
 }
 
-/** Keys that belong to the graphics group (see `set`). */
 const GRAPHICS_KEYS = [
     'renderScale', 'postProcessing', 'bloom', 'bloomIntensity',
     'vignette', 'particleDensity', 'viewDistance', 'frustumCulling',

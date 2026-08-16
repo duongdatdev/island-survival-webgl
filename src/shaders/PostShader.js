@@ -1,18 +1,8 @@
-/**
- * Post-processing shader sources (v1.0) — WebGL 2 / GLSL 3.00 es.
- *
- * All passes share a single fullscreen-triangle vertex shader that synthesizes
- * its own vertices from `gl_VertexID`, so no VBO or VAO attribute setup is
- * needed and the passes can't be disturbed by whatever vertex state the scene
- * left bound.
- */
 
 const FULLSCREEN_VERTEX = `#version 300 es
     out vec2 vUv;
 
     void main() {
-        // Oversized triangle covering the clip-space viewport: vertex 0 at
-        // (-1,-1), 1 at (3,-1), 2 at (-1,3).
         vec2 pos = vec2(
             (gl_VertexID == 1) ? 3.0 : -1.0,
             (gl_VertexID == 2) ? 3.0 : -1.0
@@ -25,10 +15,6 @@ const FULLSCREEN_VERTEX = `#version 300 es
 export const PostShader = {
     vertex: FULLSCREEN_VERTEX,
 
-    /**
-     * Bright pass: keeps only what exceeds the bloom threshold, with a soft
-     * knee so lighting that drifts across the threshold doesn't pop.
-     */
     brightPass: `#version 300 es
         precision highp float;
 
@@ -45,16 +31,12 @@ export const PostShader = {
 
             float knee = max(uSoftKnee, 0.0001);
             float contribution = clamp((brightness - uThreshold) / knee, 0.0, 1.0);
-            contribution *= contribution; // ease-in so the ramp isn't linear
+            contribution *= contribution;
 
             fragColor = vec4(color * contribution, 1.0);
         }
     `,
 
-    /**
-     * Separable 9-tap Gaussian. Run twice per bloom iteration with
-     * uDirection = (1/w, 0) then (0, 1/h).
-     */
     blur: `#version 300 es
         precision highp float;
 
@@ -77,15 +59,6 @@ export const PostShader = {
         }
     `,
 
-    /**
-     * Final composite: scene + bloom, highlight rolloff, vignette, and an
-     * optional grade tint driven by the time of day.
-     *
-     * The scene shaders write display-space colour (no linear→sRGB encode
-     * anywhere in the pipeline), so this pass deliberately does *not* apply a
-     * gamma curve or a full filmic tone map — either would visibly wash out
-     * the existing art. Rolloff is limited to values bloom pushes past 1.0.
-     */
     composite: `#version 300 es
         precision highp float;
 
@@ -106,13 +79,10 @@ export const PostShader = {
             vec3 color = scene + bloom * uBloomIntensity;
             color *= uExposure * uTint;
 
-            // Reinhard only where the image is already blown out, blended in by
-            // luminance so mid-tones come through the pass unchanged.
             float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
             vec3 rolled = color / (1.0 + color);
             color = mix(color, rolled, smoothstep(0.85, 1.8, luma));
 
-            // Radial darkening. uVignette == 0 leaves the image untouched.
             if (uVignette > 0.0) {
                 vec2 centered = vUv - 0.5;
                 float dist = length(centered) * 1.4142;

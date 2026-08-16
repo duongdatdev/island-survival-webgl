@@ -1,20 +1,14 @@
 import { Scene } from '../core/Scene.js';
-import { WorldGenerator } from '../gameplay/world/WorldGenerator.js';
 import { CharacterRegistry } from '../characters/CharacterRegistry.js';
 import { parseMtl } from '../characters/CharacterLoader.js';
 import { ObjParser } from '../core/ObjParser.js';
 import { Mesh } from '../renderer/Mesh.js';
 import { DebrisDatabase } from '../systems/DebrisDatabase.js';
 
-/**
- * Loading screen scene that tracks AssetManager status and updates the UI.
- * Now includes rotating gameplay tips and routes to MainMenu after loading.
- */
 export class LoadingScene extends Scene {
     init() {
         console.log('LoadingScene: Initializing resources...');
 
-        // Reset and display the HTML loader overlay
         const loaderScreen = document.getElementById('loading-screen');
         if (loaderScreen) {
             loaderScreen.classList.remove('hidden');
@@ -22,14 +16,12 @@ export class LoadingScene extends Scene {
 
         const debugPanel = document.getElementById('debug-panel');
         if (debugPanel) {
-            debugPanel.classList.add('hidden'); // Hide debug during load
+            debugPanel.classList.add('hidden');
         }
 
-        // Hide resource HUD during loading
         const resourceHud = document.getElementById('resource-hud');
         if (resourceHud) resourceHud.style.display = 'none';
 
-        // Loading tips
         this._tips = [
             '💡 Thu thập Gỗ, Đá, Dây Thừng và Thùng Gỗ để chế tạo bè.',
             '🌊 Tài nguyên cũng trôi trên biển — hãy ra bờ biển để nhặt!',
@@ -42,16 +34,14 @@ export class LoadingScene extends Scene {
         ];
         this._tipIndex = Math.floor(Math.random() * this._tips.length);
         this._tipTimer = 0;
-        this._tipInterval = 3.0; // Change tip every 3 seconds
+        this._tipInterval = 3.0;
         this._updateTip();
 
-        // 1. Queue core textures (using small data URLs to guarantee immediate, CORS-free resolution)
         this.engine.assets.loadTexture(
             'player_skin', 
             'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
         );
 
-        // Queue environment metadata loading
         const metadataPromise = this.engine.assets.loadEnvironmentMetadata('assets/environment/manifest.json');
         const creatureModelsPromise = this.engine.assets.loadCreatureModels('assets/creatures/manifest.json');
         const chestModelPromise = this.engine.assets.loadGLTFModel(
@@ -60,10 +50,8 @@ export class LoadingScene extends Scene {
             { targetSize: [0.75, 0.55, 0.55], preserveAspect: true }
         );
 
-        // 2. Queue simulated heavy loads (2s delay) to showcase the UI animation smoothly
         this.loadingDelay = new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Staged progress simulation
         this._progress = 0;
         this._targetProgress = 0;
         this._stages = [
@@ -75,19 +63,9 @@ export class LoadingScene extends Scene {
         this._stageIndex = 0;
         this._stageTimer = 0;
 
-        // Wait for all assets to resolve
         Promise.all([this.loadingDelay, metadataPromise, creatureModelsPromise, chestModelPromise])
             .then(async () => {
-                const seed = new URLSearchParams(window.location.search).get('seed') || Math.floor(Math.random() * 1000000).toString();
-                this.engine.worldSeed = seed;
-
-                console.log(`LoadingScene: Generating world with seed: ${seed}`);
-                const generator = new WorldGenerator(120, 100.0);
-                const world = generator.generate(seed, this.engine.assets.environmentMetadata, false);
-                this.engine.generatedWorld = world;
-
-                // Collect and compile unique meshes
-                const uniquePaths = Array.from(new Set(world.placedObjects.map(obj => obj.objPath)));
+                const uniquePaths = [];
                 const characterDef = CharacterRegistry.get('casual_male');
                 if (characterDef) {
                     uniquePaths.push(CharacterRegistry.getObjPath(characterDef));
@@ -100,25 +78,21 @@ export class LoadingScene extends Scene {
                         }
                     }
                 }
-                console.log(`LoadingScene: Compiling ${uniquePaths.length} unique environment models...`);
+                console.log(`LoadingScene: Compiling ${uniquePaths.length} shared models...`);
                 await this.engine.assets.compileUniqueModels(uniquePaths);
 
-                // Compile Survival Pack OBJ models. Most become drifting debris;
-                // static entries (such as the campfire) are only cached for reuse.
                 await this._loadSurvivalPack(this.gl);
 
                 this._targetProgress = 1.0;
-                // Give a moment for progress bar to catch up
                 setTimeout(() => this._onLoadComplete(), 500);
             })
             .catch(err => {
                 console.error('LoadingScene: Error during asset retrieval or world generation', err);
-                this._onLoadComplete(); // Safe fallback
+                this._onLoadComplete();
             });
     }
 
     update(deltaTime) {
-        // Staged progress animation
         this._stageTimer += deltaTime * 1000;
         
         if (this._stageIndex < this._stages.length) {
@@ -129,24 +103,20 @@ export class LoadingScene extends Scene {
             }
         }
 
-        // Smooth progress interpolation
         this._progress += (this._targetProgress - this._progress) * deltaTime * 3.0;
         const percent = Math.round(Math.min(this._progress, 1.0) * 100);
 
-        // Update loading progress bar element
         const barEl = document.getElementById('loader-bar');
         if (barEl) {
             barEl.style.width = `${percent}%`;
         }
 
-        // Update progress readout text
         const textEl = document.getElementById('loader-text');
         if (textEl) {
             const currentStage = this._stages[Math.min(this._stageIndex, this._stages.length - 1)];
             textEl.textContent = currentStage ? `${currentStage.label} (${percent}%)` : `Đang tải tài nguyên (${percent}%)...`;
         }
 
-        // Rotate tips
         this._tipTimer += deltaTime;
         if (this._tipTimer >= this._tipInterval) {
             this._tipTimer = 0;
@@ -158,7 +128,6 @@ export class LoadingScene extends Scene {
     render() {
         const gl = this.gl;
         
-        // Clear with deep space/night background
         gl.clearColor(0.04, 0.05, 0.09, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
@@ -177,13 +146,11 @@ export class LoadingScene extends Scene {
     _onLoadComplete() {
         console.log('LoadingScene: Assets loaded. Transitioning to Main Menu...');
 
-        // Fade out overlay
         const loaderScreen = document.getElementById('loading-screen');
         if (loaderScreen) {
             loaderScreen.classList.add('hidden');
         }
 
-        // Switch to Main Menu Scene (not directly to Game)
         this.engine.scenes.switchScene('MainMenu');
     }
 
@@ -191,10 +158,6 @@ export class LoadingScene extends Scene {
         console.log('LoadingScene destroyed.');
     }
 
-    /**
-     * Load the Survival Pack OBJ models, normalize + compile them into GPU meshes,
-     * then register each one as a drifting ocean debris type so they appear in-game.
-     */
     async _loadSurvivalPack(gl) {
         try {
             const res = await fetch('assets/survival-pack/survival-items.json');
@@ -212,7 +175,6 @@ export class LoadingScene extends Scene {
                     mtlText = '';
                 }
 
-                // Register exact material colors from the MTL so models keep their look
                 if (mtlText) {
                     const colors = parseMtl(mtlText, 'survival_' + item.id);
                     for (const [matName, color] of Object.entries(colors)) {
@@ -220,8 +182,6 @@ export class LoadingScene extends Scene {
                     }
                 }
 
-                // Optional per-model palette tweaks are applied after MTL parsing.
-                // The campfire uses this to keep its flame readable under world lighting.
                 if (item.materialColors) {
                     for (const [matName, color] of Object.entries(item.materialColors)) {
                         ObjParser.registerColor(matName, color);
@@ -231,7 +191,6 @@ export class LoadingScene extends Scene {
                 if (!objText) continue;
 
                 const parsed = ObjParser.parse(objText);
-                // Scale down survival pack models to match smaller player character
                 const adjustedScale = item.modelScale * 0.55;
                 this._normalizeMeshData(parsed, adjustedScale);
 
@@ -239,10 +198,8 @@ export class LoadingScene extends Scene {
                 const key = 'survival:' + item.id;
                 this.engine.assets.models[key] = mesh;
 
-                // Static props share this loader but must not enter the ocean-debris pool.
                 if (item.registerAsDebris === false) continue;
 
-                // Register as a drifting debris type (reuses full pickup → inventory pipeline)
                 DebrisDatabase[key] = {
                     id: key,
                     name: item.name,
@@ -265,10 +222,6 @@ export class LoadingScene extends Scene {
         }
     }
 
-    /**
-     * Recenter a parsed OBJ mesh on the XZ origin, drop its base to y=0,
-     * and uniformly scale it to a target world height so it rests nicely on water.
-     */
     _normalizeMeshData(data, targetHeight) {
         const pos = data.positions;
         if (!pos || pos.length === 0) return;
@@ -288,8 +241,6 @@ export class LoadingScene extends Scene {
 
         const cx = (minX + maxX) / 2;
         const cz = (minZ + maxZ) / 2;
-        // Scale by the LARGEST dimension so elongated items lying flat
-        // (e.g. paddles, pans) don't get wildly over-scaled on a small Y axis
         const width = maxX - minX;
         const depth = maxZ - minZ;
         const height = maxY - minY;

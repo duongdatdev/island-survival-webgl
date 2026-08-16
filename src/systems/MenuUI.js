@@ -1,24 +1,7 @@
 import { QualityPresets } from './SettingsManager.js';
 import { Achievements } from './AchievementSystem.js';
 
-/**
- * MenuUI (v1.0) — DOM controller for the settings, achievements, credits and
- * how-to-play overlays.
- *
- * Both the main menu and the in-game pause menu open the same panels, so the
- * binding lives here once instead of being duplicated per scene. A scene
- * constructs one instance, calls `openSettings()` / `openAchievements()` /
- * `openCredits()` / `openGuide()`, and disposes it on teardown.
- */
 export class MenuUI {
-    /**
-     * @param {object} engine Engine instance (settings, audio, achievements)
-     * @param {object} [hooks]
-     * @param {() => void} [hooks.onClose] Called when any panel is dismissed.
-     * @param {() => void} [hooks.onGuidePlay] Start-the-game action for the
-     *   guide panel. Only the main menu supplies it; without it the guide's
-     *   "play" button stays hidden (there is nothing to start mid-run).
-     */
     constructor(engine, hooks = {}) {
         this.engine = engine;
         this.settings = engine.settings;
@@ -26,7 +9,6 @@ export class MenuUI {
         this.onClose = hooks.onClose || null;
         this.onGuidePlay = hooks.onGuidePlay || null;
 
-        /** @type {Array<{el: Element, type: string, fn: Function}>} */
         this._bound = [];
 
         this._settingsEl = document.getElementById('settings-menu');
@@ -41,7 +23,6 @@ export class MenuUI {
         this.syncSettingsUI();
     }
 
-    // ── Panel visibility ─────────────────────────────────────────
 
     openSettings() {
         this.syncSettingsUI();
@@ -74,17 +55,11 @@ export class MenuUI {
         if (this.onClose) this.onClose();
     }
 
-    /** True when any v1.0 panel is currently on screen. */
     isAnyOpen() {
         return [this._settingsEl, this._achievementsEl, this._creditsEl, this._guideEl]
             .some(el => el && !el.classList.contains('hidden'));
     }
 
-    /**
-     * Detach every listener this instance added. Scenes must call it in
-     * `destroy()` — the overlays are shared DOM, so leaving handlers behind
-     * would make a re-entered scene fire each action twice.
-     */
     dispose() {
         for (const { el, type, fn } of this._bound) {
             el.removeEventListener(type, fn);
@@ -93,10 +68,8 @@ export class MenuUI {
         this.closeAll();
     }
 
-    // ── Settings bindings ────────────────────────────────────────
 
     _bindSettings() {
-        // Sliders: [element id, setting key, scale, formatter]
         const sliders = [
             ['set-master-volume', 'masterVolume', 0.01, v => `${Math.round(v * 100)}%`],
             ['set-sfx-volume', 'sfxVolume', 0.01, v => `${Math.round(v * 100)}%`],
@@ -136,8 +109,6 @@ export class MenuUI {
             if (!el) continue;
             this._on(el, 'change', () => {
                 this.settings.set(key, el.checked);
-                // Mute lives in two places (AudioManager owns the live gain,
-                // settings own the persisted value) — keep them in step.
                 if (key === 'muted') {
                     this.engine.audio._ensureContext();
                     this.engine.audio.setMuted(el.checked);
@@ -169,7 +140,6 @@ export class MenuUI {
             });
         }
 
-        // Key Rebinding Buttons
         const keybindButtons = document.querySelectorAll('.keybind-btn');
         keybindButtons.forEach(btn => {
             this._on(btn, 'click', () => {
@@ -177,7 +147,6 @@ export class MenuUI {
                 const slot = parseInt(btn.getAttribute('data-slot') || '0', 10);
                 if (!action || !this.engine.input) return;
 
-                // Reset all other listening buttons
                 keybindButtons.forEach(b => {
                     b.classList.remove('listening');
                     const a = b.getAttribute('data-action');
@@ -242,8 +211,6 @@ export class MenuUI {
 
         this._on(playBtn, 'click', () => {
             this.engine.audio.playClick();
-            // Close first: the scene swap tears this controller down, and the
-            // guide is shared DOM that would otherwise stay on screen.
             this.closeAll();
             if (this.onGuidePlay) this.onGuidePlay();
         });
@@ -268,10 +235,6 @@ export class MenuUI {
         }
     }
 
-    /**
-     * Push the stored settings into every control. Called on open and after a
-     * preset/reset so the widgets never drift from the real values.
-     */
     syncSettingsUI() {
         const s = this.settings;
 
@@ -294,7 +257,6 @@ export class MenuUI {
         this._setToggle('set-culling', s.get('frustumCulling'));
         this._setToggle('set-show-fps', s.get('showFps'));
 
-        // Sync keybinding buttons
         const keybindButtons = document.querySelectorAll('.keybind-btn');
         keybindButtons.forEach(btn => {
             btn.classList.remove('listening');
@@ -321,7 +283,6 @@ export class MenuUI {
         }
     }
 
-    // ── Achievements panel ───────────────────────────────────────
 
     _renderAchievements() {
         const listEl = document.getElementById('achievements-list');
@@ -338,9 +299,6 @@ export class MenuUI {
         let html = '';
         for (const def of Achievements) {
             const unlocked = this.achievements.isUnlocked(def.id);
-            // Locked cards keep their own glyph (dimmed by the card's filter)
-            // with a lock badge, so the list reads as one set of achievements
-            // rather than a row of identical padlocks.
             html += `
                 <div class="achv-card${unlocked ? ' unlocked' : ''}">
                     <div class="achv-card-icon">${def.icon}${unlocked ? ''
@@ -355,7 +313,6 @@ export class MenuUI {
         listEl.innerHTML = html;
     }
 
-    // ── DOM helpers ──────────────────────────────────────────────
 
     _show(el) {
         if (el) el.classList.remove('hidden');
@@ -381,10 +338,6 @@ export class MenuUI {
         if (el) el.checked = !!checked;
     }
 
-    /**
-     * Update the readout next to a control. The label id is derived from the
-     * control id (`set-foo` → `val-foo`) unless one is passed explicitly.
-     */
     _setValueLabel(controlId, text, labelId = null) {
         const id = labelId || controlId.replace(/^set-/, 'val-');
         const el = document.getElementById(id);

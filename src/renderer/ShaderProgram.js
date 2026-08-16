@@ -1,32 +1,24 @@
-/**
- * WebGL Shader Program Wrapper
- */
 export class ShaderProgram {
     constructor(gl, vsSource, fsSource) {
         this.gl = gl;
         
-        // Compile Shaders
         const vertexShader = this._compileShader(gl.VERTEX_SHADER, vsSource);
         const fragmentShader = this._compileShader(gl.FRAGMENT_SHADER, fsSource);
         
-        // Link Program
         this.program = gl.createProgram();
         gl.attachShader(this.program, vertexShader);
         gl.attachShader(this.program, fragmentShader);
         gl.linkProgram(this.program);
         
-        // Check link status
         if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
             const log = gl.getProgramInfoLog(this.program);
             gl.deleteProgram(this.program);
             throw new Error(`Unable to link shader program: ${log}`);
         }
         
-        // Clean up shaders as they are linked into the program now
         gl.deleteShader(vertexShader);
         gl.deleteShader(fragmentShader);
         
-        // Cache uniform locations
         this.uniformLocations = new Map();
         this.attribLocations = new Map();
     }

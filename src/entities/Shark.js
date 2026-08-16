@@ -3,20 +3,10 @@ import { Vec3 } from '../math/Vec3.js';
 import { WaveField } from '../shaders/WaterWaves.js';
 import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
-/**
- * How far past the shelf edge a shark may roam. GameScene seeds sharks on a
- * ring out to `island.radius + 13`, so the cap has to sit beyond that or a
- * freshly spawned shark gets yanked inward on its very first frame.
- */
 const OCEAN_PATROL_MARGIN = 14.0;
 
-/** Used only when no terrain/generator is available (matches Player.js). */
 const FALLBACK_OUTER_RADIUS = 46.0;
 
-/**
- * Shark — Hostile water creature.
- * Patrols deep water, attacks if the player is swimming, drops raw fish.
- */
 export class Shark extends Creature {
     constructor(gl, position, modelAsset = null) {
         const balance = CREATURE_BALANCE.shark;
@@ -37,9 +27,6 @@ export class Shark extends Creature {
             patrolRadius: 20.0,
             idleDuration: 2.0 + Math.random() * 3.0,
             lootTable: [
-                // Sea creature → raw fish, which is already cookable at the
-                // campfire. Reusing it keeps the v0.5 resource set to the three
-                // meats the design doc actually lists.
                 { resourceId: 'raw_fish', count: 2, chance: 1.0 }
             ]
         });
@@ -48,28 +35,22 @@ export class Shark extends Creature {
         Vec3.set(this.position, position[0], position[1], position[2]);
         Vec3.set(this._spawnPosition, position[0], position[1], position[2]);
 
-        // Water Y level — sharks stay at this height
         this._waterLevel = position[1];
         this._rushTriggerRange = balance.rushTriggerRange;
         this._rushSpeed = balance.rushSpeed;
 
-        // Fin animation
         this._finAngle = 0;
 
         this._buildMesh();
         this.collider.radius = 0.45;
-        // Sharks live at the water surface — never snap them onto the seabed
         this.collider.snapToTerrain = false;
         this.updateModelMatrix();
     }
 
-    /**
-     * Override update to handle water-level movement
-     */
     update(deltaTime, playerPosition, terrain, playerTerrainHeight) {
         if (this.state === CreatureState.DEAD) {
             this.deadTimer += deltaTime;
-            this.position[1] -= deltaTime * 0.5; // Slowly sink
+            this.position[1] -= deltaTime * 0.5;
             this.updateModelMatrix();
             return;
         }
@@ -77,15 +58,12 @@ export class Shark extends Creature {
         this.animTime += deltaTime;
         this._stateTimer += deltaTime;
         this._finAngle += deltaTime * 3.0;
-        // This override replaces Creature.update(), so tick the attack cooldown
-        // here too — otherwise the shark bites once and never again.
         if (this._attackTimer > 0) this._attackTimer -= deltaTime;
 
         const dx = playerPosition[0] - this.position[0];
         const dz = playerPosition[2] - this.position[2];
         const distToPlayer = Math.sqrt(dx * dx + dz * dz);
 
-        // Only aggro if player is in/near water (terrain height <= 0.3)
         const playerInWater = playerTerrainHeight !== undefined && playerTerrainHeight <= 0.3;
 
         switch (this.state) {
@@ -120,20 +98,14 @@ export class Shark extends Creature {
                     this._fleeTimer = 0;
                     break;
                 }
-                // In range: hold position and let GameScene land the bite
-                // (it arms the cooldown via canDamagePlayer()).
                 if (distToPlayer <= this.attackRange) {
                     break;
                 }
-                // Give up if the player made it back onto dry land
                 if (!playerInWater) {
                     this.state = CreatureState.PATROL;
                     this._stateTimer = 0;
                     break;
                 }
-                // Choose one movement velocity per frame. The previous logic
-                // applied the 4.5 m/s circle step and a 9 m/s rush together,
-                // producing an accidental ~13.5 m/s unavoidable lunge.
                 if (distToPlayer < this._rushTriggerRange && this._attackTimer <= 0
                     && distToPlayer > 0.0001) {
                     const rushX = dx / distToPlayer;
@@ -142,7 +114,6 @@ export class Shark extends Creature {
                     this.position[2] += rushZ * this._rushSpeed * deltaTime;
                     this.rotation[1] = Math.atan2(rushX, rushZ);
                 } else {
-                    // Circle while waiting for the next bite window.
                     const angleToPlayer = Math.atan2(dx, dz);
                     const circleOffset = 0.5;
                     const targetX = playerPosition[0] + Math.cos(angleToPlayer + circleOffset) * 4.0;
@@ -175,15 +146,9 @@ export class Shark extends Creature {
                 break;
         }
 
-        // Ride the ocean surface instead of a private sine, so a shark cutting
-        // across a swell rises and falls with the water it is swimming in.
         this.position[1] = this._waterLevel
             + WaveField.heightAt(this.position[0], this.position[2]);
 
-        // Keep within world bounds. Derived from the generated island rather
-        // than hardcoded: the radius is procedural (44–47), so a fixed 50/45
-        // pair could sit either side of the player's own boundary depending on
-        // the seed — on a large island it penned sharks inside the wade zone.
         const island = terrain && terrain.generator ? terrain.generator.island : null;
         const maxRadius = (island ? island.outerBeachRadius : FALLBACK_OUTER_RADIUS)
             + OCEAN_PATROL_MARGIN;
@@ -199,16 +164,12 @@ export class Shark extends Creature {
         this.updateModelMatrix();
     }
 
-    /**
-     * Patrol in a random gentle arc in water
-     */
     _patrolWater(deltaTime) {
         const angle = Math.sin(this.animTime * 0.3) * 1.5;
         this.position[0] += Math.cos(angle) * this.baseSpeed * 0.4 * deltaTime;
         this.position[2] += Math.sin(angle) * this.baseSpeed * 0.4 * deltaTime;
         this.rotation[1] = angle;
 
-        // Stay near spawn
         const distFromSpawn = Vec3.distance(this.position, this._spawnPosition);
         if (distFromSpawn > this._patrolRadius) {
             const toSpawn = [

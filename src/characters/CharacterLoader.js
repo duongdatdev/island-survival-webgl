@@ -20,10 +20,8 @@ export function parseMtl(text, characterId = '') {
         }
     }
 
-    // Post-process colors to boost them if they are too dark
     const charIdLower = characterId.toLowerCase();
     
-    // Find if Face material exists and has a valid light color
     let faceColor = null;
     for (const [matName, color] of Object.entries(colors)) {
         if (matName.toLowerCase() === 'face') {
@@ -41,15 +39,15 @@ export function parseMtl(text, characterId = '') {
         
         if (matNameLower === 'skin') {
             if (charIdLower.includes('zombie')) {
-                colors[matName] = [0.45, 0.65, 0.35]; // Zombie green
+                colors[matName] = [0.45, 0.65, 0.35];
             } else if (charIdLower.includes('goblin')) {
-                colors[matName] = [0.35, 0.65, 0.25]; // Goblin green
+                colors[matName] = [0.35, 0.65, 0.25];
             } else if (charIdLower.includes('elf')) {
-                colors[matName] = [0.92, 0.82, 0.75]; // Elf peach
+                colors[matName] = [0.92, 0.82, 0.75];
             } else if (faceColor) {
-                colors[matName] = faceColor; // Match face skin tone!
+                colors[matName] = faceColor;
             } else {
-                colors[matName] = [0.85, 0.67, 0.55]; // Default flesh tone
+                colors[matName] = [0.85, 0.67, 0.55];
             }
         } else if (matNameLower === 'face' && maxVal < 0.25) {
             if (charIdLower.includes('zombie')) {
@@ -60,14 +58,13 @@ export function parseMtl(text, characterId = '') {
                 colors[matName] = [0.85, 0.67, 0.55];
             }
         } else if (maxVal > 0.0 && maxVal < 0.25) {
-            // Boost other clothing/hair colors if they are too dark
-            let targetMax = 0.7; // Default for clothes/details
+            let targetMax = 0.7;
             if (matNameLower.includes('hair')) {
-                targetMax = 0.45; // Brown hair
+                targetMax = 0.45;
             } else if (matNameLower.includes('belt')) {
-                targetMax = 0.3;  // Dark leather
+                targetMax = 0.3;
             } else if (matNameLower.includes('pants')) {
-                targetMax = 0.5;  // Grey/khaki pants
+                targetMax = 0.5;
             }
             
             const scale = targetMax / maxVal;
@@ -100,7 +97,6 @@ export class CharacterLoader {
             return mesh;
         }
 
-        // Load MTL and register exact Kd colors before parsing OBJ
         const mtlPath = CharacterRegistry.getMtlPath(characterDef);
         let mtlText = assetManager.getText(mtlPath);
         if (!mtlText) {

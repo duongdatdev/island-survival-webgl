@@ -7,21 +7,7 @@ const TREE_FALL_SPEED = Math.PI * 0.42;
 const TREE_MAX_FALL_ANGLE = Math.PI * 0.5;
 const TREE_GROUND_EPSILON = 0.08;
 
-/**
- * EnvironmentObject - Represents placed environment props (trees, bushes, rocks)
- * Collider settings are data-driven via ColliderFactory from asset category metadata.
- */
 export class EnvironmentObject extends Entity {
-    /**
-     * @param {WebGL2RenderingContext} gl
-     * @param {Mesh} mesh           Shared compiled mesh from AssetManager
-     * @param {number[]} position   World position [x, y, z]
-     * @param {number[]} rotation   Euler rotation [rx, ry, rz]
-     * @param {number[]} scale      Scale [sx, sy, sz]
-     * @param {boolean} collision   Whether this object blocks the player
-     * @param {boolean} navigationBlocker
-     * @param {string}  category    Asset category (Tree, Rock, Bush, etc.)
-     */
     constructor(gl, mesh, position, rotation, scale, collision = true, navigationBlocker = true, category = '') {
         super();
         this.gl = gl;
@@ -34,13 +20,9 @@ export class EnvironmentObject extends Entity {
         Vec3.set(this.rotation, rotation[0], rotation[1], rotation[2]);
         Vec3.set(this.scale, scale[0], scale[1], scale[2]);
 
-        // Data-driven collider from category
         this.collider = ColliderFactory.createCollider(category, scale);
         this.collisionRadius = this.collider.radius;
 
-        // Harvestable trees stay as ordinary environment props until struck.
-        // Keeping the state on the prop lets the same rendered mesh become the
-        // falling trunk instead of swapping to a duplicate model.
         this.isHarvestableTree = category === 'Tree' || category === 'Palm';
         this.treeHitsRemaining = this.isHarvestableTree ? TREE_HITS_TO_FELL : 0;
         this.treeState = this.isHarvestableTree ? 'standing' : 'none';
@@ -59,10 +41,6 @@ export class EnvironmentObject extends Entity {
         this.mesh.draw(drawMode);
     }
 
-    /**
-     * Apply an axe hit. The final hit starts the fall away from the attacker.
-     * @returns {{hit: boolean, felled: boolean, hitsRemaining: number}}
-     */
     chop(attackerPosition) {
         if (!this.isHarvestableTree || this.treeState !== 'standing') {
             return { hit: false, felled: false, hitsRemaining: this.treeHitsRemaining };
@@ -82,8 +60,6 @@ export class EnvironmentObject extends Entity {
             this.rotation[2] = 0;
             this.treeState = 'falling';
 
-            // The scene unregisters the tree from CollisionSystem as well, but
-            // disabling the collider here makes any cached reference harmless.
             this.collider.type = 'none';
             this.collider.radius = 0;
             this.collider.height = 0;
@@ -93,10 +69,6 @@ export class EnvironmentObject extends Entity {
         return { hit: true, felled, hitsRemaining: this.treeHitsRemaining };
     }
 
-    /**
-     * Advance the fall until the tree tip reaches the sampled terrain.
-     * Returns true exactly once, on the frame the tree lands.
-     */
     updateTreeFall(deltaTime, terrain) {
         if (this.treeState !== 'falling') return false;
 
@@ -121,7 +93,6 @@ export class EnvironmentObject extends Entity {
         return false;
     }
 
-    /** World-space point along the trunk, from stump (0) to crown (1). */
     getTreePoint(fraction) {
         const t = Math.max(0, Math.min(1, fraction));
         const alongGround = Math.sin(this._fallAngle) * this._fallHeight * t;
@@ -136,8 +107,6 @@ export class EnvironmentObject extends Entity {
         const bounds = this.mesh && this.mesh.bounds;
         if (!bounds) return Math.max(2, this.collider.height || 2);
 
-        // Environment OBJ pivots sit at the base. The span fallback also keeps
-        // custom tree assets useful if their local minimum dips below zero.
         const localHeight = Math.max(bounds.max[1], bounds.max[1] - bounds.min[1]);
         return Math.max(2, localHeight * Math.abs(this.scale[1]));
     }
@@ -165,7 +134,5 @@ export class EnvironmentObject extends Entity {
     }
 
     delete() {
-        // Mesh resources are managed and cached inside AssetManager,
-        // so we do not delete the mesh buffer directly here.
     }
 }

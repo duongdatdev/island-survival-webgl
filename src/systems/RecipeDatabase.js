@@ -1,9 +1,3 @@
-/**
- * Recipe Database - Registry of all craftable items in the game.
- *
- * v0.2: Added Campfire and Water Collector recipes
- * v0.5: Added Spear, Bow, Arrow, Bandage recipes
- */
 
 export const RecipeType = {
     STONE_AXE:        'stone_axe',
@@ -16,7 +10,6 @@ export const RecipeType = {
     RAFT_SAIL:        'raft_sail',
     RAFT_MOTOR:       'raft_motor',
 
-    // v0.5: Wildlife & Combat
     SPEAR:    'spear',
     BOW:      'bow',
     ARROW:    'arrow',
@@ -154,7 +147,6 @@ export const RecipeDatabase = {
         }
     },
 
-    // ── v0.5: Weapons & Healing ──
 
     [RecipeType.SPEAR]: {
         id: RecipeType.SPEAR,
@@ -192,7 +184,7 @@ export const RecipeDatabase = {
         description: 'Mũi tên gỗ vót nhọn ghép đá. Chế tạo 3 cây một lần.',
         descriptionEn: 'Sharp wooden arrows tipped with stone. Craft 3 at a time.',
         category: 'tool',
-        yield: 3, // Crafts a batch of 3 arrows
+        yield: 3,
         ingredients: {
             wood: 1,
             stone: 1
@@ -206,26 +198,17 @@ export const RecipeDatabase = {
         icon: '🩹',
         description: 'Băng gạc thảo dược giúp cầm máu và hồi phục vết thương.',
         descriptionEn: 'Herbal bandage to stop bleeding and heal wounds.',
-        category: 'structure', // survival category
+        category: 'structure',
         ingredients: {
             herb: 3
         }
     }
 };
 
-/**
- * Get all recipe definitions as an array
- * @returns {object[]}
- */
 export function getAllRecipes() {
     return Object.values(RecipeDatabase);
 }
 
-/**
- * Get a recipe definition by its ID
- * @param {string} recipeId
- * @returns {object|null}
- */
 export function getRecipeDef(recipeId) {
     return RecipeDatabase[recipeId] || null;
 }

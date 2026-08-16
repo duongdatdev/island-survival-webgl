@@ -1,22 +1,3 @@
-/**
- * Debris Database - Central registry of drifting debris types that spawn in the ocean.
- * 
- * Separate from ResourceDatabase (island resources ≠ ocean debris).
- * To add a new debris type: simply add a new entry to DebrisDatabase.
- * 
- * Each entry:
- *   id           - Unique string identifier
- *   name         - Vietnamese display name
- *   nameEn       - English display name
- *   icon         - Emoji icon for UI
- *   color        - [r, g, b] mesh color (0-1)
- *   meshScale    - [x, y, z] cube scale dimensions
- *   pickupRadius - Distance (units) player must be within to collect
- *   gives        - { resourceId, amount } — maps to ResourceDatabase item for Inventory
- *   lifetime     - [min, max] seconds before auto-despawn
- *   driftSpeed   - [min, max] units/sec toward island center
- *   spawnWeight  - Higher = more likely to spawn
- */
 
 import { WOOD_LOG_MODEL_ID } from './ResourceDatabase.js';
 
@@ -102,27 +83,14 @@ export const DebrisDatabase = {
     },
 };
 
-/**
- * Get all debris definitions as an array
- * @returns {object[]}
- */
 export function getAllDebris() {
     return Object.values(DebrisDatabase);
 }
 
-/**
- * Get a debris definition by its ID
- * @param {string} debrisId
- * @returns {object|null}
- */
 export function getDebrisDef(debrisId) {
     return DebrisDatabase[debrisId] || null;
 }
 
-/**
- * Get a weighted random debris type for spawning
- * @returns {string} Debris type ID
- */
 export function getWeightedRandomDebrisType() {
     const allDebris = getAllDebris();
     const totalWeight = allDebris.reduce((sum, d) => sum + d.spawnWeight, 0);
@@ -136,11 +104,6 @@ export function getWeightedRandomDebrisType() {
     return allDebris[allDebris.length - 1].id;
 }
 
-/**
- * Generate a random value within a [min, max] range
- * @param {number[]} range - [min, max]
- * @returns {number}
- */
 export function randomInRange(range) {
     return range[0] + Math.random() * (range[1] - range[0]);
 }

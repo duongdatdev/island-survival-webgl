@@ -5,8 +5,6 @@ import { AXE_SWING_DURATION } from '../systems/CombatConfig.js';
 const DEG_TO_RAD = Math.PI / 180;
 const SKIN_COLOR = [0.82, 0.62, 0.48, 1.0];
 const SLEEVE_COLOR = [0.07, 0.12, 0.22, 1.0];
-// Bottom of the sleeve in camera space. Every attack rotation happens around
-// this point so the shoulder never slides across the screen.
 const SHOULDER_PIVOT = [0.60, -0.82, -0.62];
 
 function smoothStep(value) {
@@ -18,14 +16,6 @@ function lerp(a, b, t) {
     return a + (b - a) * t;
 }
 
-/**
- * Clean one-handed first-person axe viewmodel.
- *
- * The character OBJ is a single static mesh whose sleeves overlap the arms.
- * Pulling its Skin material out by itself leaves open seams and long triangles,
- * so the FPS arm uses matching low-poly primitives instead. The world model is
- * untouched and still uses the original character asset.
- */
 export class FirstPersonViewModel {
     constructor(gl) {
         this.gl = gl;
@@ -61,7 +51,6 @@ export class FirstPersonViewModel {
         this._swingElapsed += deltaTime;
     }
 
-    /** Alternate outside -> inside, then inside -> outside on each attack. */
     triggerSwing() {
         this._activeSwingDirection = this._nextSwingDirection;
         this._nextSwingDirection *= -1;
@@ -91,8 +80,6 @@ export class FirstPersonViewModel {
         shader.setUniform1f('uAmbientIntensity', 0.78);
         shader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
-        // The viewmodel owns a fresh depth layer so nearby world geometry can
-        // never cut through the arm or axe.
         gl.clear(gl.DEPTH_BUFFER_BIT);
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
@@ -159,8 +146,6 @@ export class FirstPersonViewModel {
             const strike = Math.sin(t * Math.PI);
             return {
                 roll: lerp(outsideAngle, followThroughAngle, t),
-                // A small upward pitch keeps the axe visible while it crosses
-                // the screen; negative pitch would bury it below the hotbar.
                 pitch: 9 * DEG_TO_RAD * strike,
             };
         }
@@ -175,9 +160,6 @@ export class FirstPersonViewModel {
     _applyRootTransform(out, bobX, bobY, pose) {
         Mat4.identity(out);
         Mat4.translate(out, out, [bobX, bobY, 0]);
-        // Rotate the whole arm around its shoulder instead of around the
-        // camera origin. The sleeve base is therefore stationary while the
-        // arm, gripping hand and axe sweep in and out as one articulated unit.
         Mat4.translate(out, out, SHOULDER_PIVOT);
         Mat4.rotateZ(out, out, pose.roll);
         Mat4.rotateX(out, out, pose.pitch);
@@ -317,7 +299,6 @@ export class FirstPersonViewModel {
         this.sleeve = null;
         this.forearm = null;
         this.hand = null;
-        // Axe is owned by AssetManager and must not be deleted here.
         this.axe = null;
     }
 }

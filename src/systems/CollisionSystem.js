@@ -33,25 +33,11 @@ export class CollisionSystem {
         return this.colliders;
     }
 
-    /**
-     * Vertical half-extent of a collider, used for the Y-overlap test.
-     * Falls back to the radius so old colliders keep behaving like spheres.
-     */
     static _halfHeight(collider) {
         if (collider.height) return collider.height * 0.5;
         return collider.radius || 0.45;
     }
 
-    /**
-     * Push `entity` out of every solid collider it overlaps.
-     *
-     * Despite the name this is used for any moving actor (player, creatures).
-     * @param {object} entity
-     * @param {object} terrain
-     * @param {number} [ignoreLayerMask] - bitmask of layers that must never push
-     *        this entity. Used so wildlife cannot shove the player around
-     *        (v0.5: two-way pushing made the player drift on its own).
-     */
     resolvePlayerCollisions(entity, terrain, ignoreLayerMask = 0) {
         if (!entity.collider || entity.collider.type === 'none') return;
 
@@ -59,7 +45,6 @@ export class CollisionSystem {
         const selfRadius = entity.collider.radius || 0.45;
         const selfHalfH = CollisionSystem._halfHeight(entity.collider);
         const selfPos = entity.position;
-        // Flying / swimming actors must not be snapped onto the terrain surface.
         const snapToTerrain = entity.collider.snapToTerrain !== false;
 
         for (const { entity: other, collider } of this.colliders) {
@@ -79,8 +64,6 @@ export class CollisionSystem {
             const distSq = dx * dx + dz * dz;
             if (distSq >= minDist * minDist) continue;
 
-            // Vertical overlap test — without this a seagull orbiting 12 units
-            // overhead still collided with (and shoved) everything below it.
             const dy = Math.abs(selfPos[1] - other.position[1]);
             if (dy >= selfHalfH + CollisionSystem._halfHeight(collider)) continue;
 

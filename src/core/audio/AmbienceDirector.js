@@ -3,22 +3,6 @@ import {
 } from './AudioBuffers.js';
 import { createPanner, setPannerPosition, SpatialProfiles } from './Spatial.js';
 
-/**
- * AmbienceDirector (v1.1) — every looping, world-driven sound.
- *
- * Four kinds of layer live here:
- *   1. Weather beds — surf, wind and rain, cross-faded by the WeatherSystem.
- *   2. Time-of-day beds — a bright insect shimmer by day, crickets by night.
- *   3. Scheduled wildlife one-shots — birdsong, dawn chorus, the odd owl.
- *   4. Positional emitters — the waterfall and campfire, panned in 3D so the
- *      player can hear where they are and how far away.
- *
- * Levels are never written directly: each layer smooths a `current` value
- * toward a `target` every frame, so weather transitions and structures being
- * placed both fade instead of popping.
- */
-
-/** Looping emitter definitions, keyed by the `kind` passed to addEmitter. */
 const EMITTER_KINDS = {
     waterfall: {
         level: 0.55,
@@ -43,31 +27,20 @@ const EMITTER_KINDS = {
 };
 
 export class AmbienceDirector {
-    /**
-     * @param {AudioContext} ctx
-     * @param {import('./AudioBuffers.js').AudioBuffers} buffers
-     * @param {AudioNode} bus Ambient bus — already routed through the mixer.
-     */
     constructor(ctx, buffers, bus) {
         this.ctx = ctx;
         this.buffers = buffers;
         this.bus = bus;
 
-        /** @type {Map<string, object>} Looping beds keyed by layer id. */
         this._layers = new Map();
-        /** @type {Map<string, object>} Positional loops keyed by caller id. */
         this._emitters = new Map();
 
         this._timeOfDay = 0.3;
         this._rainIntensity = 0;
         this._windIntensity = 0;
 
-        // Countdown to the next wildlife one-shot. Seeded short so the world
-        // isn't silent for the first few seconds of a run.
         this._callTimer = 2.5;
     }
-
-    // ── Weather beds ─────────────────────────────────────────────
 
     startWaves() {
         const buffer = this.buffers.one('amb:waves', 4.0, fillWaves);
@@ -102,7 +75,6 @@ export class AmbienceDirector {
         });
     }
 
-    /** Start the day/night wildlife beds. Both run; only their gains change. */
     startWildlifeBeds() {
         this._startLayer('daylife', {
             buffer: this.buffers.one('amb:daylife', 4.0, fillDayShimmer),
@@ -127,42 +99,26 @@ export class AmbienceDirector {
         this._stopLayer('nightlife');
     }
 
-    /** @param {number} intensity 0..1 */
     setWindIntensity(intensity) {
         this._windIntensity = clamp01(intensity);
         this._setTarget('wind', this._windIntensity * 0.25);
-        // Rougher wind means rougher surf — open the wave filter so the sea
-        // gains some spray on top of the low swell.
         this._setFilterTarget('waves', 0, 400 + this._windIntensity * 900);
     }
 
-    /** @param {number} intensity 0..1 */
     setRainIntensity(intensity) {
         this._rainIntensity = clamp01(intensity);
         this._setTarget('rain', this._rainIntensity * 0.22);
     }
 
-    /** @param {number} t Normalised time of day, 0..1 (see DayNightCycle). */
     setTimeOfDay(t) {
         this._timeOfDay = t;
-        // Heavy rain drowns out insects long before it drowns out the sea.
         const weatherMask = 1.0 - Math.min(1, this._rainIntensity * 1.4);
         const night = nightAmount(t);
         this._setTarget('nightlife', night * 0.055 * weatherMask);
         this._setTarget('daylife', (1 - night) * 0.035 * weatherMask);
     }
 
-    // ── Positional emitters ──────────────────────────────────────
 
-    /**
-     * Register a looping 3D emitter. Silent until `setEmitterActive(id, true)`,
-     * which is how an unbuilt campfire stays quiet without tearing the node
-     * graph down and rebuilding it every time.
-     * @param {string} id
-     * @param {keyof EMITTER_KINDS} kind
-     * @param {number[]} position
-     * @param {boolean} [active]
-     */
     addEmitter(id, kind, position, active = true) {
         if (this._emitters.has(id)) {
             this.setEmitterPosition(id, position);
@@ -196,8 +152,6 @@ export class AmbienceDirector {
         node.connect(panner);
         gain.connect(this.bus);
 
-        // Random start offset: two campfires (or a reload) shouldn't crackle in
-        // lockstep with each other.
         source.start(0, Math.random() * spec.duration);
 
         this._emitters.set(id, {
@@ -222,19 +176,12 @@ export class AmbienceDirector {
     removeEmitter(id) {
         const emitter = this._emitters.get(id);
         if (!emitter) return;
-        try { emitter.source.stop(); } catch (e) { /* already stopped */ }
+        try { emitter.source.stop(); } catch (e) { }
         this._emitters.delete(id);
     }
 
-    // ── Per-frame ────────────────────────────────────────────────
 
-    /**
-     * Smooth every level toward its target and schedule wildlife calls.
-     * @param {number} deltaTime
-     */
     update(deltaTime) {
-        // A tab left in the background hands back a huge delta on return;
-        // clamping keeps the smoothing stable instead of overshooting.
         const dt = Math.min(deltaTime, 0.1);
 
         for (const layer of this._layers.values()) {
@@ -256,13 +203,7 @@ export class AmbienceDirector {
         this._updateWildlifeCalls(dt);
     }
 
-    /**
-     * Fire the occasional bird or owl. These are one-shots rather than part of
-     * the looping bed because a looped birdsong is the fastest way to make an
-     * ambience sound canned.
-     */
     _updateWildlifeCalls(dt) {
-        // Wildlife shelters from rain, and nothing calls if the beds are muted.
         const activity = 1.0 - Math.min(1, this._rainIntensity * 1.6);
         if (activity <= 0.05) return;
 
@@ -271,7 +212,6 @@ export class AmbienceDirector {
 
         const t = this._timeOfDay;
         const night = nightAmount(t);
-        // Dawn chorus: birds are loudest and most frequent just after sunrise.
         const isDawn = t > 0.12 && t < 0.30;
 
         if (night > 0.6) {
@@ -283,7 +223,6 @@ export class AmbienceDirector {
         }
     }
 
-    /** Short warbling chirp: 2–4 quick sine glides. */
     _playBirdCall() {
         const ctx = this.ctx;
         const now = ctx.currentTime;
@@ -314,7 +253,6 @@ export class AmbienceDirector {
         }
     }
 
-    /** Two low "hoo" notes with a slow vibrato. */
     _playOwl() {
         const ctx = this.ctx;
         const now = ctx.currentTime;
@@ -329,7 +267,6 @@ export class AmbienceDirector {
             osc.type = 'sine';
             osc.frequency.setValueAtTime(base * (i === 0 ? 1 : 0.94), start);
 
-            // Vibrato gives the hoot a breathy, living quality.
             const lfo = ctx.createOscillator();
             lfo.type = 'sine';
             lfo.frequency.value = 5.5;
@@ -353,11 +290,6 @@ export class AmbienceDirector {
         }
     }
 
-    /**
-     * A stereo-panned entry point into the ambient bus. Ambient calls use
-     * plain stereo rather than a 3D panner — the bird is nowhere in
-     * particular, and this costs one node instead of a full panner.
-     */
     _stereoTarget(pan) {
         if (!this.ctx.createStereoPanner) return this.bus;
         const panner = this.ctx.createStereoPanner();
@@ -371,7 +303,6 @@ export class AmbienceDirector {
         for (const id of Array.from(this._emitters.keys())) this.removeEmitter(id);
     }
 
-    // ── Layer plumbing ───────────────────────────────────────────
 
     _startLayer(id, opts) {
         if (this._layers.has(id)) return;
@@ -394,8 +325,6 @@ export class AmbienceDirector {
         }
 
         const gain = ctx.createGain();
-        // Always start silent: `update` fades in to the target, so entering a
-        // scene doesn't slam the ambience on at full level.
         gain.gain.value = 0;
         node.connect(gain);
         gain.connect(this.bus);
@@ -413,7 +342,7 @@ export class AmbienceDirector {
     _stopLayer(id) {
         const layer = this._layers.get(id);
         if (!layer) return;
-        try { layer.source.stop(); } catch (e) { /* already stopped */ }
+        try { layer.source.stop(); } catch (e) { }
         this._layers.delete(id);
     }
 
@@ -429,9 +358,7 @@ export class AmbienceDirector {
     }
 }
 
-// ── Buffer fill functions ────────────────────────────────────────
 
-/** Ocean surf: brown noise under two overlapping slow swells. */
 function fillWaves(data, sampleRate) {
     fillBrownNoise(data, 0.02, 2.2);
     for (let i = 0; i < data.length; i++) {
@@ -443,7 +370,6 @@ function fillWaves(data, sampleRate) {
     crossfadeLoop(data, Math.floor(sampleRate * 0.25));
 }
 
-/** Wind: darker brown noise gusting on two slow LFOs. */
 function fillWind(data, sampleRate) {
     fillBrownNoise(data, 0.01, 2.4);
     for (let i = 0; i < data.length; i++) {
@@ -455,7 +381,6 @@ function fillWind(data, sampleRate) {
     crossfadeLoop(data, Math.floor(sampleRate * 0.25));
 }
 
-/** Rain: white noise with a wandering density modulation. */
 function fillRain(data, sampleRate) {
     for (let i = 0; i < data.length; i++) {
         const t = i / sampleRate;
@@ -465,11 +390,9 @@ function fillRain(data, sampleRate) {
     crossfadeLoop(data, Math.floor(sampleRate * 0.15));
 }
 
-/** Daytime insect shimmer — a very quiet high bed under the birdsong. */
 function fillDayShimmer(data, sampleRate) {
     for (let i = 0; i < data.length; i++) {
         const t = i / sampleRate;
-        // Two fast tremolos an odd interval apart avoid an obvious pulse rate.
         const shimmer = 0.55
             + 0.25 * Math.sin(t * Math.PI * 2 * 11.3)
             + 0.2 * Math.sin(t * Math.PI * 2 * 7.1 + 1.1);
@@ -478,13 +401,9 @@ function fillDayShimmer(data, sampleRate) {
     crossfadeLoop(data, Math.floor(sampleRate * 0.2));
 }
 
-/**
- * Cricket bed: a fast pulse train (the individual chirps) gated by a slower
- * song/rest cycle, so it breathes instead of buzzing continuously.
- */
 function fillCrickets(data, sampleRate) {
-    const chirpRate = 24;   // chirps per second inside a song
-    const songRate = 0.7;   // song/rest cycles per second
+    const chirpRate = 24;
+    const songRate = 0.7;
     for (let i = 0; i < data.length; i++) {
         const t = i / sampleRate;
         const chirpPhase = (t * chirpRate) % 1;
@@ -495,7 +414,6 @@ function fillCrickets(data, sampleRate) {
     crossfadeLoop(data, Math.floor(sampleRate * 0.2));
 }
 
-/** Waterfall: bright, dense white/brown blend with a slow surge. */
 function fillWaterfall(data, sampleRate) {
     let last = 0;
     for (let i = 0; i < data.length; i++) {
@@ -508,7 +426,6 @@ function fillWaterfall(data, sampleRate) {
     crossfadeLoop(data, Math.floor(sampleRate * 0.25));
 }
 
-/** Campfire: a low roar with randomly scattered crackles and pops on top. */
 function fillCampfire(data, sampleRate) {
     fillBrownNoise(data, 0.03, 0.75);
 
@@ -525,17 +442,11 @@ function fillCampfire(data, sampleRate) {
     crossfadeLoop(data, Math.floor(sampleRate * 0.2));
 }
 
-// ── Small helpers ────────────────────────────────────────────────
 
 function clamp01(v) {
     return Math.max(0, Math.min(1, v));
 }
 
-/**
- * How "night" a given time of day is, 0..1. The ramps line up with the dawn
- * and dusk windows in DayNightCycle so the ambience turns over at the same
- * moment the sky does.
- */
 function nightAmount(t) {
     if (t < 0.10) return 1;
     if (t < 0.20) return 1 - (t - 0.10) / 0.10;

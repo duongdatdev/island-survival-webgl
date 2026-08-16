@@ -3,23 +3,14 @@ import { Mesh } from '../renderer/Mesh.js';
 import { Vec3 } from '../math/Vec3.js';
 import { Mat4 } from '../math/Mat4.js';
 
-/**
- * RaftAssembly - Handles the raft building site on the beach.
- * Shows solid parts for built modules and holographic ghost outlines for unbuilt modules.
- */
 const RAFT_SCALE = 0.45;
 
 export class RaftAssembly extends Entity {
-    /**
-     * @param {WebGL2RenderingContext} gl
-     * @param {Float32Array|number[]} position - World [x, y, z] coordinate
-     */
     constructor(gl, position) {
         super();
         this.gl = gl;
         Vec3.copy(this.position, position);
 
-        // State of required and upgrade modules
         this.framePlaced = false;
         this.floatsPlaced = false;
         this.paddlePlaced = false;
@@ -29,61 +20,36 @@ export class RaftAssembly extends Entity {
         this.time = 0.0;
         this.tempMatrix = Mat4.create();
 
-        // 1. Build Solid Meshes with distinct colors
-        this.woodMesh = new Mesh(gl, this._createCubeData(0.55, 0.35, 0.18, 1.0));    // Warm brown logs
-        this.barrelMesh = new Mesh(gl, this._createCubeData(0.45, 0.28, 0.15, 1.0));  // Dark wood barrels
-        this.paddleMesh = new Mesh(gl, this._createCubeData(0.75, 0.60, 0.40, 1.0));  // Light wood paddle
-        this.sailMesh = new Mesh(gl, this._createCubeData(0.95, 0.95, 0.95, 1.0));    // White sail cloth
-        this.mastMesh = new Mesh(gl, this._createCubeData(0.55, 0.35, 0.18, 1.0));    // Dark brown wood mast
-        this.motorMesh = new Mesh(gl, this._createCubeData(0.35, 0.35, 0.35, 1.0));   // Dark grey motor metal
+        this.woodMesh = new Mesh(gl, this._createCubeData(0.55, 0.35, 0.18, 1.0));
+        this.barrelMesh = new Mesh(gl, this._createCubeData(0.45, 0.28, 0.15, 1.0));
+        this.paddleMesh = new Mesh(gl, this._createCubeData(0.75, 0.60, 0.40, 1.0));
+        this.sailMesh = new Mesh(gl, this._createCubeData(0.95, 0.95, 0.95, 1.0));
+        this.mastMesh = new Mesh(gl, this._createCubeData(0.55, 0.35, 0.18, 1.0));
+        this.motorMesh = new Mesh(gl, this._createCubeData(0.35, 0.35, 0.35, 1.0));
 
-        // 2. Build Holographic Ghost Mesh (translucent neon blue)
         this.ghostMesh = new Mesh(gl, this._createCubeData(0.20, 0.60, 1.00, 0.25));
 
         this.updateModelMatrix();
     }
 
-    /**
-     * Update animations (time elapsed)
-     * @param {number} deltaTime
-     */
     update(deltaTime) {
         this.time += deltaTime;
-        // Keep assembly static but animate inside draw if needed
         this.updateModelMatrix();
     }
 
-    /**
-     * Check if all parts have been placed
-     * @returns {boolean}
-     */
     isComplete() {
         return this.framePlaced && this.floatsPlaced && this.paddlePlaced;
     }
 
-    /**
-     * Calculate 2D horizontal distance to a player position
-     * @param {Float32Array} playerPosition
-     * @returns {number}
-     */
     distanceTo(playerPosition) {
         const dx = playerPosition[0] - this.position[0];
         const dz = playerPosition[2] - this.position[2];
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    /**
-     * Draw the raft modules.
-     * Solid elements are drawn in the solid pass. Ghost elements are drawn in the ghost/blend pass.
-     * @param {ShaderProgram} shaderProgram
-     * @param {number} drawMode
-     * @param {boolean} isGhostPass - True if rendering the translucent blending pass
-     */
     draw(shaderProgram, drawMode, isGhostPass) {
-        // Holographic subtle scale pulsing
         const pulse = 1.0 + 0.02 * Math.sin(this.time * 3.5);
 
-        // --- 1. RENDER RAFT FRAME ---
         if (this.framePlaced) {
             if (!isGhostPass) {
                 this._drawFrame(shaderProgram, drawMode, this.woodMesh, 1.0);
@@ -94,7 +60,6 @@ export class RaftAssembly extends Entity {
             }
         }
 
-        // --- 2. RENDER BARREL FLOATS ---
         if (this.floatsPlaced) {
             if (!isGhostPass) {
                 this._drawFloats(shaderProgram, drawMode, this.barrelMesh, 1.0);
@@ -105,7 +70,6 @@ export class RaftAssembly extends Entity {
             }
         }
 
-        // --- 3. RENDER RAFT PADDLE ---
         if (this.paddlePlaced) {
             if (!isGhostPass) {
                 this._drawPaddle(shaderProgram, drawMode, this.paddleMesh, 1.0);
@@ -116,13 +80,11 @@ export class RaftAssembly extends Entity {
             }
         }
 
-        // --- 4. RENDER SAIL ---
         if (this.sailPlaced) {
             if (!isGhostPass) {
                 this._drawSail(shaderProgram, drawMode, this.mastMesh, this.sailMesh, 1.0);
             }
         } else {
-            // Only show sail ghost when paddle is placed
             if (this.framePlaced && this.floatsPlaced && this.paddlePlaced) {
                 if (isGhostPass) {
                     this._drawSail(shaderProgram, drawMode, this.ghostMesh, this.ghostMesh, pulse);
@@ -130,8 +92,6 @@ export class RaftAssembly extends Entity {
             }
         }
 
-        // --- 5. RENDER MOTOR ---
-        // Only show motor ghost when sail is placed
         if (this.framePlaced && this.floatsPlaced && this.paddlePlaced && this.sailPlaced) {
             if (this.motorPlaced) {
                 if (!isGhostPass) {
@@ -145,13 +105,9 @@ export class RaftAssembly extends Entity {
         }
     }
 
-    /**
-     * Renders the wooden raft logs & cross beams
-     */
     _drawFrame(shaderProgram, drawMode, mesh, scaleMult) {
         const baseMatrix = this.modelMatrix;
 
-        // 4 longitudinal logs (aligned with Z-axis)
         const logOffsets = [
             [-0.60 * RAFT_SCALE, 0.10 * RAFT_SCALE, 0.0],
             [-0.20 * RAFT_SCALE, 0.10 * RAFT_SCALE, 0.0],
@@ -167,7 +123,6 @@ export class RaftAssembly extends Entity {
             mesh.draw(drawMode);
         }
 
-        // 3 transverse crossing logs (aligned with X-axis)
         const crossOffsets = [
             [0.0, 0.20 * RAFT_SCALE, -1.00 * RAFT_SCALE],
             [0.0, 0.20 * RAFT_SCALE,  0.00 * RAFT_SCALE],
@@ -183,9 +138,6 @@ export class RaftAssembly extends Entity {
         }
     }
 
-    /**
-     * Renders the 4 support float barrels under the frame
-     */
     _drawFloats(shaderProgram, drawMode, mesh, scaleMult) {
         const baseMatrix = this.modelMatrix;
 
@@ -205,14 +157,10 @@ export class RaftAssembly extends Entity {
         }
     }
 
-    /**
-     * Renders the paddles resting on the raft structure
-     */
     _drawPaddle(shaderProgram, drawMode, mesh, scaleMult) {
         const baseMatrix = this.modelMatrix;
-        const rotY = 0.15; // Sleek angled rest position
+        const rotY = 0.15;
 
-        // 1. Paddle Shaft
         Mat4.copy(this.tempMatrix, baseMatrix);
         Mat4.translate(this.tempMatrix, this.tempMatrix, [0.15 * RAFT_SCALE, 0.28 * RAFT_SCALE, -0.10 * RAFT_SCALE]);
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, rotY);
@@ -220,7 +168,6 @@ export class RaftAssembly extends Entity {
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         mesh.draw(drawMode);
 
-        // 2. Paddle Blade
         Mat4.copy(this.tempMatrix, baseMatrix);
         Mat4.translate(this.tempMatrix, this.tempMatrix, [0.32 * RAFT_SCALE, 0.28 * RAFT_SCALE, 0.70 * RAFT_SCALE]);
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, rotY);
@@ -229,20 +176,15 @@ export class RaftAssembly extends Entity {
         mesh.draw(drawMode);
     }
 
-    /**
-     * Renders the mast and the sail sheet
-     */
     _drawSail(shaderProgram, drawMode, mastMesh, sailMesh, scaleMult) {
         const baseMatrix = this.modelMatrix;
 
-        // 1. Vertical Mast Pole
         Mat4.copy(this.tempMatrix, baseMatrix);
         Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.25 * RAFT_SCALE, 0.0]);
         Mat4.scale(this.tempMatrix, this.tempMatrix, [0.12 * scaleMult * RAFT_SCALE, 2.3 * scaleMult * RAFT_SCALE, 0.12 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         mastMesh.draw(drawMode);
 
-        // 2. Sail Sheet
         Mat4.copy(this.tempMatrix, baseMatrix);
         Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 1.5 * RAFT_SCALE, 0.35 * RAFT_SCALE]);
         const billowAngle = 0.06 * Math.sin(this.time * 2.5);
@@ -252,20 +194,15 @@ export class RaftAssembly extends Entity {
         sailMesh.draw(drawMode);
     }
 
-    /**
-     * Renders the outboard motor at the rear
-     */
     _drawMotor(shaderProgram, drawMode, motorMesh, scaleMult) {
         const baseMatrix = this.modelMatrix;
 
-        // 1. Motor Block (mounted on rear crossbeam Z=-1.2)
         Mat4.copy(this.tempMatrix, baseMatrix);
         Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, 0.45 * RAFT_SCALE, -1.3 * RAFT_SCALE]);
         Mat4.scale(this.tempMatrix, this.tempMatrix, [0.35 * scaleMult * RAFT_SCALE, 0.5 * scaleMult * RAFT_SCALE, 0.35 * scaleMult * RAFT_SCALE]);
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.tempMatrix);
         motorMesh.draw(drawMode);
 
-        // 2. Propeller Stick (extending into water)
         Mat4.copy(this.tempMatrix, baseMatrix);
         Mat4.translate(this.tempMatrix, this.tempMatrix, [0.0, -0.15 * RAFT_SCALE, -1.55 * RAFT_SCALE]);
         Mat4.rotateX(this.tempMatrix, this.tempMatrix, 0.25);
@@ -305,37 +242,22 @@ export class RaftAssembly extends Entity {
         }
     }
 
-    /**
-     * Generates a 24-vertex standard cube with customizable solid color & alpha transparency
-     */
     _createCubeData(r, g, b, a) {
         const positions = new Float32Array([
-            // Front face
             -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,  0.5, -0.5,  0.5,  0.5,
-            // Back face
             -0.5, -0.5, -0.5, -0.5,  0.5, -0.5,  0.5,  0.5, -0.5,  0.5, -0.5, -0.5,
-            // Top face
             -0.5,  0.5, -0.5, -0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5, -0.5,
-            // Bottom face
             -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5, -0.5,  0.5, -0.5, -0.5,  0.5,
-            // Right face
              0.5, -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,  0.5, -0.5,  0.5,
-            // Left face
             -0.5, -0.5, -0.5, -0.5, -0.5,  0.5, -0.5,  0.5,  0.5, -0.5,  0.5, -0.5,
         ]);
 
         const normals = new Float32Array([
-            // Front
              0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,
-            // Back
              0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,
-            // Top
              0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,
-            // Bottom
              0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,
-            // Right
              1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,
-            // Left
             -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0,
         ]);
 
@@ -348,27 +270,21 @@ export class RaftAssembly extends Entity {
         }
 
         const texCoords = new Float32Array([
-            // Front
             0.0, 0.0,  1.0, 0.0,  1.0, 1.0,  0.0, 1.0,
-            // Back
             1.0, 0.0,  1.0, 1.0,  0.0, 1.0,  0.0, 0.0,
-            // Top
             0.0, 1.0,  0.0, 0.0,  1.0, 0.0,  1.0, 1.0,
-            // Bottom
             1.0, 1.0,  0.0, 1.0,  0.0, 0.0,  1.0, 0.0,
-            // Right
             1.0, 0.0,  1.0, 1.0,  0.0, 1.0,  0.0, 0.0,
-            // Left
             0.0, 0.0,  1.0, 0.0,  1.0, 1.0,  0.0, 1.0,
         ]);
 
         const indices = new Uint16Array([
-            0, 1, 2,      0, 2, 3,    // Front
-            4, 5, 6,      4, 6, 7,    // Back
-            8, 9, 10,     8, 10, 11,  // Top
-            12, 13, 14,   12, 14, 15, // Bottom
-            16, 17, 18,   16, 18, 19, // Right
-            20, 21, 22,   20, 22, 23  // Left
+            0, 1, 2,      0, 2, 3,
+            4, 5, 6,      4, 6, 7,
+            8, 9, 10,     8, 10, 11,
+            12, 13, 14,   12, 14, 15,
+            16, 17, 18,   16, 18, 19,
+            20, 21, 22,   20, 22, 23
         ]);
 
         return { positions, normals, colors, texCoords, indices };

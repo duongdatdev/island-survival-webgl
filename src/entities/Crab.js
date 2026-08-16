@@ -2,10 +2,6 @@ import { Creature, CreatureState } from './Creature.js';
 import { Vec3 } from '../math/Vec3.js';
 import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
-/**
- * Crab — Passive beach creature.
- * Scuttles along shoreline, flees from the player, drops raw crab meat.
- */
 export class Crab extends Creature {
     constructor(gl, position, modelAsset = null) {
         super({
@@ -17,12 +13,11 @@ export class Crab extends Creature {
             attackDamage: 0,
             attackCooldown: 0,
             color: [0.85, 0.3, 0.15],
-            // Slightly oversized for gameplay readability along the shoreline.
             meshScale: [0.531, 0.315, 0.288],
             modelAsset,
             bobAmplitude: 0.02,
             bobSpeed: 5.0,
-            fleeThreshold: null, // Flees immediately on detection
+            fleeThreshold: null,
             fleeDuration: 3.0,
             patrolRadius: 5.0,
             idleDuration: 1.5 + Math.random() * 2.0,
@@ -35,16 +30,11 @@ export class Crab extends Creature {
         Vec3.set(this.position, position[0], position[1], position[2]);
         Vec3.set(this._spawnPosition, position[0], position[1], position[2]);
 
-        // Rebuild mesh with the gl context
         this._buildMesh();
         this.updateModelMatrix();
     }
 
-    /**
-     * Override patrol with side-to-side scuttle
-     */
     _updatePatrol(deltaTime, distToPlayer) {
-        // Same flee detection as base
         if (distToPlayer < this.detectionRadius) {
             this.state = CreatureState.FLEE;
             this._stateTimer = 0;
@@ -52,7 +42,6 @@ export class Crab extends Creature {
             return;
         }
 
-        // Scuttle sideways (crab-like movement)
         const scuttleAngle = Math.sin(this.animTime * 2.0) * 0.5;
         this._targetDir[0] = Math.cos(scuttleAngle);
         this._targetDir[2] = Math.sin(scuttleAngle);
@@ -61,7 +50,6 @@ export class Crab extends Creature {
         this.position[2] += this._targetDir[2] * this.baseSpeed * 0.3 * deltaTime;
         this.rotation[1] = scuttleAngle + Math.PI / 2;
 
-        // Stay near spawn
         const distFromSpawn = Vec3.distance(this.position, this._spawnPosition);
         if (distFromSpawn > this._patrolRadius) {
             const toSpawn = [

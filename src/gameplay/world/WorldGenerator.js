@@ -10,30 +10,19 @@ export class WorldGenerator {
         this.width = width;
     }
 
-    /**
-     * Entry point to generate a complete world deterministically
-     * @param seed Seed string or number
-     * @param metadataMap Metadata dictionary loaded from environment *.asset.json files
-     * @param debugMode If true, draw bright debug biome colors
-     */
     generate(seed, metadataMap, debugMode = false) {
         const startTime = performance.now();
         const prng = new PRNG(seed);
 
-        // 1. Generate Island
         const island = new IslandGenerator(prng);
 
-        // 2. Generate Terrain height controller
         const terrainGen = new TerrainGenerator(prng, island, this.size, this.width);
 
-        // 3. Generate Biomes controller
         const biomeGen = new BiomeGenerator(prng, island);
 
-        // 4. Generate Environment Props, resources, and build site
         const builder = new EnvironmentBuilder(prng, island, terrainGen, biomeGen, this.width);
         const { placedObjects, resourceNodes, buildArea, navigationGrid, landmarks } = builder.build(metadataMap);
 
-        // 5. Build geometry buffers for WebGL rendering
         const step = this.width / this.size;
         const halfWidth = this.width / 2.0;
 
@@ -43,7 +32,6 @@ export class WorldGenerator {
         const indices = [];
         const heights = new Float32Array((this.size + 1) * (this.size + 1));
 
-        // 5.1 Vertices, Heights, and Colors
         for (let z = 0; z <= this.size; z++) {
             for (let x = 0; x <= this.size; x++) {
                 const px = x * step - halfWidth;
@@ -53,7 +41,6 @@ export class WorldGenerator {
                 positions.push(px, py, pz);
                 heights[z * (this.size + 1) + x] = py;
 
-                // Determine biome at this vertex coordinate
                 const biome = biomeGen.getBiome(px, pz, py);
                 const rgb = biomeGen.getBiomeColor(biome, py, debugMode);
                 
@@ -61,7 +48,6 @@ export class WorldGenerator {
             }
         }
 
-        // 5.2 Normals
         const normalStep = step * 0.5;
         for (let z = 0; z <= this.size; z++) {
             for (let x = 0; x <= this.size; x++) {
@@ -73,7 +59,6 @@ export class WorldGenerator {
             }
         }
 
-        // 5.3 Indices grid - only generate triangles near the island (incl. underwater sand shelf)
         const outerBeach = island.outerBeachRadius || island.radius;
         const outerBeachSq = outerBeach * outerBeach;
         for (let z = 0; z < this.size; z++) {
@@ -86,7 +71,6 @@ export class WorldGenerator {
                 const idx10 = row2 + x;
                 const idx11 = row2 + x + 1;
 
-                // Skip cells whose four corners all sit outside the sand-shelf ring
                 const px0 = x * step - halfWidth;
                 const pz0 = z * step - halfWidth;
                 const px1 = px0 + step;
@@ -98,12 +82,10 @@ export class WorldGenerator {
                     (px1 * px1 + pz1 * pz1) <= outerBeachSq;
                 if (!inRing) continue;
 
-                // First triangle
                 indices.push(idx00);
                 indices.push(idx10);
                 indices.push(idx01);
 
-                // Second triangle
                 indices.push(idx01);
                 indices.push(idx10);
                 indices.push(idx11);

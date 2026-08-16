@@ -52,24 +52,15 @@ import { PostProcessing } from '../renderer/PostProcessing.js';
 import { Frustum } from '../renderer/Frustum.js';
 import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
 
-/** How long between background autosaves, in seconds. */
 const AUTOSAVE_INTERVAL = 60.0;
 
-/** How often achievement predicates are re-evaluated, in seconds. */
 const ACHIEVEMENT_CHECK_INTERVAL = 1.0;
 
-/** Axe targeting and the number of pickup logs produced by one tree. */
 const TREE_CHOP_HALF_ARC = Math.PI * 0.28;
 const TREE_WOOD_DROP_FRACTIONS = [0.28, 0.52, 0.76];
 
-/**
- * Compass strip scale. Shared by the ticks, the direction labels and the POI
- * markers so an icon lands exactly over the bearing it points at. At 2.9px per
- * degree the default 260px bar shows ~90° of arc.
- */
 const COMPASS_PX_PER_DEG = 2.9;
 
-/** Map a biome type onto the footstep surface key used by AudioManager. */
 function biomeToSurface(biome) {
     switch (biome) {
         case BiomeType.BEACH: return 'sand';
@@ -81,11 +72,6 @@ function biomeToSurface(biome) {
     }
 }
 
-/**
- * Maps a resource's `vitalEffect.type` onto the VitalsSystem call and the
- * Vietnamese copy used in the pickup toast. Adding a consumable is then a
- * ResourceDatabase entry only — no new branch in the consume handlers.
- */
 const VITAL_ACTIONS = {
     hunger: { method: 'eat',   verb: 'Đã ăn',  label: 'Đói' },
     thirst: { method: 'drink', verb: 'Đã uống', label: 'Khát' },
@@ -93,39 +79,28 @@ const VITAL_ACTIONS = {
 };
 
 
-/**
- * Main active gameplay scene — v1.0 (wildlife & combat, save/load,
- * achievements, post-processing and culling).
- */
 export class GameScene extends Scene {
     init() {
         console.log('GameScene: Initializing gameplay state...');
         const gl = this.gl;
 
-        // 1. Shaders Initialisation
         this.basicShader = new ShaderProgram(gl, BasicShader.vertex, BasicShader.fragment);
         this.waterShader = new ShaderProgram(gl, WaterShader.vertex, WaterShader.fragment);
         this.unlitShader = new ShaderProgram(gl, UnlitShader.vertex, UnlitShader.fragment);
 
-        // 2. Camera Setup
         this.camera = new Camera(70 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.05, 1000.0);
 
-        // 3. Lighting Setup
         this.dirLight = new DirectionalLight([0, 1.0, 0], [1.0, 0.95, 0.85], 1.0);
         this.ambientLight = new AmbientLight([0.22, 0.28, 0.38], 0.4);
         this.lightTime = 0.0;
 
-        // 3.5 v0.4 - Day/Night Cycle & Weather System
         this.dayNight = new DayNightCycle();
         this.weather = new WeatherSystem();
         this._rainParticleTimer = 0;
 
-        // 3.6 v0.4 - Sun & Moon billboard sprites (kept for gameplay cues)
         this.sunSprite = new BillboardSprite(gl, [1.0, 0.9, 0.5], 4.0, [1.0, 0.7, 0.15]);
         this.moonSprite = new BillboardSprite(gl, [0.85, 0.85, 0.95], 3.5, [0.5, 0.5, 0.7]);
 
-        // 3.7 v1.1 - Procedural Sky Shader (shared with MainMenuScene)
-        // Renders a fullscreen sky dome with gradient, stars, sun, cirrus, dithering.
         this.skyShader = null;
         this.skyVao = null;
         try {
@@ -135,28 +110,20 @@ export class GameScene extends Scene {
             console.error('GameScene: sky shader failed to compile, using flat sky.', e);
         }
 
-        // Reused matrices for sky pass
         this._viewProj = Mat4.create();
         this._invViewProj = Mat4.create();
 
-        // 4. Entities Setup
         this.player = new Player();
 
-        // v1.0 — a save staged by the menu is consumed here so a reload of the
-        // scene (e.g. returning from the main menu) starts fresh.
-        /** @type {object|null} */
         this._pendingSave = this.engine.pendingLoad || null;
         this.engine.pendingLoad = null;
+        this.activeWorldId = this.engine.activeWorldId;
 
-        // Procedural World Generation Setup
         this.worldSeed = this.engine.worldSeed || Math.floor(Math.random() * 1000000).toString();
         this.debugBiomeColors = false;
         this.worldGenerator = new WorldGenerator(120, 100.0);
 
         if (this._pendingSave) {
-            // Generation is deterministic in the seed, so re-running it here
-            // reproduces exactly the island the save was made on — far cheaper
-            // than serializing terrain and prop placement.
             this.worldSeed = this._pendingSave.worldSeed;
             console.log(`GameScene: Restoring world from save seed: ${this.worldSeed}`);
             this.world = this.worldGenerator.generate(this.worldSeed, this.engine.assets.environmentMetadata, this.debugBiomeColors);
@@ -168,14 +135,9 @@ export class GameScene extends Scene {
             this.world = this.worldGenerator.generate(this.worldSeed, this.engine.assets.environmentMetadata, this.debugBiomeColors);
         }
 
-        // Initialize terrain with generated data
         this.terrain = new Terrain(gl, 120, 100.0, this.world.terrain, this.world.terrainGenerator);
-        // 100x100 divisions, size 200. The terrain is handed over so the mesh
-        // can bake seabed depth per vertex — that drives the shallow-water
-        // colour and the shoreline foam band.
         this.water = new Water(gl, 100, 200.0, this.terrain);
 
-        // Instantiate environment props (trees, bushes, rocks) from the generated world
         this.environmentEntities = [];
         for (const obj of this.world.placedObjects) {
             const mesh = this.engine.assets.models[obj.objPath];
@@ -194,19 +156,16 @@ export class GameScene extends Scene {
             }
         }
 
-        // 5. Build Character Renderer from OBJ
         const characterDef = CharacterRegistry.get('casual_male');
         this.characterRenderer = new CharacterRenderer(characterDef);
         this.characterRenderer.load(gl, this.engine.assets);
         this.firstPersonViewModel = new FirstPersonViewModel(gl);
         this.firstPersonViewModel.load(this.engine.assets);
 
-        // 6. Resource System Initialization
         this.inventory = new Inventory(20);
         this.resourceManager = new ResourceManager(this.engine.assets);
         this.debrisManager = new DebrisManager(this.engine.assets);
 
-        // Spawn resources from procedural generator nodes list
         this.resourceManager.worldResources = [];
         for (const node of this.world.resourceNodes) {
             this.resourceManager.spawnResource(
@@ -218,22 +177,18 @@ export class GameScene extends Scene {
             );
         }
 
-        // Bind inventory changes to UI updates
         this.inventory.onChange = (resourceId, newCount, delta) => {
             this._updateGridInventory();
             this._renderCraftingPanel();
         };
 
-        // 7. Particle System
         this.particleSystem = new ParticleSystem(gl);
         this.rainSystem = new RainSystem(gl);
 
-        // 8. Tutorial System
         this.tutorial = new TutorialSystem();
         this.tutorial.init();
         this.tutorial.start();
 
-        // 9. Unified Inventory & Crafting UI Bindings
         this.inventoryMenu = document.getElementById('inventory-menu');
         this.inventoryMenuCloseBtn = document.getElementById('inventory-menu-close');
         this.selectedCraftingCategory = 'tool';
@@ -244,7 +199,6 @@ export class GameScene extends Scene {
             this.inventoryMenuCloseBtn.addEventListener('click', () => this._closeInventoryMenu());
         }
 
-        // Bind category button clicks inside menu
         const categoryButtons = document.querySelectorAll('.cat-btn');
         categoryButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -252,16 +206,14 @@ export class GameScene extends Scene {
                 btn.classList.add('active');
                 
                 this.selectedCraftingCategory = btn.getAttribute('data-category');
-                this.selectedRecipeId = null; // Clear selection on category switch
+                this.selectedRecipeId = null;
                 this._renderCraftingPanel();
                 this.engine.audio.playClick();
             });
         });
 
-        // Initialize panel render
         this._updateGridInventory();
 
-        // 10. Vitals System (v0.2)
         this.vitals = new VitalsSystem();
         this.vitals.onChange = (vitalId, value, max) => {
             this._updateVitalBar(vitalId, value, max);
@@ -270,38 +222,31 @@ export class GameScene extends Scene {
             this._showGameOver();
         };
 
-        // Show vitals & hotbar HUD
         const vitalsHud = document.getElementById('vitals-hud');
         if (vitalsHud) vitalsHud.classList.remove('hidden');
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.remove('hidden');
 
-        // 11. Campfire Entity (v0.2) — placed near island center
         this.campfire = new Campfire(
             gl,
             [5.0, 0.0, 5.0],
             this.engine.assets.getModel('survival:bonfire_fire')
         );
-        // Position campfire on terrain
         const campfireY = this.terrain.getHeight(5.0, 5.0);
         this.campfire.position[1] = campfireY;
         this.campfire.updateModelMatrix();
 
-        // 12. Water Collector Entity (v0.2) — placed near beach
         this.waterCollector = new WaterCollector(gl, [-5.0, 0.0, 15.0]);
         const wcY = this.terrain.getHeight(-5.0, 15.0);
         this.waterCollector.position[1] = wcY;
         this.waterCollector.updateModelMatrix();
 
-        // 13. Raft Assembly & Escape HUD Initializations (v0.3: procedurally placed buildArea)
         this.raftAssembly = new RaftAssembly(gl, this.world.buildArea);
 
-        // Setup Biome Colors debug switch
         this.toggleBiomeColorsEl = document.getElementById('toggle-biome-colors');
         if (this.toggleBiomeColorsEl) {
             this.toggleBiomeColorsEl.checked = this.debugBiomeColors;
             
-            // Remove any old listeners by replacing the element or adding a standard event listener
             const newListener = (e) => {
                 this.debugBiomeColors = e.target.checked;
                 this._regenerateWorld();
@@ -309,10 +254,8 @@ export class GameScene extends Scene {
             this.toggleBiomeColorsEl.addEventListener('change', newListener);
         }
         
-        // Render initial world metrics in the debug HUD
         this._updateWorldDebugInfo();
         
-        // 13.5 Waterfall POI (v0.3) — procedural placement from world.landmarks
         const wfPos = this.world.landmarks && this.world.landmarks.waterfall
             ? this.world.landmarks.waterfall
             : [25.0, this.terrain.getHeight(25.0, -20.5), -20.5];
@@ -320,20 +263,15 @@ export class GameScene extends Scene {
         this.waterfall.position[1] = wfPos[1];
         this.waterfall.updateModelMatrix();
 
-        // 13.6 Blueprints & Fishing tracking (v0.3)
         this.unlockedBlueprints = new Set();
         this.isFishing = false;
         this.fishingTimer = 0.0;
 
-        // 13.7 Spawning Treasure Chests (v0.3) — procedural per-quadrant placement
         const chestSpots = this.world.landmarks && this.world.landmarks.treasureChests
             ? this.world.landmarks.treasureChests
             : [];
         for (const spot of chestSpots) {
             const chest = this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
-            // Tag the chest with its reward type up-front, based on the quadrant
-            // it was placed in. This is robust even when a chest lands close to
-            // an axis (where the old cx/cz sign classification broke).
             if (chest) chest.rewardType = this._quadrantRewardType(spot.quadrant);
         }
 
@@ -345,19 +283,19 @@ export class GameScene extends Scene {
         this.gameoverScreen = document.getElementById('gameover-screen');
         this.gameoverRestartBtn = document.getElementById('gameover-restart-btn');
         this.gameoverTimeEl = document.getElementById('gameover-time');
+        this.victoryScreen?.classList.add('hidden');
+        this.gameoverScreen?.classList.add('hidden');
+
+        this._onRestart = () => this._restartWorld();
 
         if (this.escapeBtn) {
             this.escapeBtn.addEventListener('click', () => this._startEscapeCutscene());
         }
         if (this.restartBtn) {
-            this.restartBtn.addEventListener('click', () => {
-                window.location.reload();
-            });
+            this.restartBtn.addEventListener('click', this._onRestart);
         }
         if (this.gameoverRestartBtn) {
-            this.gameoverRestartBtn.addEventListener('click', () => {
-                window.location.reload();
-            });
+            this.gameoverRestartBtn.addEventListener('click', this._onRestart);
         }
 
         this.isEscaping = false;
@@ -365,7 +303,6 @@ export class GameScene extends Scene {
         this.survivalSeconds = 0.0;
         this._isGameOver = false;
 
-        // 14. Pause state
         this.isPaused = false;
         this._pauseResumeBtn = document.getElementById('pause-resume-btn');
         this._pauseSoundBtn = document.getElementById('pause-sound-btn');
@@ -388,11 +325,8 @@ export class GameScene extends Scene {
         };
         this._onPauseMenu = () => {
             this.engine.audio.playClick();
-            // Leaving to the menu would otherwise throw away progress since the
-            // last autosave, so commit one on the way out.
             this._saveGame(true);
             this._resumeGame();
-            // Small delay for transition
             setTimeout(() => {
                 this.engine.scenes.switchScene('MainMenu');
             }, 100);
@@ -422,15 +356,12 @@ export class GameScene extends Scene {
         if (this._pauseAchievementsBtn) this._pauseAchievementsBtn.addEventListener('click', this._onPauseAchievements);
         if (this._pauseGuideBtn) this._pauseGuideBtn.addEventListener('click', this._onPauseGuide);
 
-        // 15. Running properties
         this.time = 0.0;
         this.tempMatrix = Mat4.create();
 
-        // Footstep timer
         this._footstepTimer = 0;
-        this._footstepInterval = 0.4; // Seconds between footstep sounds
+        this._footstepInterval = 0.4;
 
-        // 16. Collision System
         this.collisionSystem = new CollisionSystem();
         this.collisionDebug = new CollisionDebug(gl);
 
@@ -439,7 +370,6 @@ export class GameScene extends Scene {
             this.collisionSystem.register(entity);
         }
 
-        // Camera dependency injection — providers are adapter wrappers
         this.camera.setCollisionProvider({
             sphereCast: (origin, direction, radius, maxDist) => {
                 const result = this.collisionSystem.raycast(origin, direction, maxDist + radius, null);
@@ -466,7 +396,6 @@ export class GameScene extends Scene {
             getHeight: (x, z) => this.terrain.getHeight(x, z),
         });
 
-        // 17. Debug Collision toggle
         const debugCollisionEl = document.getElementById('toggle-collision-debug');
         if (debugCollisionEl) {
             debugCollisionEl.addEventListener('change', (e) => {
@@ -475,33 +404,26 @@ export class GameScene extends Scene {
             });
         }
 
-        // ── v0.5: Combat System & Wildlife ──
         this.combatSystem = new CombatSystem();
         this._attackHoldBlocked = false;
         this.creatures = [];
 
-        // Spawn creatures
         this._spawnCrabs();
         this._spawnSeagulls();
         this._spawnBoars();
         this._spawnSharks();
 
-        // Register creatures with collision system
         for (const creature of this.creatures) {
             this.collisionSystem.register(creature);
         }
 
-        // v0.4: sky color set dynamically each frame — initial placeholder
         gl.clearColor(0.53, 0.74, 0.90, 1.0);
 
-        // Show HUD
         const hud = document.getElementById('resource-hud');
         if (hud) hud.style.display = '';
 
-        // ── v1.0: Release polish systems ──
         this._initReleaseSystems();
 
-        // Start ambient audio (v1.1: positional emitters + procedural music)
         this.engine.audio._ensureContext();
         this.engine.audio.resume();
         this.engine.audio.startAmbientWaves();
@@ -510,29 +432,22 @@ export class GameScene extends Scene {
         this.engine.audio.startMusic();
         this.engine.audio.setHealthFraction(this.vitals.health / 100);
 
-        // Register positional emitters for the waterfall and campfire (if
-        // already built from a save). These are one-shot registrations;
-        // the campfire emitter is created dynamically on placement.
         this.engine.audio.addEmitter('waterfall', 'waterfall', this.waterfall.position, true);
         if (this.campfire.isBuilt) {
             this.engine.audio.addEmitter('campfire', 'campfire', this.campfire.position, true);
         }
 
-        // Restoring last means every subsystem already exists and can simply be
-        // overwritten with the stored values.
         if (this._pendingSave) {
             this._applySave(this._pendingSave);
             this._pendingSave = null;
         }
 
-        // Lock pointer automatically on start
         try {
             this.engine.input.canvas.requestPointerLock();
         } catch (e) {
             console.warn('GameScene: requestPointerLock failed', e);
         }
 
-        // Auto-lock pointer on canvas click during active gameplay
         this._onCanvasClick = () => {
             if (!this.isPaused && (!this.inventoryMenu || this.inventoryMenu.classList.contains('hidden')) && !this._isGameOver && !this.isEscaping) {
                 if (!document.pointerLockElement) {
@@ -547,43 +462,27 @@ export class GameScene extends Scene {
         this.gl.canvas.addEventListener('click', this._onCanvasClick);
     }
 
-    // ============================================
-    //  v1.0 — RELEASE SYSTEMS
-    // ============================================
 
-    /**
-     * Wire up the systems introduced in v1.0: run statistics, achievements,
-     * autosave, culling, post-processing, and the settings overlays.
-     */
     _initReleaseSystems() {
         const gl = this.gl;
         const settings = this.engine.settings;
 
-        /** Per-run counters that feed achievement predicates. */
         this.stats = createStats();
         this.achievements = this.engine.achievements;
         this._achievementTimer = 0;
 
-        // Night/storm milestones are edge-triggered, so remember the previous
-        // sample rather than counting every frame spent in that state.
         this._wasNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
         this._wasStorm = false;
 
         this._autosaveTimer = 0;
         this._saveStatusTimer = 0;
 
-        // Culling + post-processing
         this.frustum = new Frustum();
         this.postFx = new PostProcessing(gl);
         this._drawCalls = 0;
 
-        // Shared settings/achievements/credits overlays. Closing one of them
-        // returns to whatever was behind it (usually the pause menu), so no
-        // close hook is needed here.
         this.menuUI = new MenuUI(this.engine);
 
-        // Per-frame DOM lookups for the debug toggles were showing up in
-        // profiles, so resolve them once and reuse the references.
         this._domCache = {
             wireframe: document.getElementById('toggle-wireframe'),
             water: document.getElementById('toggle-water'),
@@ -600,7 +499,6 @@ export class GameScene extends Scene {
             resolution: document.getElementById('debug-resolution'),
             postFx: document.getElementById('debug-postfx'),
             saveStatus: document.getElementById('pause-save-status'),
-            // v1.1 HUD widgets
             timeWeatherWidget: document.getElementById('time-weather-widget'),
             twClock: document.getElementById('tw-clock'),
             twWeather: document.getElementById('tw-weather'),
@@ -612,7 +510,6 @@ export class GameScene extends Scene {
             hitMarker: document.getElementById('hit-marker'),
         };
 
-        // Track the survival day counter
         this._survivalDay = 1;
         this._lastDayIndex = 0;
 
@@ -620,10 +517,6 @@ export class GameScene extends Scene {
         this._unsubscribeSettings = settings.onChange(() => this._applySettings());
     }
 
-    /**
-     * Push the current settings into the renderer, camera and particle system.
-     * Cheap enough to re-run wholesale on any change.
-     */
     _applySettings() {
         const s = this.engine.settings;
 
@@ -640,21 +533,14 @@ export class GameScene extends Scene {
         if (fpsEl) fpsEl.classList.toggle('hidden', !s.get('showFps'));
     }
 
-    /**
-     * Write a save snapshot.
-     * @param {boolean} silent Autosaves and exit-saves stay quiet; the pause
-     *        menu button reports success or failure to the player.
-     */
     _saveGame(silent) {
-        // A finished run has nothing meaningful to resume, and restoring into a
-        // death/victory screen would leave the player stuck there.
         if (this._isGameOver || this.isEscaping) {
             if (!silent) this._setSaveStatus('Không thể lưu khi ván chơi đã kết thúc.', true);
             return false;
         }
 
         this.stats.survivalSeconds = this.survivalSeconds;
-        const ok = SaveSystem.save(SaveSystem.captureScene(this));
+        const ok = this.activeWorldId && SaveSystem.saveWorld(this.activeWorldId, SaveSystem.captureScene(this));
 
         this._autosaveTimer = 0;
         if (!silent) {
@@ -674,15 +560,9 @@ export class GameScene extends Scene {
         this._saveStatusTimer = 3.0;
     }
 
-    /**
-     * Overwrite live state with a stored snapshot. Called at the tail of
-     * `init`, once every subsystem exists.
-     * @param {object} save
-     */
     _applySave(save) {
         console.log('GameScene: Restoring saved run...');
 
-        // ── Player ──
         this.player.position[0] = save.player.position[0];
         this.player.position[1] = save.player.position[1];
         this.player.position[2] = save.player.position[2];
@@ -691,7 +571,6 @@ export class GameScene extends Scene {
 
         this.survivalSeconds = save.survivalSeconds || 0;
 
-        // ── Vitals ── (assign directly, then push the values to the HUD)
         this.vitals.health = save.vitals.health;
         this.vitals.hunger = save.vitals.hunger;
         this.vitals.thirst = save.vitals.thirst;
@@ -700,14 +579,12 @@ export class GameScene extends Scene {
             this._updateVitalBar(id, this.vitals[id], 100);
         }
 
-        // ── Inventory ──
         for (let i = 0; i < this.inventory.slots.length; i++) {
             const stored = save.inventory.slots[i];
             this.inventory.slots[i] = stored ? { id: stored.id, count: stored.count } : null;
         }
         this.inventory.selectedHotbarIndex = save.inventory.selectedHotbarIndex || 0;
 
-        // ── Raft assembly ──
         Object.assign(this.raftAssembly, {
             framePlaced: !!save.raft.framePlaced,
             floatsPlaced: !!save.raft.floatsPlaced,
@@ -716,7 +593,6 @@ export class GameScene extends Scene {
             motorPlaced: !!save.raft.motorPlaced,
         });
 
-        // ── Placed structures ──
         const cf = save.structures.campfire;
         this.campfire.isBuilt = !!cf.isBuilt;
         this.campfire.position[0] = cf.position[0];
@@ -732,10 +608,8 @@ export class GameScene extends Scene {
         this.waterCollector.waterStored = wc.waterStored || 0;
         this.waterCollector.updateModelMatrix();
 
-        // ── Blueprints ──
         this.unlockedBlueprints = new Set(save.blueprints || []);
 
-        // ── Environment ──
         if (save.environment) {
             this.dayNight.timeOfDay = save.environment.timeOfDay;
             this.weather.currentWeather = save.environment.weather;
@@ -745,9 +619,6 @@ export class GameScene extends Scene {
             this.weather.rainIntensity = save.environment.rainIntensity;
         }
 
-        // ── World resources ──
-        // Wipe the freshly generated pickups and rebuild only the ones the save
-        // still lists, so harvested nodes stay harvested.
         this.resourceManager.delete();
         for (const entry of save.resources || []) {
             const def = getResourceDef(entry.id);
@@ -761,7 +632,6 @@ export class GameScene extends Scene {
             this.resourceManager.worldResources.push(resource);
         }
 
-        // ── Statistics ──
         if (save.stats) Object.assign(this.stats, save.stats);
         this._wasNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
         this._wasStorm = this.weather.currentWeather === 'storm';
@@ -771,16 +641,9 @@ export class GameScene extends Scene {
         this._showNotification('💾 Đã tải lại tiến trình đã lưu!');
     }
 
-    /**
-     * Advance achievement bookkeeping: edge-triggered world milestones, plus a
-     * throttled sweep of the predicates.
-     * @param {number} deltaTime
-     */
     _updateAchievements(deltaTime) {
         this.stats.survivalSeconds = this.survivalSeconds;
 
-        // Surviving a night = being present when the clock rolls out of the
-        // night window back into dawn.
         const isNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
         if (this._wasNight && !isNight) this.stats.nightsSurvived++;
         this._wasNight = isNight;
@@ -804,14 +667,10 @@ export class GameScene extends Scene {
     }
 
     update(deltaTime) {
-        // v1.0 — achievement toasts and the FPS readout keep running while
-        // paused; they are presentation, not simulation.
         this.achievements.update(deltaTime);
         this._updateFpsCounter();
         this._tickSaveStatus(deltaTime);
 
-        // Handle ESC — closes an open settings/achievements panel first, so it
-        // never skips a step and drops the player straight back into play.
         if (this.engine.input.isKeyPressed('Escape')) {
             const isInventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
             if (isInventoryOpen) {
@@ -826,21 +685,15 @@ export class GameScene extends Scene {
             return;
         }
 
-        // If paused or game over, don't update game logic
         if (this.isPaused || this._isGameOver) return;
 
         this.time += deltaTime;
 
-        // Refresh the shared wave field before anything that floats updates.
-        // render() feeds these very same values to the shader, so what the
-        // player sees and what debris rides are one surface, not two.
         this._syncWaveField();
 
-        // Escape cutscene update loop
         if (this.isEscaping) {
             this.escapeTime += deltaTime;
 
-            // Sail the raft forward (v0.3: dynamic speed based on raft upgrades)
             let sailSpeed = 1.0 + this.escapeTime * 0.8;
             if (this.raftAssembly.motorPlaced) {
                 sailSpeed = 8.0 + this.escapeTime * 3.0;
@@ -849,25 +702,20 @@ export class GameScene extends Scene {
             }
 
             this.raftAssembly.position[2] += sailSpeed * deltaTime;
-            // Ride the actual ocean rather than an unrelated sine — the raft
-            // is the one thing the player is staring at during the escape.
             this.raftAssembly.position[1] = WaveField.heightAt(
                 this.raftAssembly.position[0], this.raftAssembly.position[2]);
             this.raftAssembly.updateModelMatrix();
 
-            // Pin player character to raft frame
             this.player.position[0] = this.raftAssembly.position[0];
             this.player.position[1] = this.raftAssembly.position[1] + (0.20 * 0.45) + 0.9 * this.player.scaleFactor;
             this.player.position[2] = this.raftAssembly.position[2];
             this.player.rotation[1] = 0.0;
             this.player.updateModelMatrix();
 
-            // Cinematic camera track
             this.camera.target[0] = this.player.position[0];
             this.camera.target[1] = this.player.position[1];
             this.camera.target[2] = this.player.position[2];
 
-            // 3/4 high side view camera panning
             this.camera.position[0] = -7.0 - this.escapeTime * 0.3;
             this.camera.position[1] = 4.0 + this.escapeTime * 0.15;
             this.camera.position[2] = this.raftAssembly.position[2] - 8.0 - this.escapeTime * 0.2;
@@ -875,10 +723,8 @@ export class GameScene extends Scene {
             const up = [0, 1.0, 0];
             Mat4.lookAt(this.camera.viewMatrix, this.camera.position, this.camera.target, up);
 
-            // Update inverse view-projection for sky shader
             this._updateInvViewProj();
 
-            // Water splash particles during escape
             if (Math.random() < 0.3) {
                 const splashPos = [
                     this.raftAssembly.position[0] + (Math.random() - 0.5) * 1.5,
@@ -888,7 +734,6 @@ export class GameScene extends Scene {
                 this.particleSystem.emit(splashPos, ParticleSystem.PRESET.SPLASH);
             }
 
-            // Engine exhaust particles during escape (v0.3)
             if (this.raftAssembly.motorPlaced && Math.random() < 0.4) {
                 const enginePos = [
                     this.raftAssembly.position[0] + (Math.random() - 0.5) * 0.3,
@@ -905,16 +750,14 @@ export class GameScene extends Scene {
                     speedVariance: 0.5,
                     lifetime: 0.8,
                     lifetimeVariance: 0.3,
-                    gravity: 0.8, // Float upwards
+                    gravity: 0.8,
                     spread: 0.3,
                     yBias: 1.0,
                 });
             }
 
-            // Update particles during cutscene
             this.particleSystem.update(deltaTime);
 
-            // Handle victory overlay trigger
             if (this.escapeTime >= 6.0) {
                 if (this.victoryScreen && this.victoryScreen.classList.contains('hidden')) {
                     this.victoryScreen.classList.remove('hidden');
@@ -925,7 +768,6 @@ export class GameScene extends Scene {
                         this.statTimeEl.textContent = `${mins}:${secs}`;
                     }
 
-                    // Update custom victory description (v0.3)
                     const subtitleEl = this.victoryScreen.querySelector('.victory-subtitle');
                     if (subtitleEl) {
                         if (this.raftAssembly.motorPlaced) {
@@ -941,39 +783,30 @@ export class GameScene extends Scene {
                         document.exitPointerLock();
                     }
 
-                    // v1.0 — the run is over: bank the escape achievement and
-                    // clear the save so "Chơi tiếp" can't resurrect a finished
-                    // game into a victory screen.
                     this.stats.escaped = 1;
                     this.stats.survivalSeconds = this.survivalSeconds;
                     this.achievements.evaluate(this.stats);
-                    SaveSystem.deleteSave();
+                    if (this.activeWorldId) SaveSystem.finishWorld(this.activeWorldId, 'escaped', this.survivalSeconds);
 
-                    // Play victory fanfare
                     this.engine.audio.playVictory();
                 }
             }
             return;
         }
 
-        // Increment survived time
         this.survivalSeconds += deltaTime;
 
-        // v1.0 — milestones and background autosave
         this._updateAchievements(deltaTime);
         this._autosaveTimer += deltaTime;
         if (this._autosaveTimer >= AUTOSAVE_INTERVAL) {
             this._saveGame(true);
         }
 
-        // Rescale aspect ratio if canvas resized
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
 
-        // ---- Fishing Channel Update (v0.3) ----
         if (this.isFishing) {
             this.fishingTimer -= deltaTime;
             
-            // Show prompt with countdown
             const hintEl = this._domCache.pickupHint;
             if (hintEl) {
                 hintEl.innerHTML = `🎣 Đang câu cá... (còn ${Math.max(1, Math.ceil(this.fishingTimer))} giây)`;
@@ -981,7 +814,6 @@ export class GameScene extends Scene {
                 hintEl.dataset.hintOwner = 'fishing';
             }
 
-            // Periodically emit water splash particles in player's forward direction
             if (Math.random() < 0.25) {
                 const angle = this.player.rotation[1];
                 const splashPos = [
@@ -1007,9 +839,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Walking is free; holding Sprint spends stamina for a short sprint.
-        // Read current input rather than last frame's currentSpeed so stamina
-        // and movement begin/end together.
         const input = this.engine.input;
         const hasMovementInput = input.isActionDown('moveForward')
             || input.isActionDown('moveBackward')
@@ -1025,12 +854,6 @@ export class GameScene extends Scene {
 
         const prevPlayerPos = [this.player.position[0], this.player.position[1], this.player.position[2]];
 
-        // Apply mouse-look before movement so WASD reacts to the camera heading
-        // in the same frame instead of lagging one frame behind a fast turn.
-        // Eye/neck heights come from the actual visual mesh because it is much
-        // taller than the gameplay collider. The camera is also shifted a small
-        // distance toward the face, matching a real pair of eyes instead of the
-        // centre of the skull.
         let eyeOffset = this.player.collider.height * 0.42;
         let faceOffset = 0.08;
         this._firstPersonHeadCutFromBase = Infinity;
@@ -1046,29 +869,19 @@ export class GameScene extends Scene {
             const eyeFromBase = modelMin + modelHeight * 0.91;
             eyeOffset = -this.player.collider.height * 0.5 + eyeFromBase;
             faceOffset = modelHeight * 0.09;
-            // This low-poly character has an oversized head that extends well
-            // below a human-like neck ratio. Cut at the shoulder line so no
-            // cheeks/chin can enter the first-person view when looking down.
             this._firstPersonHeadCutFromBase = modelMin + modelHeight * 0.72;
         }
         this.camera.update(this.engine.input, this.player.position, eyeOffset, deltaTime, faceOffset);
 
-        // Update player movements using keyboards and camera reference
         const movementInput = this.isFishing 
             ? { isKeyDown: () => false, isKeyPressed: () => false, isActionDown: () => false, isActionPressed: () => false, keys: {} } 
             : this.engine.input;
         this.player.update(deltaTime, movementInput, this.camera, this.terrain);
 
-        // Collision resolution via CollisionSystem (data-driven, layer-filtered).
-        // Creatures are excluded: they already get pushed out of the player in
-        // the wildlife loop below, and resolving both directions made the
-        // player slide around on its own whenever an animal was nearby.
         if (this.collisionSystem) {
             this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain, CollisionLayers.Creature);
         }
 
-        // Footstep sounds while moving — surface type comes from the biome
-        // underfoot, running makes the steps louder and brighter.
         if (this.player.currentSpeed > 0.1) {
             this._footstepTimer += deltaTime;
             const running = this.player.currentSpeed > PLAYER_BALANCE.walkSpeed + 0.1;
@@ -1081,7 +894,6 @@ export class GameScene extends Scene {
                 const biome = biomeGen ? biomeGen.getBiome(px, pz, h) : null;
                 this.engine.audio.playFootstep(biomeToSurface(biome), running);
 
-                // Dust particles at player feet
                 const dustPos = [
                     this.player.position[0],
                     this.player.position[1] - this.player.collider.height * 0.5 + 0.1,
@@ -1090,30 +902,24 @@ export class GameScene extends Scene {
                 this.particleSystem.emit(dustPos, ParticleSystem.PRESET.DUST);
             }
         } else {
-            this._footstepTimer = this._footstepInterval * 0.8; // Quick first step on resume
+            this._footstepTimer = this._footstepInterval * 0.8;
         }
 
-        // ── v0.5: Creature AI Update ──
         const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         for (let i = this.creatures.length - 1; i >= 0; i--) {
             const creature = this.creatures[i];
 
-            // Update AI
             creature.update(deltaTime, this.player.position, this.terrain, playerTerrainHeight);
 
-            // Resolve creature vs environment collision
             if (this.collisionSystem) {
                 this.collisionSystem.resolvePlayerCollisions(creature, this.terrain);
             }
 
-            // Creature attack damage to player on contact
             if (creature.attackDamage > 0 &&
                 (creature.state === CreatureState.CHASE || creature.state === CreatureState.ATTACK)) {
                 const dx = creature.position[0] - this.player.position[0];
                 const dz = creature.position[2] - this.player.position[2];
                 const dist = Math.sqrt(dx * dx + dz * dz);
-                // Vertical gate so a shark at sea level can't bite someone
-                // standing on the cliff directly above it.
                 const dy = Math.abs(creature.position[1] - this.player.position[1]);
                 if (dist <= creature.attackRange && dy <= 2.0) {
                     if (creature.canDamagePlayer()) {
@@ -1123,7 +929,6 @@ export class GameScene extends Scene {
                         this.engine.audio.setHealthFraction(this.vitals.health / 100);
                         this._showDamageFlash();
 
-                        // Blood particle effect
                         this.particleSystem.emit(
                             this.player.position,
                             { count: 6, color: [0.8, 0.1, 0.1], colorVariance: 0.1, size: 4, sizeVariance: 2, speed: 2.0, speedVariance: 1.0, lifetime: 0.5, lifetimeVariance: 0.2, gravity: -3.0, spread: 0.8, yBias: 1.5 }
@@ -1132,7 +937,6 @@ export class GameScene extends Scene {
                 }
             }
 
-            // Remove dead creatures that have faded out
             if (creature.isReadyForCleanup()) {
                 this.collisionSystem.unregister(creature);
                 creature.delete();
@@ -1140,13 +944,10 @@ export class GameScene extends Scene {
             }
         }
 
-        // ── v0.5: Combat System Update ──
         this.combatSystem.update(deltaTime);
         this.firstPersonViewModel.update(deltaTime, this.player.currentSpeed > 0.1);
         this._updateFallingTrees(deltaTime);
 
-        // Hold left mouse to keep attacking. CombatSystem owns the cooldown,
-        // so each new hit begins only after the previous weapon cycle ends.
         const attackHeld = !!this.engine.input.mouse.buttons[0];
         const combatMenuOpen = !!(this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden'));
         const combatUnavailable = this.isFishing || this.isEscaping || combatMenuOpen
@@ -1155,7 +956,6 @@ export class GameScene extends Scene {
         if (!attackHeld) {
             this._attackHoldBlocked = false;
         } else if (combatUnavailable) {
-            // Require a release after closing a menu instead of attacking by surprise.
             this._attackHoldBlocked = true;
         }
 
@@ -1164,17 +964,14 @@ export class GameScene extends Scene {
             this._handleCombatInput();
         }
 
-        // Toggle Inventory & Crafting Menu via 'inventory' action ('C' or 'Tab')
         if (this.engine.input.isKeyPressed('inventory')) {
             this._toggleInventoryMenu();
         }
 
-        // Consume or place item via 'useItem' action ('Q')
         if (this.engine.input.isKeyPressed('useItem')) {
             this._useActiveItem();
         }
 
-        // Hotbar selection keys 1 to 8 (actions 'hotbar1'..'hotbar8', 'Digit1'..'Digit8', 'Numpad1'..'Numpad8')
         for (let i = 0; i < 8; i++) {
             const action = 'hotbar' + (i + 1);
             if (this.engine.input.isKeyPressed(action) ||
@@ -1188,7 +985,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Mouse scroll hotbar selection (only when menu is closed)
         const isMenuOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
         if (!isMenuOpen) {
             const scroll = this.engine.input.mouse.wheelDelta;
@@ -1199,19 +995,16 @@ export class GameScene extends Scene {
                 
                 this.inventory.selectedHotbarIndex = nextIndex;
                 this._updateGridInventory();
-                this.engine.input.mouse.wheelDelta = 0; // Consume the scroll delta
+                this.engine.input.mouse.wheelDelta = 0;
             }
         }
 
-        // Developer Debug Cheat: Press 'K' to teleport to beach & get all raft modules (v0.3: upgraded)
         if (this.engine.input.isKeyPressed('KeyK')) {
-            // Teleport close to raft building site (Z = 38.5)
             this.player.position[0] = 0.0;
             this.player.position[1] = this.player.collider.height * 0.5;
             this.player.position[2] = 38.5;
             this.player.updateModelMatrix();
 
-            // Add required items & upgrades
             this.inventory.addItem('raft_frame', 1);
             this.inventory.addItem('barrel_floats', 1);
             this.inventory.addItem('paddle', 1);
@@ -1219,7 +1012,6 @@ export class GameScene extends Scene {
             this.inventory.addItem('raft_motor', 1);
             this.inventory.addItem('fishing_rod', 1);
 
-            // Unlock blueprints
             this.unlockedBlueprints.add('fishing_rod_blueprint');
             this.unlockedBlueprints.add('sail_raft_blueprint');
             this.unlockedBlueprints.add('motor_raft_blueprint');
@@ -1228,18 +1020,13 @@ export class GameScene extends Scene {
         }
 
 
-        // Re-snap the fixed eye camera after movement/collision updates.
         this.camera.update(null, this.player.position, eyeOffset, deltaTime, faceOffset);
 
-        // Body yaw follows the view even while stationary. This keeps attacks,
-        // placement and the escape cinematic aligned with what the player saw.
         this.player.rotation[1] = this._getAimYaw();
         this.player.updateModelMatrix();
 
-        // Update inverse view-projection for sky shader
         this._updateInvViewProj();
 
-        // ---- Campfire proximity (v0.2) ----
         const interactKey = this.engine.input ? this.engine.input.getBindingDisplayName('interact') : 'E';
         let showCampfirePrompt = false;
         let campfirePromptText = '';
@@ -1253,7 +1040,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Handle campfire cooking via 'interact' action (v0.5: also cook new meat types)
         if (showCampfirePrompt && this.engine.input.isKeyPressed('interact')) {
             this.engine.input.consumeAction('interact');
             const rawMeats = ['raw_fish', 'raw_crab_meat', 'raw_seagull_meat', 'raw_boar_meat', 'coconut'];
@@ -1279,7 +1065,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // ---- Water Collector proximity (v0.2) ----
         let showWaterPrompt = false;
         let waterPromptText = '';
         if (this.waterCollector.isPlayerNear(this.player.position)) {
@@ -1292,7 +1077,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Handle water collection via 'interact' action
         if (showWaterPrompt && this.waterCollector.waterStored > 0 && this.engine.input.isKeyPressed('interact')) {
             this.engine.input.consumeAction('interact');
             if (this.waterCollector.collectWater()) {
@@ -1302,7 +1086,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Proximity detection for raft assembly (v0.3: support sequential sail and motor upgrades)
         let showRaftPrompt = false;
         let raftPromptText = '';
         let hasModule = false;
@@ -1338,7 +1121,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Intercept interact action to place modules on the raft assembly
         if (showRaftPrompt && hasModule && this.engine.input.isKeyPressed('interact')) {
             this.engine.input.consumeAction('interact');
             
@@ -1364,7 +1146,6 @@ export class GameScene extends Scene {
                 this._showNotification('🚀 Lắp Động Cơ thành công! Đạt công suất phản lực.');
             }
 
-            // Sound + particle effects for raft building
             this.engine.audio.playRaftBuild(this.raftAssembly.position);
             this.particleSystem.emit(
                 [this.raftAssembly.position[0], this.raftAssembly.position[1] + 0.5 * 0.45, this.raftAssembly.position[2]],
@@ -1372,13 +1153,12 @@ export class GameScene extends Scene {
             );
         }
 
-        // ---- v0.3: Waterfall Interaction Check ----
         let showWaterfallPrompt = false;
         if (this.waterfall && this.waterfall.isPlayerInPond(this.player.position)) {
             showWaterfallPrompt = true;
             if (this.engine.input.isKeyPressed('interact')) {
                 this.engine.input.consumeAction('interact');
-                this.vitals.drink(100); // Fully restore thirst
+                this.vitals.drink(100);
                 this._showNotification('💧 Đã uống nước thác! Khôi phục hết Thối Khát.');
                 this.engine.audio.playDrink();
                 this.engine.audio.playSplash(this.player.position);
@@ -1390,7 +1170,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // ---- v0.3: Coastline Fishing Check ----
         let showFishingPrompt = false;
         const fishingTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
@@ -1402,12 +1181,11 @@ export class GameScene extends Scene {
             if (this.engine.input.isKeyPressed('interact')) {
                 this.engine.input.consumeAction('interact');
                 this.isFishing = true;
-                this.fishingTimer = 4.0; // 4 seconds channel
+                this.fishingTimer = 4.0;
                 this.engine.audio.playSplash(this.player.position);
             }
         }
 
-        // ---- v0.3: Treasure Chest Interaction Check ----
         let showChestPrompt = false;
         if (this.resourceManager.nearestPickable && this.resourceManager.nearestPickable.resourceId === 'treasure_chest') {
             showChestPrompt = true;
@@ -1417,11 +1195,9 @@ export class GameScene extends Scene {
             }
         }
 
-        // Update resource system (animations, pickup detection)
         const prevPickupCount = this._getTotalInventoryCount();
         this.resourceManager.update(deltaTime, this.player.position, this.inventory, this.engine.input);
         
-        // Check if a pickup happened (for sound + particles)
         if (this._getTotalInventoryCount() > prevPickupCount) {
             this.stats.resourcesPicked++;
             this.engine.audio.playPickup();
@@ -1429,11 +1205,9 @@ export class GameScene extends Scene {
             this.tutorial.notifyPickup();
         }
 
-        // Update drifting debris system (skip pickup if resource pickup is available)
         const prevDebrisCount = this._getTotalInventoryCount();
         this.debrisManager.update(deltaTime, this.player.position, this.inventory, this.engine.input, this.terrain, this.gl, this.resourceManager.nearestPickable);
 
-        // Check if debris pickup happened
         if (this._getTotalInventoryCount() > prevDebrisCount) {
             this.stats.resourcesPicked++;
             this.engine.audio.playPickup();
@@ -1441,7 +1215,6 @@ export class GameScene extends Scene {
             this.tutorial.notifyPickup();
         }
 
-        // Override pickup hint text — priority: waterfall > fishing > chest > campfire > water collector > raft > default
         const hintEl = this._domCache.pickupHint;
         if (showWaterfallPrompt && hintEl) {
             hintEl.innerHTML = `<span class="hint-key">${interactKey}</span> Uống nước thác ngọt mát 💧`;
@@ -1463,7 +1236,6 @@ export class GameScene extends Scene {
             hintEl.classList.remove('hidden');
         }
 
-        // Display Escape HUD if raft is completed
         if (this.raftAssembly.isComplete() && !this.isEscaping) {
             if (distToRaft < 4.0) {
                 if (this.escapeHud && this.escapeHud.classList.contains('hidden')) {
@@ -1479,27 +1251,21 @@ export class GameScene extends Scene {
             }
         }
 
-        // Update raft assembly animations
         if (this.raftAssembly) {
             this.raftAssembly.update(deltaTime);
         }
 
-        // Update Campfire + WaterCollector animations (v0.2)
         this.campfire.update(deltaTime);
         this.waterCollector.update(deltaTime);
 
-        // Update particle system
         this.particleSystem.update(deltaTime);
 
-        // Update Waterfall POI (v0.3)
         if (this.waterfall) {
             this.waterfall.update(deltaTime, this.particleSystem);
         }
 
-        // Update tutorial
         this.tutorial.update(deltaTime, this.engine.input, this.player);
 
-        // ── v0.4: Day/Night Cycle & Weather System ──
         this.weather.update(deltaTime);
 
         const rotateLight = this._domCache.lightRot ? this._domCache.lightRot.checked : true;
@@ -1511,11 +1277,9 @@ export class GameScene extends Scene {
         const sunColor = this.dayNight.getSunColor();
         const sunIntensity = this.dayNight.getSunIntensity();
 
-        // ── Sun/Moon position update (relative to camera to keep them in the sky) ──
         const sunAngle = this.dayNight.timeOfDay * Math.PI * 2;
         const celestialDist = 80.0;
         
-        // Calculate raw direction of the sun without horizon clamping
         const sunDirRaw = [
             Math.cos(sunAngle) * 0.6,
             Math.sin(sunAngle),
@@ -1524,22 +1288,16 @@ export class GameScene extends Scene {
         const len = Math.sqrt(sunDirRaw[0]*sunDirRaw[0] + sunDirRaw[1]*sunDirRaw[1] + sunDirRaw[2]*sunDirRaw[2]);
         const sunDirNorm = len > 0.001 ? [sunDirRaw[0]/len, sunDirRaw[1]/len, sunDirRaw[2]/len] : [0, 1, 0];
 
-        // Sun position relative to camera
         this.sunSprite.position[0] = this.camera.position[0] + sunDirNorm[0] * celestialDist;
         this.sunSprite.position[1] = this.camera.position[1] + sunDirNorm[1] * celestialDist;
         this.sunSprite.position[2] = this.camera.position[2] + sunDirNorm[2] * celestialDist;
         this.sunSprite.visible = sunDirNorm[1] > -0.1 && sunIntensity > 0.15;
 
-        // Moon is opposite to the sun
         this.moonSprite.position[0] = this.camera.position[0] - sunDirNorm[0] * celestialDist;
         this.moonSprite.position[1] = this.camera.position[1] - sunDirNorm[1] * celestialDist;
         this.moonSprite.position[2] = this.camera.position[2] - sunDirNorm[2] * celestialDist;
-        // Moon is only visible once the sun has dropped below the horizon
-        // (sun direction points downward). The previous check simplified to
-        // sunDirNorm[1] < 0.1, which left the moon showing during the day.
         this.moonSprite.visible = sunDirNorm[1] < -0.1 && sunIntensity < 0.5;
 
-        // Tint sun color based on time of day
         const sunCol = this.dayNight.getSunColor();
         this.sunSprite.setColor(
             sunCol[0] * 0.9 + 0.1,
@@ -1565,10 +1323,6 @@ export class GameScene extends Scene {
         this.ambientLight.color[2] = ambColor[2] * (1.0 + lightningMod * 0.5);
         this.ambientLight.intensity = this.dayNight.getAmbientIntensity() * (1.0 + lightningMod * 0.3);
 
-        // ── Rain ──
-        // Rain is drawn by the dedicated RainSystem as thin falling streaks
-        // (GL_LINES) rather than round particle sprites, so it reads like the
-        // rain in most survival/open-world games instead of floating dots.
         this.rainSystem.intensity = this.weather.rainIntensity;
         if (this.weather.rainIntensity > 0.01) {
             const windX = this.weather.windDirection[0] * this.weather.windSpeed;
@@ -1576,9 +1330,6 @@ export class GameScene extends Scene {
             this.rainSystem.update(deltaTime, this.player.position, [windX, 0, windZ]);
         }
 
-        // ── Lightning Flash Particles ──
-        // Fire exactly once per strike (rising edge) — otherwise the flash
-        // stays above threshold for several frames and stacks thunder claps.
         if (this.weather.thunderPending) {
             const flashPos = [
                 this.player.position[0] + (Math.random() - 0.5) * 20,
@@ -1589,14 +1340,11 @@ export class GameScene extends Scene {
             this.engine.audio.playThunder();
         }
 
-        // ── Audio Update (v1.1) ──
         this.engine.audio.setWindIntensity(this.weather.windSpeed / 5.0);
         this.engine.audio.setRainIntensity(this.weather.rainIntensity);
         this.engine.audio.setTimeOfDay(this.dayNight.timeOfDay);
         this.engine.audio.setListener(this.camera.position, this.camera.target);
 
-        // Music mood: danger when a predator is chasing, night when the sun is
-        // down, calm for everything else.
         const closestThreat = this._nearestThreatDistance();
         if (closestThreat < 12) {
             this.engine.audio.setMusicMood('danger');
@@ -1606,57 +1354,42 @@ export class GameScene extends Scene {
             this.engine.audio.setMusicMood('calm');
         }
 
-        // Move waterfall emitter if present
         if (this.waterfall) {
             this.engine.audio.setEmitterPosition('waterfall', this.waterfall.position);
         }
 
-        // Keep heartbeat in sync even when not injured
         this.engine.audio.setHealthFraction(this.vitals.health / 100);
 
         this.engine.audio.update(deltaTime);
 
-        // ── v1.1 HUD Widgets ──
         this._updateHUDWidgets(deltaTime);
 
-        // Push debug info — skipped entirely while the panel is hidden, since
-        // these writes forced layout work every frame for nothing.
         this._updateDebugPanel();
     }
 
-    /**
-     * Update the v1.1 HUD widgets: time/weather, compass, crosshair and hit
-     * marker. Runs every frame but skips DOM writes when the panel is hidden.
-     */
     _updateHUDWidgets(deltaTime) {
         const dom = this._domCache;
         if (!dom) return;
 
-        // ── Time/Weather Widget ──
         if (dom.timeWeatherWidget && dom.twClock && dom.twWeather && dom.twDay) {
             dom.timeWeatherWidget.classList.remove('hidden');
 
-            // Convert normalised time (0..1) to HH:MM
             const hours24 = this.dayNight.timeOfDay * 24;
             const hh = Math.floor(hours24);
             const mm = Math.floor((hours24 - hh) * 60);
             dom.twClock.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 
-            // Weather icon
             const weather = this.weather.currentWeather;
             const icons = { clear: '☀️', cloudy: '⛅', rain: '🌧️', storm: '⛈️' };
             dom.twWeather.textContent = icons[weather] || '☀️';
 
-            // Day counter: each full cycle of timeOfDay (0→1) is one day.
             const dayIndex = Math.floor(this.survivalSeconds * this.dayNight.daySpeed);
             const displayDay = dayIndex + 1;
             dom.twDay.textContent = `Ngày ${displayDay}`;
         }
 
-        // ── Compass Bar ──
         this._updateCompass(deltaTime);
 
-        // ── Crosshair: show when a weapon is equipped ──
         if (dom.crosshair) {
             const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
             const equipped = this.inventory.slots[hotbarIdx];
@@ -1668,17 +1401,6 @@ export class GameScene extends Scene {
         }
     }
 
-    /**
-     * Build the compass tick strip. Runs once — the strip is then moved purely
-     * by `transform`, which is what makes turning smooth. The old version
-     * re-sliced a string of characters every frame, so the compass could only
-     * step in whole-character jumps (~2.7° each) and multi-letter labels like
-     * "NE" got cut in half at the window edge, showing a bare "E".
-     *
-     * Positions are in strip-space pixels at a fixed COMPASS_PX_PER_DEG, so a
-     * narrow viewport shows less arc at the same scale rather than squashing
-     * it. Coverage runs -90°..450° because the visible window straddles 0/360.
-     */
     _buildCompassStrip() {
         const strip = this._domCache && this._domCache.compassStrip;
         if (!strip || strip.childElementCount > 0) return;
@@ -1701,14 +1423,6 @@ export class GameScene extends Scene {
         strip.innerHTML = html;
     }
 
-    /**
-     * Scroll the compass to the camera's bearing.
-     *
-     * Heading comes from the camera, not `player.rotation[1]`: the player's yaw
-     * is only assigned while WASD is held, and it snaps straight to the movement
-     * angle. Driving the compass from it meant looking around moved nothing at
-     * all, and a strafe flicked the needle 90° in one frame.
-     */
     _updateCompass(deltaTime) {
         const dom = this._domCache;
         const bar = dom && dom.compassBar;
@@ -1717,8 +1431,6 @@ export class GameScene extends Scene {
         bar.classList.remove('hidden');
         this._buildCompassStrip();
 
-        // clientWidth forces a layout flush, so only re-measure when the window
-        // actually changed size.
         if (this._compassHalfWidth === undefined || this._compassWinW !== window.innerWidth) {
             this._compassWinW = window.innerWidth;
             this._compassHalfWidth = bar.clientWidth / 2;
@@ -1729,8 +1441,6 @@ export class GameScene extends Scene {
         const dz = this.camera.target[2] - this.camera.position[2];
         const target = (((Math.atan2(dx, dz) * 180 / Math.PI) % 360) + 360) % 360;
 
-        // Ease along the shortest arc so mouse-look micro-jitter doesn't shake
-        // the strip. Exponential decay keeps it frame-rate independent.
         if (this._compassHeading === undefined) {
             this._compassHeading = target;
         } else {
@@ -1755,13 +1465,9 @@ export class GameScene extends Scene {
             markers.push({ id: 'raft', pos: this.raftAssembly.position, icon: '⛵' });
         }
 
-        // Reuse marker nodes. Rebuilding innerHTML every frame re-parsed and
-        // re-laid out the whole bar, which is exactly the kind of per-frame
-        // work that makes a HUD element stutter.
         if (!this._compassMarkerEls) this._compassMarkerEls = new Map();
         const pool = this._compassMarkerEls;
         const live = new Set();
-        // Same scale as the ticks, so an icon now sits over the bearing it means.
         const maxVisible = half / COMPASS_PX_PER_DEG + 4;
 
         for (const m of markers) {
@@ -1788,8 +1494,6 @@ export class GameScene extends Scene {
             }
             el.style.visibility = 'visible';
             const px = half + diff * COMPASS_PX_PER_DEG;
-            // calc() resolves the -50% against the icon's own width, keeping it
-            // centred on its bearing while transform does the positioning.
             el.style.transform = `translateX(calc(${px.toFixed(2)}px - 50%))`;
         }
 
@@ -1798,7 +1502,6 @@ export class GameScene extends Scene {
         }
     }
 
-    /** Show the crosshair hit marker (brief flash). */
     _showHitMarker(killed) {
         const el = this._domCache && this._domCache.hitMarker;
         if (!el) return;
@@ -1813,9 +1516,6 @@ export class GameScene extends Scene {
         }, 300);
     }
 
-    /**
-     * Refresh the debug panel readouts. No-op when the panel is collapsed.
-     */
     _updateDebugPanel() {
         const dom = this._domCache;
         if (dom.debugPanel && dom.debugPanel.classList.contains('hidden')) return;
@@ -1828,7 +1528,6 @@ export class GameScene extends Scene {
         if (dom.timeOfDay) dom.timeOfDay.textContent = (this.dayNight.timeOfDay * 24).toFixed(1) + 'h';
         if (dom.weatherLabel) dom.weatherLabel.textContent = this.weather.getWeatherLabel();
 
-        // v1.0 performance rows
         if (dom.drawCalls) dom.drawCalls.textContent = this._drawCalls.toString();
         if (dom.culled) {
             dom.culled.textContent = this.frustum.enabled
@@ -1845,10 +1544,6 @@ export class GameScene extends Scene {
         }
     }
 
-    /**
-     * Update the standalone FPS readout, colour-coded by frame rate. Reads the
-     * value the GameLoop already computes rather than measuring again.
-     */
     _updateFpsCounter() {
         const el = this._domCache.fpsCounter;
         if (!el || el.classList.contains('hidden')) return;
@@ -1859,7 +1554,6 @@ export class GameScene extends Scene {
         el.classList.toggle('bad', fps < 25);
     }
 
-    /** Clear the pause-menu save message after a few seconds. */
     _tickSaveStatus(deltaTime) {
         if (this._saveStatusTimer <= 0) return;
         this._saveStatusTimer -= deltaTime;
@@ -1869,14 +1563,6 @@ export class GameScene extends Scene {
         }
     }
 
-    /**
-     * Push this frame's weather into the shared wave field.
-     *
-     * Wind now steers the waves: WeatherSystem has always carried a direction,
-     * but the ocean used to ignore it and run a fixed diagonal regardless of
-     * the storm. Attenuation keeps swell off the beach so it cannot punch up
-     * through the sand.
-     */
     _syncWaveField() {
         const island = this.world.terrainGenerator.island;
         const animate = this._domCache.water ? this._domCache.water.checked : true;
@@ -1895,35 +1581,24 @@ export class GameScene extends Scene {
     render() {
         const gl = this.gl;
 
-        // Display controls come from cached checkbox references (v1.0) — the
-        // old per-frame getElementById calls were pure overhead.
         const drawWireframe = this._domCache.wireframe ? this._domCache.wireframe.checked : false;
         const drawMode = drawWireframe ? gl.LINES : gl.TRIANGLES;
         const animateWater = this._domCache.water ? this._domCache.water.checked : true;
 
-        // v1.0 — refresh culling planes for this frame, then route the scene
-        // through the offscreen target when post-processing is on.
         this.frustum.update(this.camera.projectionMatrix, this.camera.viewMatrix);
         this._drawCalls = 0;
 
         this.postFx.resize(gl.canvas.width, gl.canvas.height);
         this.postFx.beginScene();
 
-        // Sky colors from day/night cycle (used by water shader for reflections)
         const skyColors = this.dayNight.getSkyColors();
         const cloudCover = this.weather.cloudCover;
         const weatherDim = 1.0 - cloudCover * 0.3;
 
-        // Always clear the depth buffer so geometry drawn after the sky pass
-        // is not discarded by stale depth values from the previous frame.
         gl.clear(gl.DEPTH_BUFFER_BIT);
 
-        // v1.1 — Procedural sky dome pass (shared SkyShader with MainMenuScene).
-        // Runs first with depth writes OFF so it never occludes the world.
         this._renderSky();
 
-        // v0.4: Dynamic sky color based on day/night and weather — FALLBACK
-        // Only used if the sky shader failed to compile.
         if (!this.skyShader) {
             const skyTop = skyColors.top;
             gl.clearColor(
@@ -1935,15 +1610,12 @@ export class GameScene extends Scene {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         }
 
-        // --- DRAW TERRAIN & PLAYER & RESOURCES (Solid Geometry, BasicShader) ---
         this.basicShader.use();
         
-        // Load Camera matrices
         this.basicShader.setUniformMatrix4fv('uViewMatrix', this.camera.viewMatrix);
         this.basicShader.setUniformMatrix4fv('uProjectionMatrix', this.camera.projectionMatrix);
         this.basicShader.setUniform3fv('uViewPosition', this.camera.position);
 
-        // Load Lighting uniforms
         this.basicShader.setUniform3fv('uLightDirection', this.dirLight.direction);
         this.basicShader.setUniform3fv('uLightColor', this.dirLight.color);
         this.basicShader.setUniform1f('uLightIntensity', this.dirLight.intensity);
@@ -1958,11 +1630,8 @@ export class GameScene extends Scene {
         this.basicShader.setUniform1f('uPointLightRange', this.campfire.lightRange);
         this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
-        // 1. Draw Terrain
         this.terrain.draw(this.basicShader);
 
-        // Draw the body below the eyes. Only the head is clipped during normal
-        // FPS play; the escape cinematic still draws the complete character.
         const playerRenderPos = [this.player.position[0], this.player.position[1] - this.player.collider.height * 0.5, this.player.position[2]];
         const headCutoff = this.isEscaping || !Number.isFinite(this._firstPersonHeadCutFromBase)
             ? 1000000.0
@@ -1974,24 +1643,18 @@ export class GameScene extends Scene {
         this.characterRenderer.draw(this.basicShader, this.tempMatrix, drawMode);
         this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
-        // 5. Draw World Resources — pickups are small, so a 1.5m bound is
-        //    generous enough to avoid popping at the screen edge.
         for (const resource of this.resourceManager.worldResources) {
             if (!this._isVisible(resource.position, 1.5)) continue;
             resource.draw(this.basicShader, drawMode);
             this._drawCalls++;
         }
 
-        // 6. Draw Drifting Debris (on water surface, before water pass)
         this.debrisManager.drawAll(this.basicShader, drawMode);
 
-        // 7. Draw solid components of the Raft Assembly
         if (this.raftAssembly) {
             this.raftAssembly.draw(this.basicShader, drawMode, false);
         }
 
-        // Draw environment objects (trees, bushes, rocks). This is by far the
-        // largest batch, so it's where frustum + distance culling pays off.
         if (this.environmentEntities) {
             for (const entity of this.environmentEntities) {
                 const cullPosition = entity.cullingCenter || entity.position;
@@ -2003,59 +1666,46 @@ export class GameScene extends Scene {
             }
         }
 
-        // 7.5 Draw Creatures (v0.5)
         for (const creature of this.creatures) {
             if (!this._isVisible(creature.position, 2.0)) continue;
             creature.draw(this.basicShader, drawMode);
             this._drawCalls++;
         }
 
-        // 8. Draw Campfire (v0.2)
         this.campfire.draw(this.basicShader, drawMode);
 
-        // 9. Draw Water Collector (v0.2)
         this.waterCollector.draw(this.basicShader, drawMode);
 
-        // 9.5 Draw Waterfall rock cliff (opaque, solid pass)
         if (this.waterfall) {
             this.waterfall.drawSolid(this.basicShader, drawMode);
         }
 
-        // --- DRAW WATER (Translucent Geometry, WaterShader) ---
-        // Enable blending for transparency
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        // Draw ghost/hologram parts of Raft Assembly (translucent pass)
         this.basicShader.use();
         if (this.raftAssembly) {
             this.raftAssembly.draw(this.basicShader, drawMode, true);
         }
 
-        // Draw Waterfall POI with translucency (v0.3)
         if (this.waterfall) {
             this.waterfall.draw(this.basicShader, drawMode);
         }
         
-        // Disable backface culling to draw wave interiors correctly
         gl.disable(gl.CULL_FACE);
 
         this.waterShader.use();
 
-        // Load Camera matrices
         this.waterShader.setUniformMatrix4fv('uViewMatrix', this.camera.viewMatrix);
         this.waterShader.setUniformMatrix4fv('uProjectionMatrix', this.camera.projectionMatrix);
         this.waterShader.setUniform3fv('uViewPosition', this.camera.position);
 
-        // Load Lighting uniforms
         this.waterShader.setUniform3fv('uLightDirection', this.dirLight.direction);
         this.waterShader.setUniform3fv('uLightColor', this.dirLight.color);
         this.waterShader.setUniform1f('uLightIntensity', this.dirLight.intensity);
         this.waterShader.setUniform3fv('uAmbientColor', this.ambientLight.color);
         this.waterShader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity);
 
-        // Wave uniforms come from the shared field, not from weather directly,
-        // so the drawn surface is bit-for-bit the one gameplay floats things on.
         this.waterShader.setUniform1f('uTime', this.time);
         this.waterShader.setUniform1f('uWaveEnable', animateWater ? 1.0 : 0.0);
         this.waterShader.setUniform1f('uWaveAmplitude', this.weather.getWaveAmplitudeMultiplier());
@@ -2064,8 +1714,6 @@ export class GameScene extends Scene {
         this.waterShader.setUniform1f('uWaveAttenEnd', WaveField.attenEnd);
         this.waterShader.setUniform2f('uWaveHeading', WaveField.heading[0], WaveField.heading[1]);
 
-        // Fresnel needs the sky it is reflecting; use the same horizon tint the
-        // day/night cycle is painting behind the island.
         const horizonColor = skyColors.horizon;
         this.waterShader.setUniform3fv('uHorizonColor', [
             horizonColor[0] * weatherDim,
@@ -2074,49 +1722,35 @@ export class GameScene extends Scene {
         ]);
         this.waterShader.setUniform3fv('uShallowColor', [0.24, 0.66, 0.62]);
 
-        // Ripples are subtler than the menu's: the gameplay camera sits close
-        // to the surface, where the menu's strength reads as boiling.
         this.waterShader.setUniform1f('uDetailStrength', animateWater ? 0.6 : 0.0);
         this.waterShader.setUniform1f('uFoamStrength', 1.0);
 
-        // Whitecaps are wind-driven: a clear day (windSpeed ~0.5) breaks
-        // nothing, a storm (~3.5+) breaks everywhere.
         const whitecaps = Math.min(1.0, Math.max(0.0, (this.weather.windSpeed - 1.0) / 2.0));
         this.waterShader.setUniform1f('uWhitecaps', animateWater ? whitecaps : 0.0);
 
-        // v0.4: Lightning flash for water reflections
         this.waterShader.setUniform1f('uLightningFlash', this.weather.getLightningModulation());
 
-        // Sun uniforms for water glitter (dynamic, matching sky shader)
         const sunDir = this.dayNight.getSunDirection();
         const sunCol = this.dayNight.getSunColor();
         this.waterShader.setUniform3fv('uSunDirection', sunDir);
         this.waterShader.setUniform3fv('uSunColor', sunCol);
         this.waterShader.setUniform1f('uSunGlitter', 0.6);
 
-        // Draw Water Grid
         this.water.draw(this.waterShader);
 
-        // Restore default WebGL drawing state
         gl.enable(gl.CULL_FACE);
         gl.disable(gl.BLEND);
 
-        // 10. Draw Particles (additive blending, on top)
         this.particleSystem.draw(this.camera);
 
-        // 10.1 Draw Rain streaks (GL_LINES, alpha-blended)
         this.rainSystem.draw(this.camera);
 
-        // 10.5 v0.4→v2.0: Sun & Moon are now rendered procedurally by the sky
-        // shader. Billboard sprites are only drawn as a fallback when the sky
-        // shader failed to compile.
         if (!this.skyShader) {
             this.unlitShader.use();
             this.sunSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
             this.moonSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
         }
 
-        // 11. Collision Debug Overlay
         if (this.collisionDebug && this.collisionDebug.isEnabled()) {
             const colliders = this.collisionSystem.getColliders();
             this.collisionDebug.draw(
@@ -2127,22 +1761,14 @@ export class GameScene extends Scene {
             );
         }
 
-        // Camera-space arms and axe are the final 3D layer, so they remain
-        // readable against the world without clipping through nearby props.
         const equippedItem = this.inventory.getEquippedItem();
         if (!this.isEscaping && equippedItem && equippedItem.id === 'stone_axe') {
             this.firstPersonViewModel.draw(this.basicShader, this.camera.projectionMatrix, drawMode);
         }
 
-        // 12. v1.0 — resolve the offscreen target to the screen with bloom and
-        // vignette. A no-op when post-processing is disabled.
         this._compositeFrame();
     }
 
-    /**
-     * Run the post-processing composite, grading the image from the current
-     * time of day so nights read cooler and sunsets warmer.
-     */
     _compositeFrame() {
         if (!this.postFx.enabled) return;
 
@@ -2150,8 +1776,6 @@ export class GameScene extends Scene {
         const sunColor = this.dayNight.getSunColor();
         const sunIntensity = this.dayNight.getSunIntensity();
 
-        // Blend the sun's hue in gently — a full tint would recolour the whole
-        // frame, which reads as a broken white balance rather than a mood.
         const tintStrength = 0.12;
         const tint = [
             1.0 + (sunColor[0] - 1.0) * tintStrength,
@@ -2159,11 +1783,9 @@ export class GameScene extends Scene {
             1.0 + (sunColor[2] - 1.0) * tintStrength,
         ];
 
-        // Lightning briefly lifts exposure so strikes wash over the frame.
         const lightning = this.weather.getLightningModulation();
         const exposure = 1.0 + lightning * 0.35;
 
-        // Bloom is strongest at dawn/dusk when the sun sits low and bright.
         const bloomBoost = 0.75 + (1.0 - sunIntensity) * 0.35;
 
         this.postFx.composite({
@@ -2177,32 +1799,20 @@ export class GameScene extends Scene {
         });
     }
 
-    /**
-     * Frustum + draw-distance test used by the render loop.
-     * @param {number[]|Float32Array} position
-     * @param {number} radius Bounding sphere radius
-     * @returns {boolean}
-     */
     _isVisible(position, radius) {
         return this.frustum.isVisible(position, radius, this.camera.position, this._viewDistance);
     }
 
-    // ============================================
-    //  PAUSE SYSTEM
-    // ============================================
 
     _pauseGame() {
         if (this.isPaused || this.isEscaping) return;
         this.isPaused = true;
 
-        // Show pause menu
         const pauseMenu = document.getElementById('pause-menu');
         if (pauseMenu) pauseMenu.classList.remove('hidden');
 
-        // Update sound button state
         this._updatePauseSoundButton(this.engine.audio.isMuted);
 
-        // Exit pointer lock
         if (document.pointerLockElement) {
             document.exitPointerLock();
         }
@@ -2215,12 +1825,10 @@ export class GameScene extends Scene {
         if (!this.isPaused) return;
         this.isPaused = false;
 
-        // Hide pause menu
         const pauseMenu = document.getElementById('pause-menu');
         if (pauseMenu) pauseMenu.classList.add('hidden');
         this.engine.audio.setDucked(false);
 
-        // Re-lock mouse cursor
         try {
             this.engine.input.canvas.requestPointerLock();
         } catch (e) {
@@ -2237,13 +1845,7 @@ export class GameScene extends Scene {
         this._pauseSoundBtn.setAttribute('aria-pressed', isMuted ? 'true' : 'false');
     }
 
-    // ============================================
-    //  UI HELPERS
-    // ============================================
 
-    /**
-     * Get total count of all items in inventory (for detecting pickups)
-     */
     _getTotalInventoryCount() {
         let total = 0;
         const all = this.inventory.getAll();
@@ -2253,9 +1855,6 @@ export class GameScene extends Scene {
         return total;
     }
 
-    /**
-     * Update the Grid Inventory & Hotbar HUD (replaces old resource slots)
-     */
     _updateGridInventory() {
         const gridEl = document.getElementById('inventory-grid');
         const hotbarEl = document.getElementById('hotbar-hud');
@@ -2265,7 +1864,6 @@ export class GameScene extends Scene {
             counterEl.textContent = `${this.inventory.getUsedSlots()}/${this.inventory.maxSlots}`;
         }
 
-        // Render Main Inventory Grid (slots 0 to 19)
         if (gridEl) {
             let html = '';
             for (let i = 0; i < 20; i++) {
@@ -2295,7 +1893,6 @@ export class GameScene extends Scene {
             gridEl.innerHTML = html;
         }
 
-        // Render Hotbar HUD (slots 20 to 27)
         if (hotbarEl) {
             let html = '';
             for (let i = 0; i < 8; i++) {
@@ -2329,11 +1926,9 @@ export class GameScene extends Scene {
             }
             hotbarEl.innerHTML = html;
 
-            // v0.5: Ammo counter — show arrow count when bow is equipped
             const equippedSlot = this.inventory.slots[20 + this.inventory.selectedHotbarIndex];
             if (equippedSlot && equippedSlot.id === 'bow') {
                 const arrowCount = this.inventory.getCount('arrow');
-                // Find or create ammo indicator
                 let ammoEl = document.getElementById('ammo-counter');
                 if (!ammoEl) {
                     ammoEl = document.createElement('div');
@@ -2349,7 +1944,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Re-bind drag & drop and click events
         this._bindDragAndDropEvents();
         this._bindRightClickEvents();
     }
@@ -2408,7 +2002,6 @@ export class GameScene extends Scene {
             });
         });
 
-        // Trash Slot
         const trashEl = document.getElementById('trash-slot');
         if (trashEl) {
             trashEl.addEventListener('dragover', (e) => {
@@ -2447,7 +2040,6 @@ export class GameScene extends Scene {
     _bindRightClickEvents() {
         const slots = document.querySelectorAll('.inv-slot, .hotbar-slot');
         slots.forEach(slot => {
-            // Right-click to consume/place
             slot.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 const indexAttr = slot.getAttribute('data-index');
@@ -2461,7 +2053,6 @@ export class GameScene extends Scene {
                 if (this._consumeItemAt(idx)) return;
 
                 if (resDef && (item.id === 'campfire' || item.id === 'water_collector')) {
-                    // Place structures
                     const hotbarOffset = idx - 20;
                     if (hotbarOffset >= 0 && hotbarOffset < 8) {
                         this.inventory.selectedHotbarIndex = hotbarOffset;
@@ -2471,7 +2062,6 @@ export class GameScene extends Scene {
                 }
             });
 
-            // Double click to consume
             slot.addEventListener('dblclick', () => {
                 const indexAttr = slot.getAttribute('data-index');
                 if (indexAttr === null) return;
@@ -2482,17 +2072,6 @@ export class GameScene extends Scene {
         });
     }
 
-    /**
-     * Consume the item in a slot, applying its `vitalEffect` from the resource
-     * database.
-     *
-     * Every consume entry point (Q, right-click, double-click) routes through
-     * here. They each used to carry their own hardcoded id list, which is why a
-     * crafted Bandage could be eaten with Q but did nothing on right-click.
-     *
-     * @param {number} idx Inventory slot index
-     * @returns {boolean} True when something was actually consumed.
-     */
     _consumeItemAt(idx) {
         const item = this.inventory.slots[idx];
         if (!item) return false;
@@ -2511,25 +2090,15 @@ export class GameScene extends Scene {
         this.vitals[action.method](effect.amount);
         this._showNotification(`${resDef.icon} ${action.verb} ${resDef.name}! ${action.label} +${effect.amount}`);
 
-        // Different consumables get their own cue so the player doesn't hear
-        // the same generic chime when eating, drinking or healing.
         if (effect.type === 'hunger') this.engine.audio.playEat();
         else if (effect.type === 'thirst') this.engine.audio.playDrink();
         else if (effect.type === 'health') this.engine.audio.playHeal();
 
         this.engine.audio.setHealthFraction(this.vitals.health / 100);
-        // Redraw so the slot count drops immediately. Previously the stack only
-        // refreshed on the next hotbar change, so eating looked like a no-op.
         this._updateGridInventory();
         return true;
     }
 
-    /**
-     * Update a single vital bar in the HUD (v0.2)
-     * @param {string} vitalId - 'health', 'hunger', 'thirst', 'stamina'
-     * @param {number} value
-     * @param {number} max
-     */
     _updateVitalBar(vitalId, value, max) {
         const barEl = document.getElementById(`bar-${vitalId}`);
         const valEl = document.getElementById(`val-${vitalId}`);
@@ -2548,9 +2117,6 @@ export class GameScene extends Scene {
         }
     }
 
-    /**
-     * Use or place active item in selected hotbar slot
-     */
     _useActiveItem() {
         const activeIdx = 20 + this.inventory.selectedHotbarIndex;
         const activeItem = this.inventory.slots[activeIdx];
@@ -2581,9 +2147,6 @@ export class GameScene extends Scene {
     }
 
     _placeStructure(type) {
-        // Guard: only one instance of each structure exists. Re-placing an
-        // already-built structure would silently relocate it and consume the
-        // crafted item, so refuse and tell the player.
         if (type === 'campfire' && this.campfire && this.campfire.isBuilt) {
             this._showNotification('🔥 Đã có Lửa Trại rồi! Không thể đặt thêm.');
             this.engine.audio.playError();
@@ -2600,7 +2163,6 @@ export class GameScene extends Scene {
         const placeX = this.player.position[0] + Math.sin(yaw) * dist;
         const placeZ = this.player.position[2] + Math.cos(yaw) * dist;
 
-        // Keep the structure inside the island (2m buffer from the shoreline)
         const island = this.worldGenerator && this.world && this.world.terrainGenerator
             ? this.world.terrainGenerator.island
             : null;
@@ -2645,9 +2207,6 @@ export class GameScene extends Scene {
         );
     }
 
-    /**
-     * Toggle the visibility of the inventory & crafting overlay
-     */
     _toggleInventoryMenu() {
         if (!this.inventoryMenu) return;
         const isHidden = this.inventoryMenu.classList.contains('hidden');
@@ -2672,7 +2231,6 @@ export class GameScene extends Scene {
             this.engine.audio.playClosePanel();
             this.engine.audio.setDucked(false);
 
-            // Re-lock mouse cursor
             try {
                 this.engine.input.canvas.requestPointerLock();
             } catch (e) {
@@ -2681,9 +2239,6 @@ export class GameScene extends Scene {
         }
     }
 
-    /**
-     * Render dynamic recipes inside the crafting container
-     */
     _renderCraftingPanel() {
         const recipesListEl = document.getElementById('crafting-recipes-list');
         const detailsEl = document.getElementById('recipe-details-panel');
@@ -2695,7 +2250,6 @@ export class GameScene extends Scene {
             if (recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) return false;
             if (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) return false;
             
-            // Check blueprint requirements (v0.3)
             if (recipe.requiresBlueprint && !this.unlockedBlueprints.has(recipe.requiresBlueprint)) {
                 return false;
             }
@@ -2830,8 +2384,6 @@ export class GameScene extends Scene {
             ParticleSystem.PRESET.CRAFT
         );
 
-        // Reward type is tagged at spawn from the chest's quadrant. Fall back to
-        // classifying by position only if the tag is missing.
         const rewardType = chest.rewardType || this._quadrantRewardType({
             sx: chest.position[0] >= 0 ? 1 : -1,
             sz: chest.position[2] >= 0 ? 1 : -1,
@@ -2861,15 +2413,6 @@ export class GameScene extends Scene {
         this._renderCraftingPanel();
     }
 
-    /**
-     * Map a placement quadrant { sx, sz } to a chest reward type. Mirrors the
-     * quadrant list in EnvironmentBuilder._placeLandmarks so each quadrant
-     * grants a distinct, deterministic reward.
-     *   (-x, +z) → fishing   (+x, -z) → sail
-     *   (+x, +z) → motor     (-x, -z) → materials (default)
-     * @param {{sx:number, sz:number}|null} quadrant
-     * @returns {'fishing'|'sail'|'motor'|'materials'}
-     */
     _quadrantRewardType(quadrant) {
         if (!quadrant) return 'materials';
         const { sx, sz } = quadrant;
@@ -2879,50 +2422,45 @@ export class GameScene extends Scene {
         return 'materials';
     }
 
-    /**
-     * Show game over screen (v0.2)
-     */
+    _restartWorld() {
+        if (!this.activeWorldId) return;
+        SaveSystem.resetWorld(this.activeWorldId);
+        this.engine.pendingLoad = null;
+        this.victoryScreen?.classList.add('hidden');
+        this.gameoverScreen?.classList.add('hidden');
+        this.engine.scenes.switchScene('Game');
+    }
+
     _showGameOver() {
         this._isGameOver = true;
 
-        // v1.0 — a dead run isn't resumable, so drop the save rather than
-        // letting "Chơi tiếp" drop the player back at 0 HP.
-        SaveSystem.deleteSave();
+        if (this.activeWorldId) SaveSystem.finishWorld(this.activeWorldId, 'dead', this.survivalSeconds);
         this.stats.survivalSeconds = this.survivalSeconds;
         this.achievements.evaluate(this.stats);
 
-        // Death SFX + duck the world so the funeral figure lands
         this.engine.audio.playDeath();
         this.engine.audio.setDucked(true);
         this.engine.audio.setHealthFraction(0);
         this.engine.audio.setMusicMood('calm');
 
-        // Show game over screen
         if (this.gameoverScreen) {
             this.gameoverScreen.classList.remove('hidden');
         }
 
-        // Hide hotbar
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');
 
-        // Set survival time
         const mins = Math.floor(this.survivalSeconds / 60).toString().padStart(2, '0');
         const secs = Math.floor(this.survivalSeconds % 60).toString().padStart(2, '0');
         if (this.gameoverTimeEl) {
             this.gameoverTimeEl.textContent = `${mins}:${secs}`;
         }
 
-        // Exit pointer lock
         if (document.pointerLockElement) {
             document.exitPointerLock();
         }
     }
 
-    /**
-     * Show premium toast notification overlay
-     * @param {string} message
-     */
     _showNotification(message) {
         const container = document.getElementById('pickup-notification');
         if (!container) return;
@@ -2932,22 +2470,15 @@ export class GameScene extends Scene {
         toast.innerHTML = message;
         container.appendChild(toast);
 
-        // Cap visible toasts at 4 — oldest are removed first so the latest
-        // message is always on top and nothing overflows the viewport.
         while (container.children.length > 4) {
             container.removeChild(container.firstChild);
         }
 
-        // Remove the DOM node after the CSS animation completes (2.5s in +
-        // 0.3s fade-out = ~3s total).
         setTimeout(() => {
             if (toast.parentNode) toast.parentNode.removeChild(toast);
         }, 3100);
     }
 
-    /**
-     * Starts the cinematic cutscene sequence
-     */
     _startEscapeCutscene() {
         this.isEscaping = true;
         if (this.escapeHud) {
@@ -2955,25 +2486,18 @@ export class GameScene extends Scene {
         }
         this._closeInventoryMenu();
 
-        // Hide hotbar
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');
         if (document.pointerLockElement) {
             document.exitPointerLock();
         }
 
-        // Hide tutorial during escape
         this.tutorial.skip();
 
-        // Sound
         this.engine.audio.playClick();
     }
 
-    // ── v0.5: Wildlife Spawning Methods ──
 
-    /**
-     * Spawn crabs along the shoreline
-     */
     _spawnCrabs() {
         const gl = this.gl;
         const island = this.world.terrainGenerator.island;
@@ -2987,7 +2511,6 @@ export class GameScene extends Scene {
             const z = Math.sin(angle) * radius;
             const y = this.terrain.getHeight(x, z);
 
-            // Only spawn in beach zone
             if (y > 0.0 && y <= 0.35) {
                 const crab = new Crab(gl, [x, y, z], this.engine.assets.getModel('creature:crab'));
                 crab.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
@@ -2999,9 +2522,6 @@ export class GameScene extends Scene {
         console.log(`GameScene: Spawned ${spawned} crabs`);
     }
 
-    /**
-     * Spawn seagulls circling above the island
-     */
     _spawnSeagulls() {
         const gl = this.gl;
         const count = 4;
@@ -3025,9 +2545,6 @@ export class GameScene extends Scene {
         console.log(`GameScene: Spawned ${count} seagulls`);
     }
 
-    /**
-     * Spawn boars in forest biomes
-     */
     _spawnBoars() {
         const gl = this.gl;
         const count = 5;
@@ -3043,13 +2560,9 @@ export class GameScene extends Scene {
 
             if (y <= 0.3) continue;
 
-            // Forest biome only. The biome generator randomizes its sector
-            // orientation per seed, so the old `x > 2.0` guess put boars in
-            // whatever biome happened to sit east of the origin.
             const biomeGen = this.world.biomeGenerator;
             if (biomeGen && biomeGen.getBiome(x, z, y) !== BiomeType.FOREST) continue;
 
-            // Prevent overlap with existing boars
             let tooClose = false;
             for (const creature of this.creatures) {
                 if (creature instanceof Boar) {
@@ -3069,9 +2582,6 @@ export class GameScene extends Scene {
         console.log(`GameScene: Spawned ${spawned} boars`);
     }
 
-    /**
-     * Spawn sharks in deep water around the island
-     */
     _spawnSharks() {
         const gl = this.gl;
         const count = 3;
@@ -3082,7 +2592,7 @@ export class GameScene extends Scene {
             const radius = island.radius + 5 + Math.random() * 8;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
-            const waterY = 0.1; // Water surface level
+            const waterY = 0.1;
 
             const shark = new Shark(gl, [x, waterY, z], this.engine.assets.getModel('creature:shark'));
             shark.onDeath = (lootTable, pos) => this._creatureDropLoot(lootTable, pos);
@@ -3091,17 +2601,10 @@ export class GameScene extends Scene {
         console.log(`GameScene: Spawned ${count} sharks`);
     }
 
-    /**
-     * Called when a creature dies — spawns loot as world resources
-     * @param {Array<{resourceId: string, count: number, chance: number}>} lootTable
-     * @param {number[]} position
-     */
     _creatureDropLoot(lootTable, position) {
         for (const entry of lootTable) {
             if (Math.random() > entry.chance) continue;
 
-            // Drop one pickup per unit of `count`, scattered slightly so the
-            // stacks don't render inside each other.
             const count = entry.count || 1;
             for (let i = 0; i < count; i++) {
                 const offsetX = count > 1 ? (Math.random() - 0.5) * 1.2 : 0;
@@ -3110,30 +2613,22 @@ export class GameScene extends Scene {
                     this.gl, entry.resourceId,
                     position[0] + offsetX, position[2] + offsetZ,
                     this.terrain,
-                    { allowWater: true } // crabs die on the beach, sharks at sea
+                    { allowWater: true }
                 );
             }
         }
     }
 
-    /**
-     * Handle left-click attack input
-     * Reads equipped hotbar item and delegates to CombatSystem
-     */
     _handleCombatInput() {
         if (this._isGameOver || this.isPaused) return;
 
         const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
         const equippedItem = this.inventory.slots[hotbarIdx];
 
-        // Aim along the camera heading rather than player.rotation — the player
-        // model only turns while walking, so standing still and clicking used to
-        // swing at whatever direction was last walked in.
         const aimYaw = this._getAimYaw();
         this.player.rotation[1] = aimYaw;
         this.player.updateModelMatrix();
 
-        // Perform attack
         const result = this.combatSystem.attack(
             this.player.position,
             aimYaw,
@@ -3143,28 +2638,21 @@ export class GameScene extends Scene {
         );
 
         if (result.reason === 'no_ammo') {
-            // Ranged attacks without ammo do not start a cooldown. Stop the
-            // held action until release to avoid retrying every rendered frame.
             this._attackHoldBlocked = true;
             this._showNotification('➵ Hết tên! Chế tạo thêm tên để bắn cung.');
             return;
         }
 
-        // Still on cooldown — no swing happened, so stay silent
         if (!result.swung) return;
 
         let treeResult = null;
         if (equippedItem && equippedItem.id === 'stone_axe') {
             this.firstPersonViewModel.triggerSwing();
-            // Creatures take priority when they are in the swing. A missed axe
-            // swing can then connect with the closest standing tree in its arc.
             if (!result.hit) {
                 treeResult = this._tryChopTree(this.player.position, aimYaw, equippedItem);
             }
         }
 
-        // The weapon left the player's hands — always whoosh.
-        // creature can be null on a miss (swing with no target in range)
         const weaponType = equippedItem
             ? (getResourceDef(equippedItem.id) || {}).weaponType
             : 'melee';
@@ -3180,15 +2668,12 @@ export class GameScene extends Scene {
         }
 
         if (result.hit) {
-            // Hit feedback
             const killed = result.creature.state === CreatureState.DEAD;
             if (killed) this.stats.creaturesKilled++;
             this._showNotification(killed
                 ? `💀 Hạ gục! -${result.damage} máu`
                 : `⚔️ Trúng! -${result.damage} máu`);
 
-            // Creature kind determines the hurt voice. Default is used for
-            // any creature not in the map (future additions are covered).
             const creatureKind = result.creature.constructor.name.toLowerCase();
 
             if (killed) {
@@ -3222,13 +2707,10 @@ export class GameScene extends Scene {
             });
 
         } else if (equippedItem && (equippedItem.id === 'spear' || equippedItem.id === 'bow')) {
-            // Only nag about misses when an actual weapon is equipped —
-            // otherwise every stray click spams the notification bar.
             this._showNotification('💨 Đánh trượt!');
         }
     }
 
-    /** Find the closest tree intersecting the axe swing and apply one hit. */
     _tryChopTree(playerPosition, playerYaw, equippedItem) {
         const weaponDef = getResourceDef(equippedItem.id);
         const range = weaponDef && weaponDef.weaponRange ? weaponDef.weaponRange : 2.0;
@@ -3265,7 +2747,6 @@ export class GameScene extends Scene {
         return { ...chopResult, tree: closestTree };
     }
 
-    /** Animate every falling tree and create wood only after terrain contact. */
     _updateFallingTrees(deltaTime) {
         if (!this.environmentEntities || !this.resourceManager) return;
 
@@ -3288,8 +2769,6 @@ export class GameScene extends Scene {
             });
             const impactPoint = tree.getTreePoint(0.72);
 
-            // Remove the fallen model first. The wood pickups are created only
-            // after the tree has touched terrain and left the render list.
             this.environmentEntities.splice(treeIndex, 1);
             tree.delete();
 
@@ -3322,10 +2801,6 @@ export class GameScene extends Scene {
         }
     }
 
-    /**
-     * Horizontal yaw the camera is looking along, matching the convention used
-     * by Player.rotation[1] (atan2(x, z)).
-     */
     _getAimYaw() {
         const dx = this.camera.target[0] - this.camera.position[0];
         const dz = this.camera.target[2] - this.camera.position[2];
@@ -3335,11 +2810,6 @@ export class GameScene extends Scene {
         return Math.atan2(dx, dz);
     }
 
-    /**
-     * Find the closest hostile creature within detection range. Used to
-     * decide when to switch the music into the danger cue.
-     * @returns {number} Distance, or Infinity when nothing is threatening.
-     */
     _nearestThreatDistance() {
         let closest = Infinity;
         for (const creature of this.creatures) {
@@ -3352,11 +2822,6 @@ export class GameScene extends Scene {
         return closest;
     }
 
-    /**
-     * Brief red flash on the screen edge to indicate the direction damage
-     * came from. The overlay is created on first use and styled with CSS
-     * rather than a DOM element per direction.
-     */
     _showDamageFlash() {
         if (!this._damageFlash) {
             this._damageFlash = document.createElement('div');
@@ -3366,7 +2831,7 @@ export class GameScene extends Scene {
         }
         this._damageFlash.classList.remove('hidden');
         this._damageFlash.classList.remove('damage-vignette-fade');
-        void this._damageFlash.offsetWidth; // force reflow
+        void this._damageFlash.offsetWidth;
         this._damageFlash.classList.add('damage-vignette-fade');
         if (this._damageFlashTimer) clearTimeout(this._damageFlashTimer);
         this._damageFlashTimer = setTimeout(() => {
@@ -3379,15 +2844,10 @@ export class GameScene extends Scene {
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
 
-        // These HUD widgets live in the shared page markup and are only ever
-        // un-hidden here, so this scene has to put them back — otherwise they
-        // stay painted over the main menu (z-index 120 beats the menu's 15).
         const dom = this._domCache || {};
         for (const el of [dom.compassBar, dom.timeWeatherWidget, dom.crosshair, dom.hitMarker]) {
             if (el) el.classList.add('hidden');
         }
-        // Marker nodes are appended to static markup, so a re-entered scene
-        // would otherwise stack a second copy behind its fresh pool.
         if (dom.compassMarkers) dom.compassMarkers.replaceChildren();
         this._compassMarkerEls = null;
 
@@ -3402,7 +2862,6 @@ export class GameScene extends Scene {
         if (this.characterRenderer) this.characterRenderer.delete();
         if (this.firstPersonViewModel) this.firstPersonViewModel.delete();
 
-        // Cleanup resource system
         if (this.raftAssembly) this.raftAssembly.delete();
         if (this.waterfall) this.waterfall.delete();
         if (this.resourceManager) this.resourceManager.delete();
@@ -3412,7 +2871,6 @@ export class GameScene extends Scene {
             clearTimeout(this._notificationTimeoutId);
         }
 
-        // Cleanup creatures (v0.5)
         if (this.creatures) {
             for (const creature of this.creatures) {
                 creature.delete();
@@ -3420,15 +2878,12 @@ export class GameScene extends Scene {
             this.creatures = [];
         }
 
-        // Cleanup particle system
         if (this.particleSystem) this.particleSystem.delete();
         if (this.rainSystem) this.rainSystem.delete();
 
-        // Cleanup sun/moon sprites
         if (this.sunSprite) this.sunSprite.delete();
         if (this.moonSprite) this.moonSprite.delete();
 
-        // Cleanup sky shader
         if (this.skyShader) {
             this.skyShader.delete();
             this.skyShader = null;
@@ -3438,13 +2893,11 @@ export class GameScene extends Scene {
             this.skyVao = null;
         }
 
-        // Cleanup tutorial
         if (this.tutorial) this.tutorial.destroy();
 
         if (this.campfire) this.campfire.delete();
         if (this.waterCollector) this.waterCollector.delete();
 
-        // Cleanup environment entities list
         if (this.environmentEntities) {
             for (const entity of this.environmentEntities) {
                 entity.delete();
@@ -3452,7 +2905,6 @@ export class GameScene extends Scene {
             this.environmentEntities = [];
         }
 
-        // Cleanup collision system
         if (this.collisionSystem) {
             this.collisionSystem.clear();
             this.collisionSystem = null;
@@ -3462,7 +2914,6 @@ export class GameScene extends Scene {
             this.collisionDebug = null;
         }
 
-        // Remove pause button listeners
         if (this._pauseResumeBtn) this._pauseResumeBtn.removeEventListener('click', this._onPauseResume);
         if (this._pauseSoundBtn) this._pauseSoundBtn.removeEventListener('click', this._onPauseSound);
         if (this._pauseMenuBtn) this._pauseMenuBtn.removeEventListener('click', this._onPauseMenu);
@@ -3470,8 +2921,9 @@ export class GameScene extends Scene {
         if (this._pauseSettingsBtn) this._pauseSettingsBtn.removeEventListener('click', this._onPauseSettings);
         if (this._pauseAchievementsBtn) this._pauseAchievementsBtn.removeEventListener('click', this._onPauseAchievements);
         if (this._pauseGuideBtn) this._pauseGuideBtn.removeEventListener('click', this._onPauseGuide);
+        if (this.restartBtn) this.restartBtn.removeEventListener('click', this._onRestart);
+        if (this.gameoverRestartBtn) this.gameoverRestartBtn.removeEventListener('click', this._onRestart);
 
-        // v1.0 cleanup
         if (this._unsubscribeSettings) {
             this._unsubscribeSettings();
             this._unsubscribeSettings = null;
@@ -3493,7 +2945,6 @@ export class GameScene extends Scene {
             achievementToast.classList.add('hidden');
         }
 
-        // Hide overlays
         const pauseMenu = document.getElementById('pause-menu');
         if (pauseMenu) pauseMenu.classList.add('hidden');
 
@@ -3503,7 +2954,6 @@ export class GameScene extends Scene {
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');
 
-        // Stop ambient, weather and music
         this.engine.audio.stopAmbientWaves();
         this.engine.audio.stopWind();
         this.engine.audio.stopRain();
@@ -3511,42 +2961,33 @@ export class GameScene extends Scene {
         this.engine.audio.removeEmitter('waterfall');
         this.engine.audio.removeEmitter('campfire');
 
-        // Cleanup dynamically created HUD elements
         if (this._damageFlash && this._damageFlash.parentNode) {
             this._damageFlash.parentNode.removeChild(this._damageFlash);
         }
         if (this._damageFlashTimer) clearTimeout(this._damageFlashTimer);
         if (this._hitMarkerTimeout) clearTimeout(this._hitMarkerTimeout);
 
-        // Clear any remaining stacked toasts
         const toastContainer = document.getElementById('pickup-notification');
         if (toastContainer) toastContainer.innerHTML = '';
 
-        // Remove canvas click listener
         if (this._onCanvasClick) {
             this.gl.canvas.removeEventListener('click', this._onCanvasClick);
             this._onCanvasClick = null;
         }
     }
 
-    /**
-     * Regenerate world dynamically (triggered on debug mode switch)
-     */
     _regenerateWorld() {
         console.log(`GameScene: Regenerating world with debugBiomeColors = ${this.debugBiomeColors}`);
         const gl = this.gl;
 
-        // 1. Generate new world
         this.world = this.worldGenerator.generate(
             this.worldSeed, 
             this.engine.assets.environmentMetadata, 
             this.debugBiomeColors
         );
         
-        // 2. Rebuild terrain geometry buffers
         this.terrain.rebuild(this.world.terrain, this.world.terrainGenerator);
         
-        // 3. Re-instantiate environment objects
         if (this.environmentEntities) {
             for (const entity of this.environmentEntities) {
                 entity.delete();
@@ -3571,7 +3012,6 @@ export class GameScene extends Scene {
             }
         }
         
-        // 4. Re-spawn resource nodes list
         if (this.resourceManager) {
             this.resourceManager.delete();
             this.resourceManager.worldResources = [];
@@ -3586,7 +3026,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // 5. Adjust POIs positions relative to new terrain
         if (this.campfire) {
             const cy = this.terrain.getHeight(this.campfire.position[0], this.campfire.position[2]);
             this.campfire.position[1] = cy;
@@ -3609,7 +3048,6 @@ export class GameScene extends Scene {
             this.waterfall.updateModelMatrix();
         }
 
-        // Re-spawn treasure chests from new landmarks
         if (this.resourceManager && this.world.landmarks && this.world.landmarks.treasureChests) {
             for (const spot of this.world.landmarks.treasureChests) {
                 const chest = this.resourceManager.spawnResource(gl, 'treasure_chest', spot.position[0], spot.position[2], this.terrain);
@@ -3617,7 +3055,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // 6. Relocate Raft assembly to procedurally calculated buildArea
         if (this.raftAssembly) {
             this.raftAssembly.position[0] = this.world.buildArea[0];
             this.raftAssembly.position[1] = this.world.buildArea[1];
@@ -3625,18 +3062,13 @@ export class GameScene extends Scene {
             this.raftAssembly.updateModelMatrix();
         }
 
-        // 7. Snap player position to new terrain slope heights
         const py = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         this.player.position[1] = py + this.player.collider.height * 0.5;
         this.player.updateModelMatrix();
 
-        // 8. Update HUD Metrics
         this._updateWorldDebugInfo();
     }
 
-    /**
-     * Render seed and metrics in Debug Panel
-     */
     _updateWorldDebugInfo() {
         const seedEl = document.getElementById('debug-world-seed');
         if (seedEl) seedEl.textContent = this.worldSeed;
@@ -3647,7 +3079,6 @@ export class GameScene extends Scene {
         const objcountEl = document.getElementById('debug-world-objcount');
         if (objcountEl) objcountEl.textContent = this.world.objectCount.toString();
 
-        // v0.4 debug info
         const timeLabel = document.getElementById('debug-time-label');
         if (timeLabel) timeLabel.textContent = this.dayNight.getTimeLabel();
 
@@ -3658,20 +3089,11 @@ export class GameScene extends Scene {
         if (weatherLabel) weatherLabel.textContent = this.weather.getWeatherLabel();
     }
 
-    /**
-     * Rebuild the inverse view-projection the sky pass unprojects with.
-     * Shared with MainMenuScene logic.
-     */
     _updateInvViewProj() {
         Mat4.multiply(this._viewProj, this.camera.projectionMatrix, this.camera.viewMatrix);
         Mat4.invert(this._invViewProj, this._viewProj);
     }
 
-    /**
-     * Fullscreen sky pass using SkyShader v2.0. Runs first with depth writes
-     * off so it never occludes the world. Now feeds dynamic colours from the
-     * DayNightCycle so the sky transitions through sunrise → day → sunset → night.
-     */
     _renderSky() {
         if (!this.skyShader) return;
 

@@ -1,6 +1,3 @@
-/**
- * Lightweight 3D Vector Math Library
- */
 export const Vec3 = {
     create(x = 0, y = 0, z = 0) {
         return new Float32Array([x, y, z]);

@@ -2,10 +2,6 @@ import { Creature, CreatureState } from './Creature.js';
 import { Vec3 } from '../math/Vec3.js';
 import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
-/**
- * Boar — Hostile forest creature.
- * Approaches the player, then uses a telegraphed, dodgeable charge.
- */
 export class Boar extends Creature {
     constructor(gl, position, modelAsset = null) {
         const balance = CREATURE_BALANCE.boar;
@@ -34,8 +30,6 @@ export class Boar extends Creature {
         Vec3.set(this.position, position[0], position[1], position[2]);
         Vec3.set(this._spawnPosition, position[0], position[1], position[2]);
 
-        // Wind-up telegraphs the burst, then the bearing is locked so the
-        // charge can be sidestepped rather than tracking like a homing missile.
         this._chargeSpeed = balance.chargeSpeed;
         this._chargeTriggerRange = balance.chargeTriggerRange;
         this._chargeWindup = balance.chargeWindup;
@@ -49,12 +43,10 @@ export class Boar extends Creature {
 
         this._buildMesh();
         this.collider.radius = 0.35;
-        // Keep the original gameplay collision volume; this change is visual only.
         this.collider.height = 0.25;
         this.updateModelMatrix();
     }
 
-    /** Override chase with a wind-up → locked charge → recovery sequence. */
     _updateChase(deltaTime, distToPlayer, playerPosition) {
         if (this.health <= this.fleeThreshold) {
             this.state = CreatureState.FLEE;
@@ -112,7 +104,6 @@ export class Boar extends Creature {
         super._updateChase(deltaTime, distToPlayer, playerPosition);
     }
 
-    /** A landed contact always pays the recovery pause. */
     _updateAttack() {
         this._chargePhase = 'recovery';
         this._chargeTimer = this._chargeRecovery;

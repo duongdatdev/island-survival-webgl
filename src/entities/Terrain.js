@@ -1,13 +1,6 @@
 import { Entity } from './Entity.js';
 import { Mesh } from '../renderer/Mesh.js';
 
-/**
- * Procedural Island Terrain Grid
- *
- * All height/color/normal data comes from WorldGenerator + TerrainGenerator
- * (`generatedData` and `generator` are required). The terrain rebuild path is
- * used by the debug biome-color toggle in GameScene.
- */
 export class Terrain extends Entity {
     constructor(gl, size = 60, width = 60.0, generatedData = null, generator = null) {
         super();
@@ -24,9 +17,6 @@ export class Terrain extends Entity {
         this.updateModelMatrix();
     }
 
-    /**
-     * Rebuild the terrain mesh with procedurally generated data
-     */
     rebuild(generatedData, generator) {
         if (this.mesh) {
             this.mesh.delete();

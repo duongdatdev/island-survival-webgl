@@ -3,70 +3,43 @@ import { Vec3 } from '../math/Vec3.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Mesh } from '../renderer/Mesh.js';
 
-/**
- * Campfire Entity — Placeable cooking structure on the island.
- * Built from Stone + Wood. Allows cooking raw food into Cooked Meals.
- * 
- * Visual: Survival Pack Bonfire_Fire OBJ, with a procedural fallback if loading fails.
- */
 const CAMPFIRE_SCALE = 0.4;
 
 export class Campfire extends Entity {
-    /**
-     * @param {WebGL2RenderingContext} gl
-     * @param {number[]} position - World position [x, y, z]
-     * @param {Mesh|null} modelMesh - Shared Survival Pack campfire mesh
-     */
     constructor(gl, position, modelMesh = null) {
         super();
         this.gl = gl;
         this.modelMesh = modelMesh;
         Vec3.set(this.position, position[0], position[1], position[2]);
 
-        this.isBuilt = false;       // Must be crafted before appearing
-        this.interactRadius = 3.0;  // Player proximity to interact
+        this.isBuilt = false;
+        this.interactRadius = 3.0;
 
-        // Fire animation state
         this._fireTime = 0;
         this._fireFlicker = 1.0;
 
-        // Warm, compact point light consumed by BasicShader. Keeping these
-        // values on the entity makes the visual and its light share one source.
         this.lightPosition = Vec3.create(position[0], position[1] + 0.45, position[2]);
         this.lightColor = Vec3.create(1.0, 0.45, 0.12);
         this.lightRange = 4.5;
         this.lightIntensity = 2.8;
 
-        // Only allocate the old procedural geometry when the external model
-        // could not be loaded. Shared OBJ meshes are owned by AssetManager.
         if (!this.modelMesh) this._buildMeshes(gl);
 
         this.updateModelMatrix();
     }
 
-    /**
-     * Build procedural meshes for the campfire
-     */
     _buildMeshes(gl) {
-        // Stone ring — create cube geometry for stones
-        this._stoneMeshData = this._createCubeData(0.5, 0.5, 0.48);  // Gray stone
+        this._stoneMeshData = this._createCubeData(0.5, 0.5, 0.48);
 
-        // Fire embers center — warm orange cube
-        this._fireMeshData = this._createCubeData(0.95, 0.45, 0.1);  // Orange fire
+        this._fireMeshData = this._createCubeData(0.95, 0.45, 0.1);
 
-        // Wood logs — brown
-        this._logMeshData = this._createCubeData(0.45, 0.28, 0.12);  // Dark wood
+        this._logMeshData = this._createCubeData(0.45, 0.28, 0.12);
 
-        // Create VAO/VBO for each mesh part
         this.stoneMesh = this._createMesh(gl, this._stoneMeshData);
         this.fireMesh = this._createMesh(gl, this._fireMeshData);
         this.logMesh = this._createMesh(gl, this._logMeshData);
     }
 
-    /**
-     * Update fire animation
-     * @param {number} deltaTime
-     */
     update(deltaTime) {
         if (!this.isBuilt) return;
         this._fireTime += deltaTime;
@@ -76,10 +49,6 @@ export class Campfire extends Entity {
             + Math.sin(this._fireTime * 13.0) * 0.06;
     }
 
-    /**
-     * Update and return the world-space light origin just above the flames.
-     * @returns {Float32Array}
-     */
     getLightPosition() {
         Vec3.set(
             this.lightPosition,
@@ -90,11 +59,6 @@ export class Campfire extends Entity {
         return this.lightPosition;
     }
 
-    /**
-     * Check if player is within interaction range
-     * @param {number[]} playerPos
-     * @returns {boolean}
-     */
     isPlayerNear(playerPos) {
         if (!this.isBuilt) return false;
         const dx = playerPos[0] - this.position[0];
@@ -102,11 +66,6 @@ export class Campfire extends Entity {
         return Math.sqrt(dx * dx + dz * dz) < this.interactRadius;
     }
 
-    /**
-     * Draw campfire using BasicShader
-     * @param {ShaderProgram} shader
-     * @param {number} drawMode
-     */
     draw(shader, drawMode) {
         if (!this.isBuilt) return;
 
@@ -118,7 +77,6 @@ export class Campfire extends Entity {
 
         const tempMatrix = Mat4.create();
 
-        // Draw stone ring — 6 stones arranged in circle
         const stoneCount = 6;
         for (let i = 0; i < stoneCount; i++) {
             const angle = (i / stoneCount) * Math.PI * 2;
@@ -134,7 +92,6 @@ export class Campfire extends Entity {
             this.stoneMesh.draw(drawMode);
         }
 
-        // Draw crossed wood logs
         for (let i = 0; i < 3; i++) {
             const angle = (i / 3) * Math.PI;
             Mat4.identity(tempMatrix);
@@ -145,7 +102,6 @@ export class Campfire extends Entity {
             this.logMesh.draw(drawMode);
         }
 
-        // Draw fire center (animated scale)
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
             this.position[0],
@@ -157,7 +113,6 @@ export class Campfire extends Entity {
         shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
         this.fireMesh.draw(drawMode);
 
-        // Draw secondary smaller fire
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
             this.position[0] + 0.1 * CAMPFIRE_SCALE,
@@ -174,9 +129,6 @@ export class Campfire extends Entity {
         return new Mesh(gl, data);
     }
 
-    /**
-     * Standard 24-vertex cube data generator
-     */
     _createCubeData(r, g, b) {
         const positions = new Float32Array([
             -0.5,-0.5, 0.5,  0.5,-0.5, 0.5,  0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
@@ -210,7 +162,6 @@ export class Campfire extends Entity {
     }
 
     delete() {
-        // modelMesh is shared and disposed by AssetManager.
         if (this.stoneMesh) this.stoneMesh.delete();
         if (this.fireMesh) this.fireMesh.delete();
         if (this.logMesh) this.logMesh.delete();

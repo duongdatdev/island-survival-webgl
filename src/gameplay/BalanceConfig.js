@@ -1,11 +1,3 @@
-/**
- * Shared movement and wildlife tuning.
- *
- * Keeping these values together makes the important match-ups visible: a
- * walking player can disengage from a boar, sprinting creates a short escape
- * window from a shark, and burst attacks are faster than sprinting without
- * becoming unavoidable homing missiles.
- */
 export const PLAYER_BALANCE = Object.freeze({
     walkSpeed: 3.2,
     sprintSpeed: 4.4,

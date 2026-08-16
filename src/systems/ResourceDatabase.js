@@ -1,16 +1,6 @@
-/**
- * Resource Database - Central registry of all collectible resource types
- * Each resource defines its visual properties, mesh shape, and gameplay parameters.
- * 
- * v0.2: Added Coconut, Raw Fish, Cooked Meal, Fresh Water
- * v0.5: Added meats (crab/seagull/boar), herbs, bandage, spear, bow, arrow
- */
 
 import { AXE_SWING_DURATION } from './CombatConfig.js';
 
-// Shared detailed mesh used anywhere raw wood appears in the world. The asset
-// is compiled by LoadingScene before gameplay starts; renderers still keep a
-// procedural fallback for failed or incomplete asset loads.
 export const WOOD_LOG_MODEL_ID = 'survival:wood_log';
 export const CHEST_MODEL_ID = 'environment:chest';
 
@@ -36,7 +26,6 @@ export const ResourceType = {
     RAFT_MOTOR:       'raft_motor',
     TREASURE_CHEST:   'treasure_chest',
 
-    // v0.5: Wildlife & Combat
     RAW_CRAB_MEAT:      'raw_crab_meat',
     RAW_SEAGULL_MEAT:   'raw_seagull_meat',
     RAW_BOAR_MEAT:      'raw_boar_meat',
@@ -47,22 +36,19 @@ export const ResourceType = {
     ARROW:              'arrow'
 };
 
-/**
- * Resource definitions keyed by ResourceType ID
- */
 export const ResourceDatabase = {
     [ResourceType.WOOD]: {
         id: ResourceType.WOOD,
         name: 'Gỗ',
         nameEn: 'Wood',
         icon: '🪵',
-        color: [0.55, 0.35, 0.18],       // Warm brown (log)
-        meshScale: [0.15, 0.35, 0.15],    // Tall narrow log shape
+        color: [0.55, 0.35, 0.18],
+        meshScale: [0.15, 0.35, 0.15],
         modelId: WOOD_LOG_MODEL_ID,
         modelScale: 1.0,
         pickupRadius: 2.5,
         stackSize: 99,
-        spawnWeight: 4,                    // Higher = more common
+        spawnWeight: 4,
         consumable: false
     },
 
@@ -71,8 +57,8 @@ export const ResourceDatabase = {
         name: 'Đá',
         nameEn: 'Stone',
         icon: '🪨',
-        color: [0.55, 0.55, 0.52],       // Gray stone
-        meshScale: [0.28, 0.17, 0.25],     // Low flat rock shape
+        color: [0.55, 0.55, 0.52],
+        meshScale: [0.28, 0.17, 0.25],
         pickupRadius: 2.5,
         stackSize: 99,
         spawnWeight: 3,
@@ -84,8 +70,8 @@ export const ResourceDatabase = {
         name: 'Dây Thừng',
         nameEn: 'Rope',
         icon: '🪢',
-        color: [0.82, 0.72, 0.45],       // Sandy rope color
-        meshScale: [0.22, 0.08, 0.22],     // Flat coiled disc shape
+        color: [0.82, 0.72, 0.45],
+        meshScale: [0.22, 0.08, 0.22],
         pickupRadius: 2.5,
         stackSize: 99,
         spawnWeight: 2,
@@ -97,11 +83,11 @@ export const ResourceDatabase = {
         name: 'Thùng Gỗ',
         nameEn: 'Barrel',
         icon: '🛢️',
-        color: [0.45, 0.28, 0.15],       // Dark wood barrel
-        meshScale: [0.22, 0.3, 0.22],     // Cylindrical barrel shape
+        color: [0.45, 0.28, 0.15],
+        meshScale: [0.22, 0.3, 0.22],
         pickupRadius: 2.8,
         stackSize: 99,
-        spawnWeight: 1,                    // Rarer
+        spawnWeight: 1,
         consumable: false
     },
 
@@ -110,12 +96,12 @@ export const ResourceDatabase = {
         name: 'Dừa',
         nameEn: 'Coconut',
         icon: '🥥',
-        color: [0.35, 0.55, 0.2],        // Green-brown coconut
-        meshScale: [0.17, 0.17, 0.17],      // Round shape
+        color: [0.35, 0.55, 0.2],
+        meshScale: [0.17, 0.17, 0.17],
         pickupRadius: 2.5,
         stackSize: 20,
         spawnWeight: 2,
-        consumable: false                  // Must be cooked first
+        consumable: false
     },
 
     [ResourceType.RAW_FISH]: {
@@ -123,12 +109,12 @@ export const ResourceDatabase = {
         name: 'Cá Sống',
         nameEn: 'Raw Fish',
         icon: '🐟',
-        color: [0.6, 0.65, 0.7],         // Silver fish
-        meshScale: [0.22, 0.08, 0.11],     // Flat fish shape
+        color: [0.6, 0.65, 0.7],
+        meshScale: [0.22, 0.08, 0.11],
         pickupRadius: 2.8,
         stackSize: 20,
-        spawnWeight: 1,                    // Rare — spawns as ocean debris
-        consumable: false                  // Must be cooked first
+        spawnWeight: 1,
+        consumable: false
     },
 
     [ResourceType.COOKED_MEAL]: {
@@ -136,9 +122,9 @@ export const ResourceDatabase = {
         name: 'Thức Ăn Chín',
         nameEn: 'Cooked Meal',
         icon: '🍖',
-        color: [0.7, 0.35, 0.15],        // Cooked brown
+        color: [0.7, 0.35, 0.15],
         meshScale: [0.3, 0.2, 0.3],
-        pickupRadius: 0,                   // Not spawned, only crafted/cooked
+        pickupRadius: 0,
         stackSize: 10,
         spawnWeight: 0,
         consumable: true,
@@ -150,9 +136,9 @@ export const ResourceDatabase = {
         name: 'Nước Ngọt',
         nameEn: 'Fresh Water',
         icon: '💧',
-        color: [0.2, 0.5, 0.8],          // Blue water
+        color: [0.2, 0.5, 0.8],
         meshScale: [0.25, 0.3, 0.25],
-        pickupRadius: 0,                   // Not spawned, only from collector
+        pickupRadius: 0,
         stackSize: 10,
         spawnWeight: 0,
         consumable: true,
@@ -170,11 +156,9 @@ export const ResourceDatabase = {
         stackSize: 1,
         spawnWeight: 0,
         consumable: false,
-        // v0.5: doubles as a weak melee weapon (CombatSystem reads these).
         weaponType: 'melee',
         weaponDamage: 10,
         weaponRange: 2.0,
-        // Holding attack starts the next hit exactly when the swing finishes.
         weaponCooldown: AXE_SWING_DURATION
     },
 
@@ -250,7 +234,7 @@ export const ResourceDatabase = {
         icon: '🎣',
         color: [0.7, 0.5, 0.3],
         meshScale: [0.1, 0.9, 0.1],
-        pickupRadius: 2.5, // Allow pickup if dropped or spawned
+        pickupRadius: 2.5,
         stackSize: 1,
         spawnWeight: 0,
         consumable: false
@@ -323,7 +307,6 @@ export const ResourceDatabase = {
         consumable: false
     },
 
-    // ── v0.5: Wildlife & Combat Resources ──
 
     [ResourceType.RAW_CRAB_MEAT]: {
         id: ResourceType.RAW_CRAB_MEAT,
@@ -335,7 +318,7 @@ export const ResourceDatabase = {
         pickupRadius: 2.5,
         stackSize: 20,
         spawnWeight: 0,
-        consumable: false // Must be cooked first (like raw_fish)
+        consumable: false
     },
 
     [ResourceType.RAW_SEAGULL_MEAT]: {
@@ -348,7 +331,7 @@ export const ResourceDatabase = {
         pickupRadius: 2.5,
         stackSize: 20,
         spawnWeight: 0,
-        consumable: false // Must be cooked first
+        consumable: false
     },
 
     [ResourceType.RAW_BOAR_MEAT]: {
@@ -361,7 +344,7 @@ export const ResourceDatabase = {
         pickupRadius: 2.5,
         stackSize: 20,
         spawnWeight: 0,
-        consumable: false // Must be cooked first
+        consumable: false
     },
 
     [ResourceType.HERB]: {
@@ -373,7 +356,7 @@ export const ResourceDatabase = {
         meshScale: [0.12, 0.06, 0.12],
         pickupRadius: 2.5,
         stackSize: 30,
-        spawnWeight: 2, // Spawns naturally on forest terrain
+        spawnWeight: 2,
         consumable: false
     },
 
@@ -435,30 +418,18 @@ export const ResourceDatabase = {
         pickupRadius: 0,
         stackSize: 30,
         spawnWeight: 0,
-        consumable: false // Used as ammo by the bow
+        consumable: false
     }
 };
 
-/**
- * Get all resource definitions as an array
- */
 export function getAllResources() {
     return Object.values(ResourceDatabase);
 }
 
-/**
- * Get a resource definition by its ID
- * @param {string} resourceId
- * @returns {object|null}
- */
 export function getResourceDef(resourceId) {
     return ResourceDatabase[resourceId] || null;
 }
 
-/**
- * Get a weighted random resource type for spawning (only spawnable resources)
- * @returns {string} Resource ID
- */
 export function getWeightedRandomType() {
     const resources = getAllResources().filter(r => r.spawnWeight > 0);
     const totalWeight = resources.reduce((sum, r) => sum + r.spawnWeight, 0);

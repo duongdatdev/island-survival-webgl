@@ -1,9 +1,5 @@
 import { Mesh } from './Mesh.js';
 
-/**
- * A billboard sprite: a textured quad that always faces the camera.
- * Used for sun, moon, and other sky objects.
- */
 export class BillboardSprite {
     constructor(gl, color = [1.0, 0.9, 0.6], size = 1.0, glowColor = null) {
         this.gl = gl;
@@ -139,22 +135,18 @@ export class BillboardSprite {
             this.position[0], this.position[1], this.position[2], 1,
         ];
 
-        // Enable depth test, but disable depth write and culling
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(false);
         gl.disable(gl.CULL_FACE);
         gl.enable(gl.BLEND);
 
-        // Bind camera matrices to the shader program
         shader.setUniformMatrix4fv('uViewMatrix', viewMatrix);
         shader.setUniformMatrix4fv('uProjectionMatrix', projectionMatrix);
 
-        // Draw glow first (additive blending)
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
         shader.setUniformMatrix4fv('uModelMatrix', modelMatrix);
         this.glowMesh.draw();
 
-        // Draw core sprite
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         shader.setUniformMatrix4fv('uModelMatrix', modelMatrix);
         this.mesh.draw();

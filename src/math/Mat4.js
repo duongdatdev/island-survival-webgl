@@ -1,6 +1,3 @@
-/**
- * Lightweight 4x4 Matrix Math Library (Column-Major order, WebGL standard)
- */
 export const Mat4 = {
     create() {
         const out = new Float32Array(16);
@@ -203,7 +200,6 @@ export const Mat4 = {
         z1 = eyey - centery;
         z2 = eyez - centerz;
 
-        // normalize z
         len = 1 / Math.sqrt(z0 * z0 + z1 * z1 + z2 * z2);
         z0 *= len;
         z1 *= len;
@@ -262,7 +258,6 @@ export const Mat4 = {
         const b10 = a21 * a33 - a23 * a31;
         const b11 = a22 * a33 - a23 * a32;
 
-        // Calculate the determinant
         let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
         if (!det) {

@@ -1,37 +1,17 @@
 import { ShaderProgram } from '../renderer/ShaderProgram.js';
 import { ParticleShader } from '../shaders/ParticleShader.js';
 
-/**
- * ParticleSystem — CPU-driven, GPU-rendered particle effects using GL_POINTS.
- * 
- * Usage:
- *   system.emit(worldPosition, preset)  — spawn a burst of particles
- *   system.update(deltaTime)            — advance physics
- *   system.draw(camera)                 — render all live particles
- */
 export class ParticleSystem {
-    /**
-     * @param {WebGL2RenderingContext} gl
-     * @param {number} [maxParticles=512] Maximum concurrent particles
-     */
     constructor(gl, maxParticles = 512) {
         this.gl = gl;
         this.maxParticles = maxParticles;
 
-        /**
-         * v1.0 — global multiplier on every preset's particle count, driven by
-         * the graphics quality setting. Applied at emit time so existing call
-         * sites keep passing unmodified presets.
-         */
         this.density = 1.0;
 
-        // CPU particle pool
         this.particles = [];
 
-        // Shader
         this.shader = new ShaderProgram(gl, ParticleShader.vertex, ParticleShader.fragment);
 
-        // GPU buffers (dynamic)
         this._positionData = new Float32Array(maxParticles * 3);
         this._colorData = new Float32Array(maxParticles * 4);
         this._sizeData = new Float32Array(maxParticles);
@@ -39,7 +19,6 @@ export class ParticleSystem {
         this._vao = gl.createVertexArray();
         gl.bindVertexArray(this._vao);
 
-        // Position buffer
         this._posBuf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this._posBuf);
         gl.bufferData(gl.ARRAY_BUFFER, this._positionData.byteLength, gl.DYNAMIC_DRAW);
@@ -49,7 +28,6 @@ export class ParticleSystem {
             gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
         }
 
-        // Color buffer
         this._colBuf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this._colBuf);
         gl.bufferData(gl.ARRAY_BUFFER, this._colorData.byteLength, gl.DYNAMIC_DRAW);
@@ -59,7 +37,6 @@ export class ParticleSystem {
             gl.vertexAttribPointer(colLoc, 4, gl.FLOAT, false, 0, 0);
         }
 
-        // Size buffer
         this._sizeBuf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this._sizeBuf);
         gl.bufferData(gl.ARRAY_BUFFER, this._sizeData.byteLength, gl.DYNAMIC_DRAW);
@@ -72,12 +49,8 @@ export class ParticleSystem {
         gl.bindVertexArray(null);
     }
 
-    // =============================================================
-    //  PRESETS
-    // =============================================================
 
     static PRESET = {
-        /** Bright sparkles when picking up a resource */
         PICKUP: {
             count: 10,
             color: [0.2, 0.9, 0.6],
@@ -92,7 +65,6 @@ export class ParticleSystem {
             spread: 1.0,
             yBias: 2.0,
         },
-        /** Dust puffs when walking */
         DUST: {
             count: 3,
             color: [0.65, 0.55, 0.40],
@@ -107,7 +79,6 @@ export class ParticleSystem {
             spread: 0.4,
             yBias: 0.5,
         },
-        /** Sparks when crafting */
         CRAFT: {
             count: 14,
             color: [1.0, 0.7, 0.1],
@@ -122,7 +93,6 @@ export class ParticleSystem {
             spread: 1.2,
             yBias: 3.0,
         },
-        /** Water splash */
         SPLASH: {
             count: 8,
             color: [0.4, 0.75, 0.95],
@@ -137,7 +107,6 @@ export class ParticleSystem {
             spread: 0.8,
             yBias: 3.5,
         },
-        /** Raft build effect */
         BUILD: {
             count: 12,
             color: [0.55, 0.35, 0.18],
@@ -152,7 +121,6 @@ export class ParticleSystem {
             spread: 0.6,
             yBias: 1.5,
         },
-        /** Rain drops (v0.4) */
         RAIN: {
             count: 1,
             color: [0.6, 0.75, 0.9],
@@ -167,7 +135,6 @@ export class ParticleSystem {
             spread: 0.05,
             yBias: 10.0,
         },
-        /** Lightning flash particles (v0.4) */
         LIGHTNING: {
             count: 5,
             color: [1.0, 1.0, 0.95],
@@ -184,14 +151,8 @@ export class ParticleSystem {
         },
     };
 
-    /**
-     * Emit a burst of particles at a world position
-     * @param {number[]} position [x, y, z]
-     * @param {object} preset — one of ParticleSystem.PRESET.*
-     */
     emit(position, preset) {
         const p = preset;
-        // Never round a burst away entirely — one particle still reads as feedback.
         const count = Math.max(1, Math.round(p.count * this.density));
 
         for (let i = 0; i < count; i++) {
@@ -227,15 +188,6 @@ export class ParticleSystem {
         }
     }
 
-    /**
-     * Spawn a single particle with an explicit velocity (no burst spread).
-     * Use this for directional effects like rain, where drops must fall
-     * straight down instead of exploding outward like emit().
-     *
-     * @param {number[]} position [x, y, z] spawn point
-     * @param {number[]} velocity [vx, vy, vz] initial velocity (units/sec)
-     * @param {object} opts { color:[r,g,b], size, lifetime, gravity }
-     */
     emitDirected(position, velocity, opts) {
         if (this.particles.length >= this.maxParticles) return;
 
@@ -257,10 +209,6 @@ export class ParticleSystem {
         });
     }
 
-    /**
-     * Advance particle physics
-     * @param {number} deltaTime
-     */
     update(deltaTime) {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
@@ -271,29 +219,22 @@ export class ParticleSystem {
                 continue;
             }
 
-            // Euler integration
             p.vy += p.gravity * deltaTime;
             p.x += p.vx * deltaTime;
             p.y += p.vy * deltaTime;
             p.z += p.vz * deltaTime;
 
-            // Damp velocity
             p.vx *= 0.98;
             p.vz *= 0.98;
         }
     }
 
-    /**
-     * Render all live particles
-     * @param {object} camera — Camera instance with viewMatrix, projectionMatrix
-     */
     draw(camera) {
         const count = this.particles.length;
         if (count === 0) return;
 
         const gl = this.gl;
 
-        // Fill CPU buffers
         for (let i = 0; i < count; i++) {
             const p = this.particles[i];
             const lifeRatio = p.life / p.maxLife;
@@ -305,12 +246,11 @@ export class ParticleSystem {
             this._colorData[i * 4] = p.r;
             this._colorData[i * 4 + 1] = p.g;
             this._colorData[i * 4 + 2] = p.b;
-            this._colorData[i * 4 + 3] = lifeRatio; // Fade out
+            this._colorData[i * 4 + 3] = lifeRatio;
 
             this._sizeData[i] = p.size * Math.max(0.2, lifeRatio);
         }
 
-        // Upload to GPU
         gl.bindBuffer(gl.ARRAY_BUFFER, this._posBuf);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._positionData.subarray(0, count * 3));
 
@@ -320,7 +260,6 @@ export class ParticleSystem {
         gl.bindBuffer(gl.ARRAY_BUFFER, this._sizeBuf);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._sizeData.subarray(0, count));
 
-        // Draw
         this.shader.use();
         this.shader.setUniformMatrix4fv('uViewMatrix', camera.viewMatrix);
         this.shader.setUniformMatrix4fv('uProjectionMatrix', camera.projectionMatrix);
@@ -338,9 +277,6 @@ export class ParticleSystem {
         gl.disable(gl.BLEND);
     }
 
-    /**
-     * Free GPU resources
-     */
     delete() {
         const gl = this.gl;
         if (this._vao) gl.deleteVertexArray(this._vao);

@@ -1,27 +1,15 @@
-/**
- * Scene Manager for coordinating state switches and game screens
- */
 export class SceneManager {
-    /**
-     * @param {Engine} engine - Reference to the core game engine
-     */
     constructor(engine) {
         this.engine = engine;
-        this.scenes = new Map(); // Name -> Scene class
+        this.scenes = new Map();
         this.activeScene = null;
         this.activeSceneName = '';
     }
 
-    /**
-     * Register a scene class with a unique name
-     */
     addScene(name, sceneClass) {
         this.scenes.set(name, sceneClass);
     }
 
-    /**
-     * Switch to a registered scene by name
-     */
     switchScene(name) {
         if (!this.scenes.has(name)) {
             console.error(`SceneManager: Scene '${name}' is not registered.`);
@@ -30,7 +18,6 @@ export class SceneManager {
 
         console.log(`SceneManager: Transitioning to scene '${name}'...`);
 
-        // Destroy current active scene
         if (this.activeScene) {
             this.activeScene.destroy();
             this.activeScene = null;
@@ -38,12 +25,10 @@ export class SceneManager {
 
         this.activeSceneName = name;
 
-        // Instantiate and initialize new scene
         const SceneClass = this.scenes.get(name);
         this.activeScene = new SceneClass(this.engine);
         this.activeScene.init();
 
-        // Update active scene in the debug panel DOM
         const sceneEl = document.getElementById('debug-scene');
         if (sceneEl) {
             sceneEl.textContent = name;

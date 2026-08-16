@@ -21,7 +21,6 @@ function findAssetFiles(dir) {
 
 try {
     const assets = findAssetFiles(envDir).map(filePath => {
-        // Return path relative to root directory, using forward slashes for browser-compatibility
         return path.relative(rootDir, filePath).replace(/\\/g, '/');
     });
 

@@ -5,7 +5,6 @@ export class TerrainGenerator {
         this.size = size;
         this.width = width;
 
-        // Generate deterministic noise waves for rolling hills
         const waveCount = prng.nextInt(3, 6);
         for (let i = 0; i < waveCount; i++) {
             this.waves.push({
@@ -16,12 +15,8 @@ export class TerrainGenerator {
         }
     }
 
-    // Initialize waves property inside constructor
     waves = [];
 
-    /**
-     * Compute height at a given (x, z) world coordinate
-     */
     getHeight(x, z) {
         const dx = x - this.island.center[0];
         const dz = z - this.island.center[1];
@@ -30,15 +25,11 @@ export class TerrainGenerator {
         const beachHeight = 0.22;
         const seaFloorDepth = -1.0;
 
-        // Underwater sand shelf — beach continues past the land radius, sloping
-        // gently down from the waterline before reaching ocean floor. Nothing is
-        // cut flat at the shoreline, so the beach looks like it wades into the sea.
         const underwaterExtent = this.island.underwaterBeachExtent || 2.5;
         if (distance > this.island.radius) {
             const over = distance - this.island.radius;
             if (over >= underwaterExtent) return seaFloorDepth;
             const t = over / underwaterExtent;
-            // easeInQuad — starts nearly flat at the waterline then dives faster
             const eased = t * t;
             return beachHeight * (1.0 - t) + seaFloorDepth * eased;
         }
@@ -46,43 +37,29 @@ export class TerrainGenerator {
         const transitionWidth = this.island.radius - this.island.innerRadius;
         const shoreDist = this.island.radius - distance;
 
-        // Base land height from the bell curve
         const baseHeight = 3.6 * Math.exp(-0.0015 * distance * distance) - 0.2;
 
-        // Wave noise for rolling hills
         let noise = 0.0;
         for (const wave of this.waves) {
             noise += Math.sin(x * wave.freqX) * Math.cos(z * wave.freqZ) * wave.amp;
         }
 
-        // Transition from beachHeight (shoreline) to (baseHeight + noise) (inland)
-        // t = 0 at distance = radius (shoreline)
-        // t = 1 at distance = innerRadius (inland boundary)
         const t = Math.max(0.0, Math.min(1.0, shoreDist / transitionWidth));
-        const blend = t * t * (3.0 - 2.0 * t); // smoothstep blend factor
+        const blend = t * t * (3.0 - 2.0 * t);
 
-        // Combine base height and beach plateau to keep it smooth
         const combinedBase = (1.0 - blend) * beachHeight + blend * Math.max(0.0, baseHeight);
 
-        // Scale the noise by the blend factor so that noise is 0 at the shoreline,
-        // preventing it from punching holes/depressions in the beach.
         const finalHeight = combinedBase + blend * noise;
 
-        // Prevent any land point on the island (distance <= radius) from dipping below
-        // water level (0.0). We clamp to a dry minimum of beachHeight (0.22) to avoid water intrusion.
         return Math.max(beachHeight, finalHeight);
     }
 
-    /**
-     * Generate normal vectors from heights slopes
-     */
     getNormal(x, z, step) {
         const hL = this.getHeight(x - step, z);
         const hR = this.getHeight(x + step, z);
         const hD = this.getHeight(x, z - step);
         const hU = this.getHeight(x, z + step);
 
-        // Calculate gradient normal vector
         const nx = hL - hR;
         const ny = 2.0 * step;
         const nz = hD - hU;

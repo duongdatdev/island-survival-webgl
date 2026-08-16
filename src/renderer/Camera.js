@@ -8,13 +8,6 @@ import { CameraDebug } from './CameraDebug.js';
 
 const UP = Vec3.create(0, 1, 0);
 
-/**
- * First-person gameplay camera.
- *
- * The public surface is intentionally kept compatible with the old orbit
- * camera because GameScene also uses position/target for audio, combat,
- * compass heading and the escape cutscene.
- */
 export class Camera {
     constructor(fov = 70 * Math.PI / 180, aspect = 1.0, near = 0.05, far = 1000.0) {
         this.viewMatrix = Mat4.create();
@@ -30,13 +23,11 @@ export class Camera {
         this.config.near = near;
         this.config.far = far;
 
-        // In first person yaw is the actual view heading: 0 points along +Z.
         this._yaw = this.config.defaultYaw;
         this._pitch = this.config.defaultPitch;
         this._smoothYaw = this._yaw;
         this._smoothPitch = this._pitch;
 
-        // Retained for the existing debug HUD and camera provider API.
         this._distance = 0;
         this._smoothDistance = 0;
         this._smoothPos = Vec3.create(0, 0, 0);
@@ -95,7 +86,6 @@ export class Camera {
         this._emit('onStateChanged', prev.name, next.name);
     }
 
-    // Compatibility no-op: a first-person camera has no shoulder offset.
     setShoulderOffset(x, y) {
         this.config.shoulderOffsetX = x;
         this.config.shoulderOffsetY = y;
@@ -116,20 +106,10 @@ export class Camera {
         this._firstUpdate = true;
     }
 
-    /**
-     * Place the camera at the player's eyes and aim from yaw/pitch.
-     * @param {object} input InputManager-compatible input object.
-     * @param {number[]} playerPos Player capsule centre.
-     * @param {number} eyeOffset Height above the capsule centre in world units.
-     * @param {number} forwardOffset Distance from the head centre toward the face.
-     */
     update(input, playerPos, eyeOffset = 0.24, deltaTime = 1 / 60, forwardOffset = 0) {
         const config = this._resolveConfig();
         this._handleInput(input, config);
 
-        // Mouse-look must feel immediate in first person. Position is also
-        // snapped to the player so fast turns and collision corrections never
-        // produce a floating or rubber-band camera.
         this._smoothYaw = this._yaw;
         this._smoothPitch = this._pitch;
 
@@ -192,14 +172,11 @@ export class Camera {
     _handleInput(input, config) {
         if (!input || !input.mouse) return;
         if (input.mouse.isLocked || input.mouse.buttons[0]) {
-            // This renderer's +Z forward axis needs reversed horizontal input,
-            // while vertical mouse-look follows the usual screen-Y direction.
             const pitchDirection = config.invertY ? 1 : -1;
             this._yaw -= input.mouse.deltaX * config.mouseSensitivity;
             this._pitch += input.mouse.deltaY * config.mouseSensitivity * pitchDirection;
             this._pitch = Math.max(config.pitchMin, Math.min(this._pitch, config.pitchMax));
 
-            // Keep yaw bounded so it remains numerically stable during long sessions.
             if (this._yaw > Math.PI) this._yaw -= Math.PI * 2;
             else if (this._yaw < -Math.PI) this._yaw += Math.PI * 2;
         }

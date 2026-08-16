@@ -1,40 +1,27 @@
-/**
- * TutorialSystem — Step-by-step interactive tutorial for first-time players.
- * Each step has a trigger condition, message, and auto-dismiss timer.
- * State is persisted via localStorage so the tutorial only shows once.
- */
 export class TutorialSystem {
     constructor() {
-        /** @type {number} Current step index (-1 = not started, steps.length = completed) */
         this.currentStep = -1;
 
-        /** @type {boolean} Whether tutorial has been completed or skipped */
         this.isComplete = false;
 
-        /** @type {number} Timer for auto-dismiss current step */
         this._stepTimer = 0;
 
-        /** @type {number} Delay before activating the first step */
         this._startDelay = 1.5;
 
-        /** @type {boolean} Whether the tutorial has been started */
         this._started = false;
 
-        // Internal tracking for trigger conditions
         this._playerHasMoved = false;
         this._cameraHasRotated = false;
         this._hasPickedUp = false;
         this._hasOpenedCrafting = false;
         this._hasCrafted = false;
 
-        // Check localStorage for prior completion
         try {
             if (localStorage.getItem('island_survival_tutorial_done') === 'true') {
                 this.isComplete = true;
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
 
-        // DOM references
         this._overlayEl = null;
         this._textEl = null;
         this._stepEl = null;
@@ -75,14 +62,11 @@ export class TutorialSystem {
                 id: 'raft',
                 text: '⛵ Tìm <b>bãi bè ở bờ biển</b> và lắp ráp các bộ phận để thoát đảo!',
                 autoDismiss: 10,
-                triggerCheck: () => false, // Always auto-dismiss
+                triggerCheck: () => false,
             },
         ];
     }
 
-    /**
-     * Initialize DOM references. Called when game scene is ready.
-     */
     init() {
         this._overlayEl = document.getElementById('tutorial-overlay');
         this._textEl = document.getElementById('tutorial-text');
@@ -98,25 +82,15 @@ export class TutorialSystem {
         }
     }
 
-    /**
-     * Start the tutorial sequence
-     */
     start() {
         if (this.isComplete) return;
         this._started = true;
         this._startDelay = 1.5;
     }
 
-    /**
-     * Per-frame update — advance steps based on triggers
-     * @param {number} deltaTime
-     * @param {object} inputManager
-     * @param {object} player
-     */
     update(deltaTime, inputManager, player) {
         if (this.isComplete) return;
 
-        // Wait for start delay
         if (this._started && this.currentStep === -1) {
             this._startDelay -= deltaTime;
             if (this._startDelay <= 0) {
@@ -129,7 +103,6 @@ export class TutorialSystem {
 
         const step = this._steps[this.currentStep];
 
-        // Track player actions for triggers
         if (inputManager) {
             if (inputManager.isActionDown && (
                 inputManager.isActionDown('moveForward') ||
@@ -152,57 +125,39 @@ export class TutorialSystem {
             }
         }
 
-        // Check if step trigger condition is met
         if (step.triggerCheck()) {
             this._advanceStep();
             return;
         }
 
-        // Auto-dismiss timer
         this._stepTimer -= deltaTime;
         if (this._stepTimer <= 0) {
             this._advanceStep();
         }
     }
 
-    /**
-     * Notify that player picked up a resource
-     */
     notifyPickup() {
         this._hasPickedUp = true;
     }
 
-    /**
-     * Notify that crafting panel was opened
-     */
     notifyCraftingOpened() {
         this._hasOpenedCrafting = true;
     }
 
-    /**
-     * Notify that an item was crafted
-     */
     notifyCrafted() {
         this._hasCrafted = true;
     }
 
-    /**
-     * Skip the entire tutorial
-     */
     skip() {
         this.isComplete = true;
         this._hide();
         this._persist();
     }
 
-    /**
-     * Advance to the next step or complete
-     */
     _advanceStep() {
         this.currentStep++;
 
         if (this.currentStep >= this._steps.length) {
-            // Tutorial complete
             this.isComplete = true;
             this._hide();
             this._persist();
@@ -214,9 +169,6 @@ export class TutorialSystem {
         this._show(step);
     }
 
-    /**
-     * Display a tutorial step
-     */
     _show(step) {
         if (this._overlayEl) {
             this._overlayEl.classList.remove('hidden');
@@ -229,27 +181,18 @@ export class TutorialSystem {
         }
     }
 
-    /**
-     * Hide tutorial overlay
-     */
     _hide() {
         if (this._overlayEl) {
             this._overlayEl.classList.add('hidden');
         }
     }
 
-    /**
-     * Save completion state
-     */
     _persist() {
         try {
             localStorage.setItem('island_survival_tutorial_done', 'true');
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
     }
 
-    /**
-     * Reset tutorial (for testing / replay)
-     */
     reset() {
         this.currentStep = -1;
         this.isComplete = false;
@@ -261,7 +204,7 @@ export class TutorialSystem {
         this._hasCrafted = false;
         try {
             localStorage.removeItem('island_survival_tutorial_done');
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
     }
 
     destroy() {

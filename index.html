@@ -159,14 +159,9 @@
 
             <!-- Primary actions: one filled CTA per intent, icons in a shared column -->
             <div class="menu-buttons">
-                <button id="menu-continue-btn" class="menu-btn primary hero hidden" aria-label="Chơi tiếp tiến trình đã lưu">
-                    <svg class="ui-icon" aria-hidden="true"><use href="#i-save"/></svg>
-                    <span class="btn-text">CHƠI TIẾP</span>
-                    <span id="menu-continue-meta" class="btn-meta"></span>
-                </button>
-                <button id="menu-start-btn" class="menu-btn primary" aria-label="Bắt đầu ván chơi mới">
+                <button id="menu-play-btn" class="menu-btn primary hero" aria-label="Chọn map để chơi">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-sail"/></svg>
-                    <span class="btn-text">BẮT ĐẦU</span>
+                    <span class="btn-text">CHƠI</span>
                 </button>
                 <button id="menu-tutorial-btn" class="menu-btn secondary" aria-label="Xem hướng dẫn chơi">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-book"/></svg>
@@ -199,6 +194,75 @@
 
             <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • v1.1</div>
         </div>
+    </div>
+
+    <div id="world-menu" class="overlay panel-overlay hidden" aria-hidden="true">
+        <section class="world-menu-content" role="dialog" aria-modal="true" aria-labelledby="world-menu-title">
+            <header class="world-menu-header">
+                <div>
+                    <div class="world-menu-kicker">HÀNH TRÌNH CỦA BẠN</div>
+                    <h2 id="world-menu-title">CHỌN THẾ GIỚI</h2>
+                </div>
+                <button id="world-menu-close-btn" class="panel-close" aria-label="Quay lại menu chính">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
+            </header>
+            <div class="world-menu-toolbar">
+                <p id="world-menu-summary" class="world-menu-summary"></p>
+                <button id="world-create-btn" class="menu-btn primary world-create-btn" type="button">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-island"/></svg>
+                    <span class="btn-text">TẠO MAP MỚI</span>
+                </button>
+            </div>
+            <div id="world-list" class="world-list" role="listbox" aria-label="Danh sách map"></div>
+            <div id="world-menu-error" class="world-menu-error" role="alert"></div>
+            <footer class="world-menu-footer">
+                <button id="world-play-btn" class="menu-btn primary hero world-play-btn" type="button" disabled>
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-play"/></svg>
+                    <span class="btn-text">VÀO MAP</span>
+                </button>
+            </footer>
+        </section>
+    </div>
+
+    <div id="world-form-modal" class="world-modal hidden" aria-hidden="true">
+        <form id="world-form" class="world-dialog" novalidate>
+            <div class="world-dialog-header">
+                <h2 id="world-form-title">TẠO MAP MỚI</h2>
+                <button id="world-form-close-btn" class="panel-close" type="button" aria-label="Đóng">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
+            </div>
+            <label class="world-field" for="world-name-input">
+                <span>TÊN MAP</span>
+                <input id="world-name-input" type="text" maxlength="32" autocomplete="off" required>
+            </label>
+            <label class="world-field" for="world-seed-input">
+                <span>SEED</span>
+                <input id="world-seed-input" type="text" maxlength="64" autocomplete="off" placeholder="để trống để tạo ngẫu nhiên">
+            </label>
+            <div id="world-form-error" class="world-menu-error" role="alert"></div>
+            <div class="world-dialog-actions">
+                <button id="world-form-cancel-btn" class="menu-btn secondary small" type="button"><span class="btn-text">HỦY</span></button>
+                <button class="menu-btn primary small" type="submit"><span id="world-form-submit-label" class="btn-text">TẠO MAP</span></button>
+            </div>
+        </form>
+    </div>
+
+    <div id="world-delete-modal" class="world-modal hidden" aria-hidden="true">
+        <section class="world-dialog world-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="world-delete-title">
+            <div class="world-dialog-header">
+                <h2 id="world-delete-title">XÓA MAP?</h2>
+                <button id="world-delete-close-btn" class="panel-close" type="button" aria-label="Đóng">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
+            </div>
+            <p id="world-delete-message" class="world-delete-message"></p>
+            <div class="world-dialog-actions">
+                <button id="world-delete-cancel-btn" class="menu-btn secondary small" type="button"><span class="btn-text">HỦY</span></button>
+                <button id="world-delete-confirm-btn" class="menu-btn danger small" type="button"><span class="btn-text">XÓA MAP</span></button>
+            </div>
+        </section>
     </div>
 
     <!-- UI Overlay: Settings Menu (v1.0) -->

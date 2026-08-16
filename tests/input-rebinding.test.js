@@ -29,23 +29,19 @@ test('getKeyDisplayName formats raw codes to friendly labels', () => {
 test('isActionDown and isActionPressed detect bound keys', () => {
     const input = new InputManager(null);
 
-    // Initial: nothing pressed
     assert.equal(input.isActionDown('moveForward'), false);
     assert.equal(input.isActionPressed('moveForward'), false);
 
-    // Press KeyW
     input.keys['KeyW'] = true;
     assert.equal(input.isActionDown('moveForward'), true);
     assert.equal(input.isActionPressed('moveForward'), true);
     assert.equal(input.isKeyDown('moveForward'), true);
     assert.equal(input.isKeyPressed('moveForward'), true);
 
-    // Next frame (resetDeltas called)
     input.resetDeltas();
     assert.equal(input.isActionDown('moveForward'), true);
-    assert.equal(input.isActionPressed('moveForward'), false); // no longer just pressed
+    assert.equal(input.isActionPressed('moveForward'), false);
 
-    // Release KeyW
     input.keys['KeyW'] = false;
     assert.equal(input.isActionDown('moveForward'), false);
     assert.equal(input.isActionPressed('moveForward'), false);
@@ -54,14 +50,12 @@ test('isActionDown and isActionPressed detect bound keys', () => {
 test('Hotbar selection 1-8 is supported via primary and secondary bindings', () => {
     const input = new InputManager(null);
 
-    // Primary: Digit1
     input.keys['Digit1'] = true;
     assert.equal(input.isActionPressed('hotbar1'), true);
     input.resetDeltas();
     input.keys['Digit1'] = false;
     input.resetDeltas();
 
-    // Secondary: Numpad5 for hotbar5
     input.keys['Numpad5'] = true;
     assert.equal(input.isActionPressed('hotbar5'), true);
     input.resetDeltas();
@@ -71,22 +65,18 @@ test('Hotbar selection 1-8 is supported via primary and secondary bindings', () 
 test('Key rebinding allows modifying actions and resetting to default', () => {
     const input = new InputManager(null);
 
-    // Rebind interact from KeyE to KeyF
     input.setBinding('interact', 'KeyF', 0);
     assert.equal(input.getBindingKey('interact'), 'KeyF');
     assert.equal(input.getBindingDisplayName('interact'), 'F');
 
-    // KeyE should no longer trigger interact
     input.keys['KeyE'] = true;
     assert.equal(input.isActionPressed('interact'), false);
     input.keys['KeyE'] = false;
 
-    // KeyF triggers interact
     input.keys['KeyF'] = true;
     assert.equal(input.isActionPressed('interact'), true);
     input.keys['KeyF'] = false;
 
-    // Reset bindings back to default
     input.resetBindings();
     assert.equal(input.getBindingKey('interact'), 'KeyE');
     assert.equal(input.getBindingDisplayName('interact'), 'E');
@@ -103,7 +93,6 @@ test('consumeAction consumes all keys bound to action', () => {
 });
 
 test('SettingsManager persists and resets keyBindings', () => {
-    // Setup mock localStorage
     const storage = {};
     globalThis.localStorage = {
         getItem: (k) => storage[k] || null,
@@ -115,18 +104,15 @@ test('SettingsManager persists and resets keyBindings', () => {
     assert.ok(settings.get('keyBindings'));
     assert.equal(settings.get('keyBindings').moveForward[0], 'KeyW');
 
-    // Modify a binding
     const custom = JSON.parse(JSON.stringify(settings.get('keyBindings')));
     custom.moveForward = ['KeyI', 'ArrowUp'];
     settings.set('keyBindings', custom);
 
     assert.equal(settings.get('keyBindings').moveForward[0], 'KeyI');
 
-    // Reload from storage
     const reloaded = new SettingsManager();
     assert.equal(reloaded.get('keyBindings').moveForward[0], 'KeyI');
 
-    // Reset key bindings
     reloaded.resetKeyBindings();
     assert.equal(reloaded.get('keyBindings').moveForward[0], 'KeyW');
 });

@@ -1,55 +1,32 @@
 import { getResourceDef } from './ResourceDatabase.js';
 
-/**
- * Bare hands. Not a resource, so it can't come from the database like every
- * other weapon does.
- */
 const FIST = { type: 'melee', damage: 5, range: 1.5, cooldown: 0.4 };
 const COOLDOWN_EPSILON = 1e-6;
 
-/**
- * CombatSystem — Handles melee and ranged attacks against creatures.
- * Detects weapon type from equipped hotbar item and applies damage.
- */
 export class CombatSystem {
     constructor() {
-        // Cooldown state shared across all weapons
         this._globalCooldown = 0;
         this._lastWeaponType = null;
     }
 
-    /**
-     * Perform a melee attack in the player's forward direction.
-     * @param {Float32Array|number[]} playerPosition
-     * @param {number} playerYaw — rotation[1] from Player
-     * @param {object|null} equippedItem — hotbar item { id, count } or null
-     * @param {Creature[]} creatures — array of living creatures
-     * @param {object} [inventory] — for arrow consumption
-     * @returns {{ hit: boolean, creature: object|null, damage: number }}
-     */
     attack(playerPosition, playerYaw, equippedItem, creatures, inventory) {
-        // Determine weapon stats from equipped item
         const weaponData = this._getWeaponData(equippedItem);
         if (!weaponData) {
             return { hit: false, creature: null, damage: 0 };
         }
 
-        // Check cooldown — nothing happened, so the caller shows no feedback
         if (this._globalCooldown > 0) {
             return { hit: false, creature: null, damage: 0, onCooldown: true };
         }
 
-        // Ranged weapon check
         if (weaponData.type === 'ranged') {
             return this._rangedAttack(playerPosition, playerYaw, weaponData, creatures, inventory);
         }
 
-        // Melee attack — arc check in front of player
         const range = weaponData.range;
         const damage = weaponData.damage;
-        const halfArc = Math.PI * 0.35; // ~126-degree total swing cone
+        const halfArc = Math.PI * 0.35;
 
-        // Direction the player is facing
         const facingX = Math.sin(playerYaw);
         const facingZ = Math.cos(playerYaw);
 
@@ -65,17 +42,14 @@ export class CombatSystem {
             const dist = Math.sqrt(dx * dx + dz * dz);
 
             if (dist > range) continue;
-            // Melee can't reach a gull circling overhead
             if (Math.abs(dy) > range) continue;
 
-            // Point blank: always a hit, and dividing by dist would be NaN
             if (dist > 0.0001) {
                 const dot = (dx / dist) * facingX + (dz / dist) * facingZ;
                 const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
                 if (angle > halfArc) continue;
             }
 
-            // Pick closest in range
             if (dist < closestDist) {
                 closestDist = dist;
                 closestCreature = creature;
@@ -90,17 +64,10 @@ export class CombatSystem {
             return { hit: true, creature: closestCreature, damage, swung: true };
         }
 
-        // Miss — cooldown still applied (the swing happened)
         return { hit: false, creature: null, damage: 0, swung: true };
     }
 
-    /**
-     * Ranged attack — fires a projectile in camera direction.
-     * Alternatively called internally from attack() for bow.
-     * @private
-     */
     _rangedAttack(playerPosition, playerYaw, weaponData, creatures, inventory) {
-        // Consume arrow
         if (inventory) {
             if (!inventory.hasItem('arrow', 1)) {
                 return { hit: false, creature: null, damage: 0, reason: 'no_ammo' };
@@ -113,7 +80,6 @@ export class CombatSystem {
         const facingX = Math.sin(playerYaw);
         const facingZ = Math.cos(playerYaw);
 
-        // Raycast: check all creatures along the firing line
         let closestCreature = null;
         let closestDist = range;
 
@@ -126,11 +92,9 @@ export class CombatSystem {
 
             if (dist > range) continue;
 
-            // Project creature position onto firing direction
             const t = dx * facingX + dz * facingZ;
-            if (t <= 0) continue; // Behind player
+            if (t <= 0) continue;
 
-            // Perpendicular distance from ray to creature center
             const perpX = dx - t * facingX;
             const perpZ = dz - t * facingZ;
             const perpDist = Math.sqrt(perpX * perpX + perpZ * perpZ);
@@ -155,14 +119,6 @@ export class CombatSystem {
         return { hit: false, creature: null, damage: 0, swung: true };
     }
 
-    /**
-     * Get weapon stats for the equipped item.
-     *
-     * Stats live in ResourceDatabase (`weaponType`/`weaponDamage`/`weaponRange`/
-     * `weaponCooldown`) so balance changes land in one place. Anything without
-     * those fields — a coconut, a plank — swings as a fist.
-     * @private
-     */
     _getWeaponData(equippedItem) {
         if (!equippedItem) return FIST;
 
@@ -177,31 +133,19 @@ export class CombatSystem {
         };
     }
 
-    /**
-     * Call every frame to reduce cooldown timer
-     * @param {number} deltaTime
-     */
     update(deltaTime) {
         if (this._globalCooldown > 0) {
             this._globalCooldown -= deltaTime;
-            // Avoid a microscopic positive remainder delaying a held attack
-            // by one whole rendered frame at the exact animation boundary.
             if (this._globalCooldown <= COOLDOWN_EPSILON) {
                 this._globalCooldown = 0;
             }
         }
     }
 
-    /**
-     * Check if any attack can be performed
-     */
     canAttack() {
         return this._globalCooldown <= 0;
     }
 
-    /**
-     * Get remaining cooldown
-     */
     getCooldown() {
         return Math.max(0, this._globalCooldown);
     }

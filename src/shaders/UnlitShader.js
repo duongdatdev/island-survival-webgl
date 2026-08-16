@@ -1,6 +1,3 @@
-/**
- * Unlit Shader source for WebGL 2 (GLSL 3.00 es)
- */
 export const UnlitShader = {
     vertex: `#version 300 es
         layout(location = 0) in vec3 aPosition;

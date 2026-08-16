@@ -1,17 +1,6 @@
-/**
- * AchievementSystem (v1.0) — milestone tracking with toast feedback.
- *
- * Unlocks persist across runs (they're a profile-level record, not part of a
- * save file), so wiping a save keeps the trophy case intact.
- */
 
 const STORAGE_KEY = 'island_survival_achievements_v1';
 
-/**
- * Each achievement declares a `check(stats)` predicate evaluated against the
- * running stat counters. Keeping the rule next to the copy means adding one is
- * a single entry rather than a scatter of call sites.
- */
 export const Achievements = [
     {
         id: 'first_pickup',
@@ -113,7 +102,6 @@ export const Achievements = [
     },
 ];
 
-/** Zeroed stat block — also the shape SaveSystem round-trips. */
 export function createStats() {
     return {
         resourcesPicked: 0,
@@ -133,10 +121,8 @@ export function createStats() {
 
 export class AchievementSystem {
     constructor() {
-        /** @type {Set<string>} Unlocked achievement ids */
         this.unlocked = new Set();
 
-        /** @type {Array<{icon:string,name:string,description:string}>} Pending toasts */
         this._queue = [];
         this._toastTimer = 0;
         this._activeToast = null;
@@ -144,11 +130,6 @@ export class AchievementSystem {
         this._load();
     }
 
-    /**
-     * Evaluate every locked achievement against the current stats.
-     * Cheap enough (a dozen predicates) to run once per second from the scene.
-     * @param {object} stats
-     */
     evaluate(stats) {
         for (const def of Achievements) {
             if (this.unlocked.has(def.id)) continue;
@@ -158,10 +139,6 @@ export class AchievementSystem {
         }
     }
 
-    /**
-     * Unlock by id, queueing a toast. No-op when already unlocked.
-     * @param {string} id
-     */
     unlock(id) {
         if (this.unlocked.has(id)) return;
         const def = Achievements.find(a => a.id === id);
@@ -186,11 +163,6 @@ export class AchievementSystem {
         this._persist();
     }
 
-    /**
-     * Drive the toast queue. Shows one banner at a time so a burst of unlocks
-     * reads as a sequence instead of overwriting itself.
-     * @param {number} deltaTime
-     */
     update(deltaTime) {
         if (this._activeToast) {
             this._toastTimer -= deltaTime;
@@ -205,7 +177,6 @@ export class AchievementSystem {
         }
     }
 
-    // ── Toast DOM ────────────────────────────────────────────────
 
     _showToast(def) {
         this._activeToast = def;
@@ -223,7 +194,7 @@ export class AchievementSystem {
             </div>
         `;
         el.classList.remove('hidden');
-        void el.offsetWidth; // restart the entrance animation
+        void el.offsetWidth;
         el.classList.add('visible');
     }
 
@@ -234,12 +205,10 @@ export class AchievementSystem {
 
         el.classList.remove('visible');
         setTimeout(() => {
-            // Guard against a new toast having claimed the element meanwhile.
             if (!this._activeToast) el.classList.add('hidden');
         }, 350);
     }
 
-    // ── Persistence ──────────────────────────────────────────────
 
     _load() {
         try {
@@ -257,6 +226,6 @@ export class AchievementSystem {
     _persist() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(this.unlocked)));
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
     }
 }

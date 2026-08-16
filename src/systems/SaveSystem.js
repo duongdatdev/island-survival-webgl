@@ -1,98 +1,164 @@
-/**
- * SaveSystem (v1.0) — local persistence for a run in progress.
- *
- * The save is a plain JSON snapshot in localStorage. It stores the world seed
- * rather than the generated geometry: the world generator is deterministic, so
- * regenerating from the seed reproduces the same island for a fraction of the
- * storage cost. Only the state that *diverges* from a fresh generation (picked
- * resources, placed structures, inventory, vitals) is written out.
- *
- * Transient things — drifting debris, particles, living creatures — are not
- * saved. They respawn on load, which is cheaper than serializing them and
- * indistinguishable in play.
- */
+const LEGACY_STORAGE_KEY = 'island_survival_save_v1';
+const WORLD_INDEX_KEY = 'island_survival_world_index_v1';
+const WORLD_SAVE_PREFIX = 'island_survival_world_save_v1:';
 
-const STORAGE_KEY = 'island_survival_save_v1';
 export const SAVE_VERSION = 1;
 
+function makeId() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function makeSeed() {
+    if (globalThis.crypto?.getRandomValues) {
+        const values = new Uint32Array(1);
+        globalThis.crypto.getRandomValues(values);
+        return values[0].toString();
+    }
+    return Math.floor(Math.random() * 1000000000).toString();
+}
+
+function normalizeName(name) {
+    return typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '';
+}
+
+function normalizeSeed(seed) {
+    return typeof seed === 'string' ? seed.trim() : '';
+}
+
 export class SaveSystem {
-    /**
-     * @returns {boolean} True when a loadable save exists.
-     */
-    static hasSave() {
-        return SaveSystem.load() !== null;
-    }
-
-    /**
-     * Lightweight header for the "Continue" button — survival time and date,
-     * without the caller having to interpret the whole payload.
-     * @returns {{savedAt:number, survivalSeconds:number, seed:string}|null}
-     */
-    static getMeta() {
-        const data = SaveSystem.load();
-        if (!data) return null;
-        return {
-            savedAt: data.savedAt || 0,
-            survivalSeconds: data.survivalSeconds || 0,
-            seed: data.worldSeed || '',
-        };
-    }
-
-    /**
-     * Read and validate the stored save.
-     * @returns {object|null} Parsed save, or null when absent/corrupt/outdated.
-     */
-    static load() {
+    static initialize() {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
+            localStorage.removeItem(LEGACY_STORAGE_KEY);
+        } catch (e) { }
+    }
+
+    static listWorlds() {
+        const index = SaveSystem._readIndex();
+        return index.worlds.slice().sort((a, b) =>
+            (b.lastPlayedAt || b.updatedAt || b.createdAt) - (a.lastPlayedAt || a.updatedAt || a.createdAt)
+        );
+    }
+
+    static getWorld(id) {
+        return SaveSystem._readIndex().worlds.find(world => world.id === id) || null;
+    }
+
+    static createWorld({ name, seed = '' }) {
+        const cleanName = normalizeName(name);
+        const cleanSeed = normalizeSeed(seed);
+        const index = SaveSystem._readIndex();
+        const error = SaveSystem._validateWorldInput(cleanName, cleanSeed, index.worlds);
+        if (error) return { ok: false, error };
+
+        const now = Date.now();
+        const world = {
+            id: makeId(),
+            name: cleanName,
+            seed: cleanSeed || makeSeed(),
+            createdAt: now,
+            updatedAt: now,
+            lastPlayedAt: 0,
+            status: 'new',
+            survivalSeconds: 0,
+        };
+        index.worlds.push(world);
+        if (!SaveSystem._writeIndex(index)) return { ok: false, error: 'Không thể lưu map vào bộ nhớ trình duyệt.' };
+        return { ok: true, world };
+    }
+
+    static renameWorld(id, name) {
+        const cleanName = normalizeName(name);
+        const index = SaveSystem._readIndex();
+        const world = index.worlds.find(item => item.id === id);
+        if (!world) return { ok: false, error: 'Map không còn tồn tại.' };
+        const error = SaveSystem._validateWorldInput(cleanName, world.seed, index.worlds.filter(item => item.id !== id));
+        if (error) return { ok: false, error };
+
+        world.name = cleanName;
+        world.updatedAt = Date.now();
+        if (!SaveSystem._writeIndex(index)) return { ok: false, error: 'Không thể đổi tên map.' };
+        return { ok: true, world };
+    }
+
+    static deleteWorld(id) {
+        const index = SaveSystem._readIndex();
+        const nextWorlds = index.worlds.filter(world => world.id !== id);
+        if (nextWorlds.length === index.worlds.length) return { ok: false, error: 'Map không còn tồn tại.' };
+        index.worlds = nextWorlds;
+        if (!SaveSystem._writeIndex(index)) return { ok: false, error: 'Không thể xóa map.' };
+        try {
+            localStorage.removeItem(SaveSystem._saveKey(id));
+        } catch (e) { }
+        return { ok: true };
+    }
+
+    static loadWorld(id) {
+        try {
+            const raw = localStorage.getItem(SaveSystem._saveKey(id));
             if (!raw) return null;
-
             const data = JSON.parse(raw);
-            if (!data || typeof data !== 'object') return null;
-
-            // A save from a different schema can't be trusted to restore
-            // cleanly, so treat it as absent rather than half-applying it.
-            if (data.version !== SAVE_VERSION) {
-                console.warn(`SaveSystem: ignoring save with version ${data.version} (expected ${SAVE_VERSION}).`);
-                return null;
-            }
-            if (!data.worldSeed) return null;
-
+            if (!data || typeof data !== 'object' || data.version !== SAVE_VERSION || !data.worldSeed) return null;
             return data;
         } catch (e) {
-            console.warn('SaveSystem: save data is unreadable, discarding.', e);
             return null;
         }
     }
 
-    /**
-     * Persist a snapshot.
-     * @param {object} data Snapshot from `SaveSystem.captureScene`.
-     * @returns {boolean} True when the write succeeded.
-     */
-    static save(data) {
+    static saveWorld(id, data) {
+        const index = SaveSystem._readIndex();
+        const world = index.worlds.find(item => item.id === id);
+        if (!world) return false;
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-            return true;
+            localStorage.setItem(SaveSystem._saveKey(id), JSON.stringify(data));
         } catch (e) {
-            // Quota errors are the realistic failure here — surface it to the
-            // caller so the UI can tell the player the save didn't happen.
-            console.error('SaveSystem: failed to write save.', e);
             return false;
         }
+
+        world.updatedAt = Date.now();
+        world.lastPlayedAt = world.updatedAt;
+        world.status = 'playing';
+        world.survivalSeconds = data.survivalSeconds || 0;
+        return SaveSystem._writeIndex(index);
     }
 
-    static deleteSave() {
+    static prepareWorld(id) {
+        const index = SaveSystem._readIndex();
+        const world = index.worlds.find(item => item.id === id);
+        if (!world) return null;
+        world.lastPlayedAt = Date.now();
+        world.updatedAt = world.lastPlayedAt;
+        world.status = 'playing';
+        if (!SaveSystem._writeIndex(index)) return null;
+        return world;
+    }
+
+    static finishWorld(id, status, survivalSeconds) {
+        const index = SaveSystem._readIndex();
+        const world = index.worlds.find(item => item.id === id);
+        if (!world) return false;
+        world.updatedAt = Date.now();
+        world.status = status === 'escaped' ? 'escaped' : 'dead';
+        world.survivalSeconds = survivalSeconds || 0;
         try {
-            localStorage.removeItem(STORAGE_KEY);
-        } catch (e) { /* ignore */ }
+            localStorage.removeItem(SaveSystem._saveKey(id));
+        } catch (e) { }
+        return SaveSystem._writeIndex(index);
     }
 
-    /**
-     * Build a snapshot from a live GameScene.
-     * @param {import('../scenes/GameScene.js').GameScene} scene
-     * @returns {object}
-     */
+    static resetWorld(id) {
+        const index = SaveSystem._readIndex();
+        const world = index.worlds.find(item => item.id === id);
+        if (!world) return false;
+        world.updatedAt = Date.now();
+        world.status = 'new';
+        world.survivalSeconds = 0;
+        try {
+            localStorage.removeItem(SaveSystem._saveKey(id));
+        } catch (e) { }
+        return SaveSystem._writeIndex(index);
+    }
+
     static captureScene(scene) {
         const player = scene.player;
         const vitals = scene.vitals;
@@ -103,26 +169,20 @@ export class SaveSystem {
             savedAt: Date.now(),
             worldSeed: scene.worldSeed,
             survivalSeconds: scene.survivalSeconds,
-
             player: {
                 position: [player.position[0], player.position[1], player.position[2]],
                 yaw: player.rotation[1],
             },
-
             vitals: {
                 health: vitals.health,
                 hunger: vitals.hunger,
                 thirst: vitals.thirst,
                 stamina: vitals.stamina,
             },
-
             inventory: {
-                // Slots hold {id, count} or null — copy so later mutation of the
-                // live inventory can't retroactively alter a written save.
                 slots: scene.inventory.slots.map(s => (s ? { id: s.id, count: s.count } : null)),
                 selectedHotbarIndex: scene.inventory.selectedHotbarIndex,
             },
-
             raft: {
                 framePlaced: raft.framePlaced,
                 floatsPlaced: raft.floatsPlaced,
@@ -130,7 +190,6 @@ export class SaveSystem {
                 sailPlaced: raft.sailPlaced,
                 motorPlaced: raft.motorPlaced,
             },
-
             structures: {
                 campfire: {
                     isBuilt: scene.campfire.isBuilt,
@@ -142,9 +201,7 @@ export class SaveSystem {
                     waterStored: scene.waterCollector.waterStored,
                 },
             },
-
             blueprints: Array.from(scene.unlockedBlueprints),
-
             environment: {
                 timeOfDay: scene.dayNight.timeOfDay,
                 weather: scene.weather.currentWeather,
@@ -152,9 +209,6 @@ export class SaveSystem {
                 windSpeed: scene.weather.windSpeed,
                 rainIntensity: scene.weather.rainIntensity,
             },
-
-            // Surviving pickups only. Anything the player already collected is
-            // simply absent, so a load never resurrects harvested resources.
             resources: scene.resourceManager.worldResources
                 .filter(r => !r.isCollected)
                 .map(r => ({
@@ -162,8 +216,45 @@ export class SaveSystem {
                     position: [r.position[0], r.position[1], r.position[2]],
                     rewardType: r.rewardType || null,
                 })),
-
             stats: Object.assign({}, scene.stats),
         };
+    }
+
+    static _readIndex() {
+        try {
+            const raw = localStorage.getItem(WORLD_INDEX_KEY);
+            if (!raw) return { version: SAVE_VERSION, worlds: [] };
+            const index = JSON.parse(raw);
+            if (!index || typeof index !== 'object' || !Array.isArray(index.worlds)) return { version: SAVE_VERSION, worlds: [] };
+            return { version: SAVE_VERSION, worlds: index.worlds.filter(SaveSystem._isValidWorld) };
+        } catch (e) {
+            return { version: SAVE_VERSION, worlds: [] };
+        }
+    }
+
+    static _writeIndex(index) {
+        try {
+            localStorage.setItem(WORLD_INDEX_KEY, JSON.stringify(index));
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    static _saveKey(id) {
+        return `${WORLD_SAVE_PREFIX}${id}`;
+    }
+
+    static _validateWorldInput(name, seed, worlds) {
+        if (!name || name.length > 32) return 'Tên map phải có từ 1 đến 32 ký tự.';
+        if (seed.length > 64) return 'Seed tối đa 64 ký tự.';
+        if (worlds.some(world => world.name.localeCompare(name, undefined, { sensitivity: 'accent' }) === 0)) {
+            return 'Tên map này đã được sử dụng.';
+        }
+        return '';
+    }
+
+    static _isValidWorld(world) {
+        return !!world && typeof world.id === 'string' && typeof world.name === 'string' && typeof world.seed === 'string';
     }
 }

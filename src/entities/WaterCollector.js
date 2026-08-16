@@ -3,50 +3,32 @@ import { Vec3 } from '../math/Vec3.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Mesh } from '../renderer/Mesh.js';
 
-/**
- * WaterCollector Entity — Collects rainwater for the player to drink.
- * Built from Wood + Barrel. Generates Fresh Water over time.
- * 
- * Visual: Wooden frame with barrel underneath catching drips.
- * Procedural mesh — no external assets required.
- */
 const COLLECTOR_SCALE = 0.45;
 
 export class WaterCollector extends Entity {
-    /**
-     * @param {WebGL2RenderingContext} gl
-     * @param {number[]} position - World position [x, y, z]
-     */
     constructor(gl, position) {
         super();
         this.gl = gl;
         Vec3.set(this.position, position[0], position[1], position[2]);
 
-        this.isBuilt = false;       // Must be crafted before appearing
-        this.interactRadius = 3.0;  // Player proximity to interact
+        this.isBuilt = false;
+        this.interactRadius = 3.0;
 
-        // Water generation
-        this.waterStored = 0;       // Current stored water units
-        this.maxWater = 3;          // Max stored water
-        this.generateInterval = 30; // Seconds per water unit
+        this.waterStored = 0;
+        this.maxWater = 3;
+        this.generateInterval = 30;
         this._generateTimer = 0;
 
-        // Animation
         this._dripTime = 0;
 
-        // Build meshes
         this._buildMeshes(gl);
         this.updateModelMatrix();
     }
 
     _buildMeshes(gl) {
-        // Wood frame — brown
         this._woodData = this._createCubeData(0.5, 0.32, 0.15);
-        // Barrel/container — dark wood
         this._barrelData = this._createCubeData(0.4, 0.25, 0.12);
-        // Water surface — blue
         this._waterData = this._createCubeData(0.2, 0.5, 0.8);
-        // Leaf/funnel — green
         this._leafData = this._createCubeData(0.25, 0.55, 0.2);
 
         this.woodMesh = this._createMesh(gl, this._woodData);
@@ -55,16 +37,11 @@ export class WaterCollector extends Entity {
         this.leafMesh = this._createMesh(gl, this._leafData);
     }
 
-    /**
-     * Update water generation timer
-     * @param {number} deltaTime
-     */
     update(deltaTime) {
         if (!this.isBuilt) return;
 
         this._dripTime += deltaTime;
 
-        // Generate water over time
         if (this.waterStored < this.maxWater) {
             this._generateTimer += deltaTime;
             if (this._generateTimer >= this.generateInterval) {
@@ -74,11 +51,6 @@ export class WaterCollector extends Entity {
         }
     }
 
-    /**
-     * Check if player is within interaction range
-     * @param {number[]} playerPos
-     * @returns {boolean}
-     */
     isPlayerNear(playerPos) {
         if (!this.isBuilt) return false;
         const dx = playerPos[0] - this.position[0];
@@ -86,10 +58,6 @@ export class WaterCollector extends Entity {
         return Math.sqrt(dx * dx + dz * dz) < this.interactRadius;
     }
 
-    /**
-     * Collect water from the collector
-     * @returns {boolean} True if water was available
-     */
     collectWater() {
         if (this.waterStored > 0) {
             this.waterStored--;
@@ -98,17 +66,11 @@ export class WaterCollector extends Entity {
         return false;
     }
 
-    /**
-     * Draw water collector using BasicShader
-     * @param {ShaderProgram} shader
-     * @param {number} drawMode
-     */
     draw(shader, drawMode) {
         if (!this.isBuilt) return;
 
         const tempMatrix = Mat4.create();
 
-        // Draw 4 wooden support poles
         const polePositions = [
             [-0.4 * COLLECTOR_SCALE, 0, -0.4 * COLLECTOR_SCALE], [0.4 * COLLECTOR_SCALE, 0, -0.4 * COLLECTOR_SCALE],
             [-0.4 * COLLECTOR_SCALE, 0, 0.4 * COLLECTOR_SCALE], [0.4 * COLLECTOR_SCALE, 0, 0.4 * COLLECTOR_SCALE]
@@ -125,7 +87,6 @@ export class WaterCollector extends Entity {
             this.woodMesh.draw(drawMode);
         }
 
-        // Draw leaf funnel on top (angled)
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
             this.position[0],
@@ -137,7 +98,6 @@ export class WaterCollector extends Entity {
         shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
         this.leafMesh.draw(drawMode);
 
-        // Draw barrel/container underneath
         Mat4.identity(tempMatrix);
         Mat4.translate(tempMatrix, tempMatrix, [
             this.position[0],
@@ -148,7 +108,6 @@ export class WaterCollector extends Entity {
         shader.setUniformMatrix4fv('uModelMatrix', tempMatrix);
         this.barrelMesh.draw(drawMode);
 
-        // Draw water level inside barrel (if water stored)
         if (this.waterStored > 0) {
             const waterHeight = (this.waterStored / this.maxWater) * 0.3 * COLLECTOR_SCALE;
             Mat4.identity(tempMatrix);
@@ -162,7 +121,6 @@ export class WaterCollector extends Entity {
             this.waterMesh.draw(drawMode);
         }
 
-        // Draw drip animation (falling water drop)
         const dripPhase = (this._dripTime * 0.8) % 1.0;
         if (this.waterStored < this.maxWater) {
             Mat4.identity(tempMatrix);

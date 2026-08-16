@@ -1,6 +1,3 @@
-/**
- * Precise game loop manager utilizing requestAnimationFrame
- */
 export class GameLoop {
     constructor() {
         this.isActive = false;
@@ -9,11 +6,9 @@ export class GameLoop {
         this.fpsFrameCount = 0;
         this.fps = 0;
 
-        // Callback slots
         this.onUpdate = null;
         this.onRender = null;
 
-        // Bind the tick method to the current context
         this._tick = this._tick.bind(this);
     }
 
@@ -33,16 +28,13 @@ export class GameLoop {
     _tick(currentTime) {
         if (!this.isActive) return;
 
-        // Calculate delta time in seconds
         let deltaTime = (currentTime - this.lastTime) / 1000.0;
         this.lastTime = currentTime;
 
-        // Clamp delta time to avoid huge leaps during lags or tab suspends
         if (deltaTime > 0.1) {
             deltaTime = 0.1;
         }
 
-        // Track and compute FPS (average every 500ms)
         this.fpsFrameCount++;
         const elapsed = currentTime - this.fpsUpdateTime;
         if (elapsed >= 500) {
@@ -50,14 +42,12 @@ export class GameLoop {
             this.fpsFrameCount = 0;
             this.fpsUpdateTime = currentTime;
             
-            // Push FPS updates directly to DOM
             const fpsEl = document.getElementById('debug-fps');
             if (fpsEl) {
                 fpsEl.textContent = `FPS: ${this.fps}`;
             }
         }
 
-        // Trigger updates and renders
         if (this.onUpdate) {
             this.onUpdate(deltaTime);
         }
@@ -65,7 +55,6 @@ export class GameLoop {
             this.onRender();
         }
 
-        // Loop next frame
         requestAnimationFrame(this._tick);
     }
 }

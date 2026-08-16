@@ -2,10 +2,6 @@ import { Mat4 } from '../math/Mat4.js';
 import { Mesh } from './Mesh.js';
 import { Texture } from './Texture.js';
 
-/**
- * A renderer-native model compiled from a glTF document. Geometry and textures
- * are shared by every entity using the asset; only entity transforms vary.
- */
 export class ModelAsset {
     constructor(gl, drawables, textures, metadata = {}) {
         this.gl = gl;
@@ -16,9 +12,6 @@ export class ModelAsset {
         this._worldMatrix = Mat4.create();
     }
 
-    /**
-     * Compile the mesh nodes, primitives and base-color textures in a glTF document.
-     */
     static async fromDocument(gl, document, options = {}) {
         const targetSize = ModelAsset._validatedTargetSize(options.targetSize);
         const preserveAspect = options.preserveAspect === true;
@@ -111,8 +104,6 @@ export class ModelAsset {
             drawable.mesh.draw(drawMode);
         }
 
-        // BasicShader is shared by the whole opaque pass. Restore the default
-        // so subsequent procedural meshes never sample a stale creature texture.
         shaderProgram.setUniform1i('uUseBaseColorTexture', 0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, null);
     }
@@ -177,8 +168,6 @@ export class ModelAsset {
         let sy = targetSize[1] / extent[1];
         let sz = targetSize[2] / extent[2];
         if (preserveAspect) {
-            // Creature dimensions are authored around their height. Apply the
-            // same factor to all axes so the source silhouette cannot stretch.
             sx = sy;
             sz = sy;
         }

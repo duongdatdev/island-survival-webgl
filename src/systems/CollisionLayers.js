@@ -7,7 +7,7 @@ export const CollisionLayers = {
     BuildArea:   1 << 5,
     Trigger:     1 << 6,
     UI:          1 << 7,
-    Creature:    1 << 8, // v0.5: Wildlife & Combat
+    Creature:    1 << 8,
 };
 
 export const LayerNames = {
@@ -19,7 +19,7 @@ export const LayerNames = {
     32: 'BuildArea',
     64: 'Trigger',
     128: 'UI',
-    256: 'Creature', // v0.5
+    256: 'Creature',
 };
 
 export function layerNameFromMask(mask) {
