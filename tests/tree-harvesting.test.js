@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { EnvironmentObject, TREE_HITS_TO_FELL } from '../src/entities/EnvironmentObject.js';
-import { GameScene } from '../src/scenes/GameScene.js';
+import { DEV_CHEATS_ENABLED, GameScene } from '../src/scenes/GameScene.js';
 
 function createTree(position = [0, 0, 2], category = 'Tree') {
     const mesh = {
@@ -17,6 +17,10 @@ function createTree(position = [0, 0, 2], category = 'Tree') {
     return new EnvironmentObject(null, mesh, position, [0, 0, 0], [1, 1, 1], true, true, category);
 }
 
+test('developer cheats stay disabled outside the Vite development server', () => {
+    assert.equal(DEV_CHEATS_ENABLED, false);
+});
+
 test('only trees and palms expose chopping state', () => {
     const tree = createTree();
     const palm = createTree([1, 0, 1], 'Palm');
@@ -30,9 +34,11 @@ test('only trees and palms expose chopping state', () => {
 
 test('the third aimed axe hit starts a fall away from the player', () => {
     const tree = createTree();
+    tree.worldObjectId = '17';
     const scene = Object.create(GameScene.prototype);
     let unregisterCalls = 0;
     scene.environmentEntities = [tree];
+    scene.removedEnvironmentObjectIds = new Set();
     scene.collisionSystem = { unregister() { unregisterCalls++; } };
 
     for (let hit = 1; hit <= TREE_HITS_TO_FELL; hit++) {
@@ -44,6 +50,7 @@ test('the third aimed axe hit starts a fall away from the player', () => {
     assert.equal(tree.treeState, 'falling');
     assert.equal(tree.collider.type, 'none');
     assert.equal(unregisterCalls, 1);
+    assert.deepEqual(Array.from(scene.removedEnvironmentObjectIds), ['17']);
     assert.ok(Math.abs(tree._fallYaw) < 1e-6);
 });
 

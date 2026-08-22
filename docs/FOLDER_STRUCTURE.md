@@ -75,6 +75,9 @@ island-survival/
 │   │   ├── RainSystem.js           # v0.4 — rain particle volume around the player
 │   │   ├── CombatSystem.js         # v0.5 — melee cone & ranged raycast attacks
 │   │   ├── SaveSystem.js           # v1.0 — seed-based localStorage snapshots
+│   │   ├── GameSaveController.js    # Save lifecycle, autosave, and scene restoration
+│   │   ├── InteractionController.js # Context prompts and world interactions
+│   │   ├── InventoryController.js   # Inventory UI, item use, placement, and crafting
 │   │   ├── SettingsManager.js      # v1.0 — persisted, clamped user preferences
 │   │   ├── AchievementSystem.js    # v1.0 — milestone predicates and unlock toasts
 │   │   ├── MenuUI.js               # v1.0 — settings/achievements/credits overlays

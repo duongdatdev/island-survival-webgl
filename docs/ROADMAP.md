@@ -133,18 +133,21 @@ locks sprint until 20 stamina, preventing rapid speed flicker while Shift is hel
 ### Implemented Features
 - **Save/Load System:** Full run state persisted to `localStorage` — player transform, vitals,
   all 28 inventory slots, raft modules, placed structures, unlocked blueprints, time of day,
-  weather, remaining world pickups and run statistics. Autosaves every 60 s, on demand from the
-  pause menu, and when leaving to the main menu. The save stores the **world seed** rather than
+  weather, remaining world pickups, harvested trees and run statistics. Autosaves every 60 s,
+  when the page is hidden/closed, on demand from the pause menu, and when leaving to the main menu.
+  The save stores the **world seed** rather than
   terrain geometry: generation is deterministic, so the island is reproduced exactly on load.
   Death and escape both clear the save, so "Chơi tiếp" can never restore a finished run.
 - **Settings Menu:** Reachable from both the main menu and pause menu. Audio (master / SFX /
   ambient / mute), controls (mouse sensitivity, invert Y, FOV), and graphics (quality preset,
   render scale, view distance, post-processing, bloom + intensity, vignette, particle density,
-  frustum culling, FPS counter). Persisted to `localStorage` and applied live.
+  frustum culling, FPS counter), plus two-slot key rebinding with reset-to-default controls.
+  Persisted to `localStorage` and applied live.
 - **Optimization:** Frustum + draw-distance culling for environment props, world resources and
   creatures — typically ~90 % of the ~1 900 placed props are rejected before reaching the GPU.
   Render scale trades resolution for fill rate, per-frame `getElementById` lookups were replaced
   with cached references, and the debug panel skips its DOM writes entirely while collapsed.
+  Production builds copy only runtime-referenced assets instead of the complete authoring library.
 - **Advanced VFX:** Full post-processing pipeline — the scene renders into a half-float
   framebuffer, followed by a soft-knee bright pass, a two-iteration separable Gaussian bloom at
   half resolution, and a composite pass with highlight rolloff, time-of-day grade tint,
@@ -185,12 +188,11 @@ never claims a preset that no longer describes the configuration.
 | Thoát Khỏi Đảo | Rời khỏi đảo hoang |
 
 ### Not Carried Forward
-Two items from the original v1.0 sketch were dropped deliberately:
-- **Controls remapping** — the settings menu covers sensitivity, invert-Y and FOV, but key
-  rebinding would need an input-action layer that `InputManager` doesn't have yet.
+One item from the original v1.0 sketch was dropped deliberately:
 - **Screen-space reflections / shadow maps** — both need a depth pre-pass and a second camera
   pass; bloom, grading and vignette deliver the visual lift at a fraction of the cost on the
   software-rendered fallback path.
 
-Storage keys: `island_survival_save_v1`, `island_survival_settings_v1`,
+Storage keys: `island_survival_world_index_v1`, `island_survival_world_save_v1:<world-id>`,
+`island_survival_settings_v1`,
 `island_survival_achievements_v1`.

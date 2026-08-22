@@ -6,7 +6,8 @@ This document describes the software architecture, core modules, and engineering
 
 ## 1. Design Philosophy & Constraints
 *   **Pure WebGL 2.0:** No external 3D libraries (e.g., Three.js, Babylon.js, PlayCanvas) are used. All rendering logic, buffer handling, camera matrices, and lighting calculations are implemented from scratch using WebGL 2.0 APIs.
-*   **Procedural Content Generation (PCG):** Island terrain meshes, wave displacement, and audio cues are synthesized at runtime to eliminate external asset file I/O overhead.
+*   **Procedural Content Generation (PCG):** Island terrain meshes, wave displacement, and audio cues are synthesized at runtime. Imported OBJ/GLB models are packaged through a runtime allowlist so authoring files and unused variants are not deployed.
+*   **Browser-safe glTF loading:** Runtime GLB files use `WebIO`. The production build explicitly isolates the `NodeIO`-only `node:fs` and `node:path` imports exposed by the shared package entry point.
 *   **Single Responsibility:** Each class manages a single scope. The gameplay layers are completely decoupled from WebGL API calls (graphics buffers are isolated in the `src/renderer/` folder).
 
 ---
@@ -36,6 +37,7 @@ graph TD
     *   **Scenes (`LoadingScene`, `MainMenuScene`, `GameScene`):** Manages phase transitions and local scene lifecycles. All scenes inherit from the base `Scene.js` class.
     *   **Entities (`Player`, `Terrain`, `Water`, `WorldResource`, `DriftingDebris`, `RaftAssembly`, `Campfire`, `WaterCollector`):** Represents interactive elements in the virtual space. Tracks spatial transforms and computes local model matrices (`this.modelMatrix`). Inherits from `Entity.js`.
     *   **Systems (`InventoryV2`, `VitalsSystem`, `CraftingSystem`, `DebrisManager`, `ResourceManager`, `ParticleSystem`, `TutorialSystem`):** Performs game logic rules, collision updates, survival vitals tracking, and inventory slot management.
+    *   **Gameplay controllers (`GameSaveController`, `InteractionController`, `InventoryController`):** Coordinate scene-facing persistence, contextual interactions, inventory UI, item use, and crafting while keeping those workflows out of the main `GameScene` update loop.
 
 ### C. Engine Core Layer (Coordination & I/O)
 *   **Components:** `src/core/`.

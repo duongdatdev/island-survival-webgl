@@ -18,7 +18,8 @@ The **Island Survival: Escape** codebase is built around modular, decoupled syst
 * Slot-based since v0.2: a flat 28-entry array — indices `0–19` are the backpack grid, `20–27` the hotbar. Each slot holds `{ id, count }` or `null`.
 * `addItem` fills the hotbar first, then the grid, respecting each resource's `stackSize`. It returns `false` when the bag can't take the whole amount, which is what lets `ResourceManager` refuse a pickup instead of destroying it.
 * Exposes `addItem`, `removeItem`, `removeItemAt`, `getCount`, `hasItem` and `getEquippedItem`.
-* Consumption is data-driven: `GameScene._consumeItemAt` reads the `vitalEffect` off the ResourceDatabase entry, so adding an edible item needs no new branch in the input handlers.
+* Consumption is data-driven: `InventoryController.consumeItemAt` reads the `vitalEffect` off the ResourceDatabase entry, so adding an edible item needs no new branch in the input handlers.
+* `InventoryController` owns inventory/hotbar rendering, drag/drop lifecycle, contextual item use, structure placement, and the crafting panel. Persistent DOM listeners are attached once and removed by `dispose()`.
 
 ---
 
@@ -56,7 +57,7 @@ The **Island Survival: Escape** codebase is built around modular, decoupled syst
 ---
 
 ## 7. UI System
-*Classes:* Handled via DOM overlays in [GameScene](file:///d:/Project/webgl/island-survival/src/scenes/GameScene.js) & [index.html](file:///d:/Project/webgl/island-survival/index.html)
+*Classes:* DOM overlays coordinated by `InventoryController`, `MenuUI`, [GameScene](file:///d:/Project/webgl/island-survival/src/scenes/GameScene.js) & [index.html](file:///d:/Project/webgl/island-survival/index.html)
 * Renders overlays (Loading Screen, Main Menu, Resource HUD, Crafting Panel, Pause Menu, Victory Screen) using HTML/CSS instead of canvas drawing, improving typography rendering performance.
 * Handles layout styles including Glassmorphism and glow effects.
 

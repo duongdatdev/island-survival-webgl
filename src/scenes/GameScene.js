@@ -18,9 +18,7 @@ import { Vec3 } from '../math/Vec3.js';
 import { ResourceManager } from '../systems/ResourceManager.js';
 import { DebrisManager } from '../systems/DebrisManager.js';
 import { Inventory } from '../systems/InventoryV2.js';
-import { getAllRecipes, getRecipeDef } from '../systems/RecipeDatabase.js';
 import { getResourceDef } from '../systems/ResourceDatabase.js';
-import { CraftingSystem } from '../systems/CraftingSystem.js';
 import { RaftAssembly } from '../entities/RaftAssembly.js';
 import { ParticleSystem } from '../systems/ParticleSystem.js';
 import { TutorialSystem } from '../systems/TutorialSystem.js';
@@ -45,14 +43,16 @@ import { CreatureState } from '../entities/Creature.js';
 import { SkyShader } from '../shaders/SkyShader.js';
 import { BiomeType } from '../gameplay/world/BiomeGenerator.js';
 import { CollisionLayers } from '../systems/CollisionLayers.js';
-import { SaveSystem } from '../systems/SaveSystem.js';
+import { GameSaveController } from '../systems/GameSaveController.js';
+import { InteractionController } from '../systems/InteractionController.js';
+import { InventoryController } from '../systems/InventoryController.js';
 import { MenuUI } from '../systems/MenuUI.js';
 import { createStats } from '../systems/AchievementSystem.js';
 import { PostProcessing } from '../renderer/PostProcessing.js';
 import { Frustum } from '../renderer/Frustum.js';
 import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
 
-const AUTOSAVE_INTERVAL = 60.0;
+export const DEV_CHEATS_ENABLED = import.meta.env?.DEV === true;
 
 const ACHIEVEMENT_CHECK_INTERVAL = 1.0;
 
@@ -71,13 +71,6 @@ function biomeToSurface(biome) {
         default: return 'grass';
     }
 }
-
-const VITAL_ACTIONS = {
-    hunger: { method: 'eat',   verb: 'Đã ăn',  label: 'Đói' },
-    thirst: { method: 'drink', verb: 'Đã uống', label: 'Khát' },
-    health: { method: 'heal',  verb: 'Đã dùng', label: 'HP' },
-};
-
 
 export class GameScene extends Scene {
     init() {
@@ -139,7 +132,8 @@ export class GameScene extends Scene {
         this.water = new Water(gl, 100, 200.0, this.terrain);
 
         this.environmentEntities = [];
-        for (const obj of this.world.placedObjects) {
+        this.removedEnvironmentObjectIds = new Set();
+        for (const [worldObjectIndex, obj] of this.world.placedObjects.entries()) {
             const mesh = this.engine.assets.models[obj.objPath];
             if (mesh) {
                 const entity = new EnvironmentObject(
@@ -152,6 +146,7 @@ export class GameScene extends Scene {
                     obj.navigationBlocker,
                     obj.category || ''
                 );
+                entity.worldObjectId = String(worldObjectIndex);
                 this.environmentEntities.push(entity);
             }
         }
@@ -177,11 +172,6 @@ export class GameScene extends Scene {
             );
         }
 
-        this.inventory.onChange = (resourceId, newCount, delta) => {
-            this._updateGridInventory();
-            this._renderCraftingPanel();
-        };
-
         this.particleSystem = new ParticleSystem(gl);
         this.rainSystem = new RainSystem(gl);
 
@@ -189,30 +179,8 @@ export class GameScene extends Scene {
         this.tutorial.init();
         this.tutorial.start();
 
-        this.inventoryMenu = document.getElementById('inventory-menu');
-        this.inventoryMenuCloseBtn = document.getElementById('inventory-menu-close');
-        this.selectedCraftingCategory = 'tool';
-        this.selectedRecipeId = null;
+        this.inventoryMenu = null;
         this._notificationTimeoutId = null;
-
-        if (this.inventoryMenuCloseBtn) {
-            this.inventoryMenuCloseBtn.addEventListener('click', () => this._closeInventoryMenu());
-        }
-
-        const categoryButtons = document.querySelectorAll('.cat-btn');
-        categoryButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                categoryButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                this.selectedCraftingCategory = btn.getAttribute('data-category');
-                this.selectedRecipeId = null;
-                this._renderCraftingPanel();
-                this.engine.audio.playClick();
-            });
-        });
-
-        this._updateGridInventory();
 
         this.vitals = new VitalsSystem();
         this.vitals.onChange = (vitalId, value, max) => {
@@ -325,7 +293,7 @@ export class GameScene extends Scene {
         };
         this._onPauseMenu = () => {
             this.engine.audio.playClick();
-            this._saveGame(true);
+            this.saveController.save(true);
             this._resumeGame();
             setTimeout(() => {
                 this.engine.scenes.switchScene('MainMenu');
@@ -333,7 +301,7 @@ export class GameScene extends Scene {
         };
         this._onPauseSave = () => {
             this.engine.audio.playClick();
-            this._saveGame(false);
+            this.saveController.save(false);
         };
         this._onPauseSettings = () => {
             this.engine.audio.playClick();
@@ -438,7 +406,7 @@ export class GameScene extends Scene {
         }
 
         if (this._pendingSave) {
-            this._applySave(this._pendingSave);
+            this.saveController.apply(this._pendingSave);
             this._pendingSave = null;
         }
 
@@ -474,14 +442,13 @@ export class GameScene extends Scene {
         this._wasNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
         this._wasStorm = false;
 
-        this._autosaveTimer = 0;
-        this._saveStatusTimer = 0;
-
         this.frustum = new Frustum();
         this.postFx = new PostProcessing(gl);
         this._drawCalls = 0;
 
         this.menuUI = new MenuUI(this.engine);
+        this.inventoryController = new InventoryController(this);
+        this.inventoryController.init();
 
         this._domCache = {
             wireframe: document.getElementById('toggle-wireframe'),
@@ -515,6 +482,9 @@ export class GameScene extends Scene {
 
         this._applySettings();
         this._unsubscribeSettings = settings.onChange(() => this._applySettings());
+        this.saveController = new GameSaveController(this);
+        this.saveController.attach();
+        this.interactionController = new InteractionController(this);
     }
 
     _applySettings() {
@@ -531,114 +501,6 @@ export class GameScene extends Scene {
 
         const fpsEl = this._domCache && this._domCache.fpsCounter;
         if (fpsEl) fpsEl.classList.toggle('hidden', !s.get('showFps'));
-    }
-
-    _saveGame(silent) {
-        if (this._isGameOver || this.isEscaping) {
-            if (!silent) this._setSaveStatus('Không thể lưu khi ván chơi đã kết thúc.', true);
-            return false;
-        }
-
-        this.stats.survivalSeconds = this.survivalSeconds;
-        const ok = this.activeWorldId && SaveSystem.saveWorld(this.activeWorldId, SaveSystem.captureScene(this));
-
-        this._autosaveTimer = 0;
-        if (!silent) {
-            this._setSaveStatus(
-                ok ? '💾 Đã lưu tiến trình!' : '❌ Lưu thất bại — bộ nhớ trình duyệt đã đầy.',
-                !ok
-            );
-        }
-        return ok;
-    }
-
-    _setSaveStatus(message, isError) {
-        const el = this._domCache.saveStatus;
-        if (!el) return;
-        el.textContent = message;
-        el.classList.toggle('error', !!isError);
-        this._saveStatusTimer = 3.0;
-    }
-
-    _applySave(save) {
-        console.log('GameScene: Restoring saved run...');
-
-        this.player.position[0] = save.player.position[0];
-        this.player.position[1] = save.player.position[1];
-        this.player.position[2] = save.player.position[2];
-        this.player.rotation[1] = save.player.yaw;
-        this.player.updateModelMatrix();
-
-        this.survivalSeconds = save.survivalSeconds || 0;
-
-        this.vitals.health = save.vitals.health;
-        this.vitals.hunger = save.vitals.hunger;
-        this.vitals.thirst = save.vitals.thirst;
-        this.vitals.stamina = save.vitals.stamina;
-        for (const id of ['health', 'hunger', 'thirst', 'stamina']) {
-            this._updateVitalBar(id, this.vitals[id], 100);
-        }
-
-        for (let i = 0; i < this.inventory.slots.length; i++) {
-            const stored = save.inventory.slots[i];
-            this.inventory.slots[i] = stored ? { id: stored.id, count: stored.count } : null;
-        }
-        this.inventory.selectedHotbarIndex = save.inventory.selectedHotbarIndex || 0;
-
-        Object.assign(this.raftAssembly, {
-            framePlaced: !!save.raft.framePlaced,
-            floatsPlaced: !!save.raft.floatsPlaced,
-            paddlePlaced: !!save.raft.paddlePlaced,
-            sailPlaced: !!save.raft.sailPlaced,
-            motorPlaced: !!save.raft.motorPlaced,
-        });
-
-        const cf = save.structures.campfire;
-        this.campfire.isBuilt = !!cf.isBuilt;
-        this.campfire.position[0] = cf.position[0];
-        this.campfire.position[1] = cf.position[1];
-        this.campfire.position[2] = cf.position[2];
-        this.campfire.updateModelMatrix();
-
-        const wc = save.structures.waterCollector;
-        this.waterCollector.isBuilt = !!wc.isBuilt;
-        this.waterCollector.position[0] = wc.position[0];
-        this.waterCollector.position[1] = wc.position[1];
-        this.waterCollector.position[2] = wc.position[2];
-        this.waterCollector.waterStored = wc.waterStored || 0;
-        this.waterCollector.updateModelMatrix();
-
-        this.unlockedBlueprints = new Set(save.blueprints || []);
-
-        if (save.environment) {
-            this.dayNight.timeOfDay = save.environment.timeOfDay;
-            this.weather.currentWeather = save.environment.weather;
-            this.weather.nextWeather = save.environment.weather;
-            this.weather.cloudCover = save.environment.cloudCover;
-            this.weather.windSpeed = save.environment.windSpeed;
-            this.weather.rainIntensity = save.environment.rainIntensity;
-        }
-
-        this.resourceManager.delete();
-        for (const entry of save.resources || []) {
-            const def = getResourceDef(entry.id);
-            if (!def) continue;
-            const resource = this.resourceManager.createResourceEntity(
-                this.gl,
-                def,
-                [entry.position[0], entry.position[1], entry.position[2]]
-            );
-            if (entry.rewardType) resource.rewardType = entry.rewardType;
-            this.resourceManager.worldResources.push(resource);
-        }
-
-        if (save.stats) Object.assign(this.stats, save.stats);
-        this._wasNight = this.dayNight.timeOfDay > 0.85 || this.dayNight.timeOfDay < 0.1;
-        this._wasStorm = this.weather.currentWeather === 'storm';
-
-        this._updateGridInventory();
-        this._renderCraftingPanel();
-        this._showNotification('💾 Đã tải lại tiến trình đã lưu!');
     }
 
     _updateAchievements(deltaTime) {
@@ -669,12 +531,12 @@ export class GameScene extends Scene {
     update(deltaTime) {
         this.achievements.update(deltaTime);
         this._updateFpsCounter();
-        this._tickSaveStatus(deltaTime);
+        this.saveController.updateStatus(deltaTime);
 
         if (this.engine.input.isKeyPressed('Escape')) {
             const isInventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
             if (isInventoryOpen) {
-                this._closeInventoryMenu();
+                this.inventoryController.closeMenu();
             } else if (this.menuUI && this.menuUI.isAnyOpen()) {
                 this.menuUI.closeAll();
             } else if (this.isPaused) {
@@ -786,7 +648,7 @@ export class GameScene extends Scene {
                     this.stats.escaped = 1;
                     this.stats.survivalSeconds = this.survivalSeconds;
                     this.achievements.evaluate(this.stats);
-                    if (this.activeWorldId) SaveSystem.finishWorld(this.activeWorldId, 'escaped', this.survivalSeconds);
+                    this.saveController.finish('escaped');
 
                     this.engine.audio.playVictory();
                 }
@@ -797,10 +659,7 @@ export class GameScene extends Scene {
         this.survivalSeconds += deltaTime;
 
         this._updateAchievements(deltaTime);
-        this._autosaveTimer += deltaTime;
-        if (this._autosaveTimer >= AUTOSAVE_INTERVAL) {
-            this._saveGame(true);
-        }
+        this.saveController.updateAutosave(deltaTime);
 
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
 
@@ -965,11 +824,11 @@ export class GameScene extends Scene {
         }
 
         if (this.engine.input.isKeyPressed('inventory')) {
-            this._toggleInventoryMenu();
+            this.inventoryController.toggleMenu();
         }
 
         if (this.engine.input.isKeyPressed('useItem')) {
-            this._useActiveItem();
+            this.inventoryController.useActiveItem();
         }
 
         for (let i = 0; i < 8; i++) {
@@ -980,7 +839,7 @@ export class GameScene extends Scene {
                 if (this.inventory.selectedHotbarIndex !== i) {
                     this.inventory.selectedHotbarIndex = i;
                     this.engine.audio.playClick();
-                    this._updateGridInventory();
+                    this.inventoryController.renderInventory();
                 }
             }
         }
@@ -994,12 +853,12 @@ export class GameScene extends Scene {
                 else if (nextIndex > 7) nextIndex = 0;
                 
                 this.inventory.selectedHotbarIndex = nextIndex;
-                this._updateGridInventory();
+                this.inventoryController.renderInventory();
                 this.engine.input.mouse.wheelDelta = 0;
             }
         }
 
-        if (this.engine.input.isKeyPressed('KeyK')) {
+        if (DEV_CHEATS_ENABLED && this.engine.input.isKeyPressed('KeyK')) {
             this.player.position[0] = 0.0;
             this.player.position[1] = this.player.collider.height * 0.5;
             this.player.position[2] = 38.5;
@@ -1027,230 +886,7 @@ export class GameScene extends Scene {
 
         this._updateInvViewProj();
 
-        const interactKey = this.engine.input ? this.engine.input.getBindingDisplayName('interact') : 'E';
-        let showCampfirePrompt = false;
-        let campfirePromptText = '';
-        if (this.campfire.isPlayerNear(this.player.position)) {
-            const hasRawFood = this.inventory.hasItem('coconut') || this.inventory.hasItem('raw_fish')
-                || this.inventory.hasItem('raw_crab_meat') || this.inventory.hasItem('raw_seagull_meat')
-                || this.inventory.hasItem('raw_boar_meat');
-            if (hasRawFood) {
-                campfirePromptText = `<span class="hint-key">${interactKey}</span> Nấu thức ăn 🔥`;
-                showCampfirePrompt = true;
-            }
-        }
-
-        if (showCampfirePrompt && this.engine.input.isKeyPressed('interact')) {
-            this.engine.input.consumeAction('interact');
-            const rawMeats = ['raw_fish', 'raw_crab_meat', 'raw_seagull_meat', 'raw_boar_meat', 'coconut'];
-            let cooked = false;
-            for (const meat of rawMeats) {
-                if (this.inventory.hasItem(meat)) {
-                    this.inventory.removeItem(meat, 1);
-                    this.inventory.addItem('cooked_meal', 1);
-                    this.stats.mealsCooked++;
-                    this._showNotification('🔥 Đã nấu: 🍖 Thức Ăn Chín!');
-                    this.engine.audio.playCraft();
-                    this.particleSystem.emit(
-                        [this.campfire.position[0], this.campfire.position[1] + 0.5, this.campfire.position[2]],
-                        ParticleSystem.PRESET.CRAFT
-                    );
-                    cooked = true;
-                    break;
-                }
-            }
-            if (!cooked) {
-                this._showNotification('❌ Không có nguyên liệu nấu!');
-                this.engine.audio.playError();
-            }
-        }
-
-        let showWaterPrompt = false;
-        let waterPromptText = '';
-        if (this.waterCollector.isPlayerNear(this.player.position)) {
-            if (this.waterCollector.waterStored > 0) {
-                waterPromptText = `<span class="hint-key">${interactKey}</span> Lấy nước (${this.waterCollector.waterStored}/${this.waterCollector.maxWater}) 💧`;
-                showWaterPrompt = true;
-            } else {
-                waterPromptText = 'Bẫy nước đang hứng... (0/' + this.waterCollector.maxWater + ') 💧';
-                showWaterPrompt = true;
-            }
-        }
-
-        if (showWaterPrompt && this.waterCollector.waterStored > 0 && this.engine.input.isKeyPressed('interact')) {
-            this.engine.input.consumeAction('interact');
-            if (this.waterCollector.collectWater()) {
-                this.inventory.addItem('fresh_water', 1);
-                this._showNotification('💧 Đã lấy: Nước Ngọt!');
-                this.engine.audio.playDrink();
-            }
-        }
-
-        let showRaftPrompt = false;
-        let raftPromptText = '';
-        let hasModule = false;
-        let targetModule = '';
-
-        const distToRaft = this.raftAssembly.distanceTo(this.player.position);
-        if (distToRaft < 3.0) {
-            if (!this.raftAssembly.framePlaced) {
-                targetModule = 'raft_frame';
-                hasModule = this.inventory.hasItem('raft_frame');
-                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Lắp Khung Bè 🧱` : 'Cần chế tạo Khung Bè 🧱 để lắp ráp';
-                showRaftPrompt = true;
-            } else if (!this.raftAssembly.floatsPlaced) {
-                targetModule = 'barrel_floats';
-                hasModule = this.inventory.hasItem('barrel_floats');
-                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Lắp Phao Thùng 🛢️` : 'Cần chế tạo Phao Thùng 🛢️ để lắp ráp';
-                showRaftPrompt = true;
-            } else if (!this.raftAssembly.paddlePlaced) {
-                targetModule = 'paddle';
-                hasModule = this.inventory.hasItem('paddle');
-                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Lắp Mái Chèo 🛶` : 'Cần chế tạo Mái Chèo 🛶 để lắp ráp';
-                showRaftPrompt = true;
-            } else if (!this.raftAssembly.sailPlaced) {
-                targetModule = 'raft_sail';
-                hasModule = this.inventory.hasItem('raft_sail');
-                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Nâng Cấp: Lắp Cánh Buồm ⛵` : 'Chế tạo Cánh Buồm ⛵ giúp di chuyển nhanh hơn';
-                showRaftPrompt = true;
-            } else if (!this.raftAssembly.motorPlaced) {
-                targetModule = 'raft_motor';
-                hasModule = this.inventory.hasItem('raft_motor');
-                raftPromptText = hasModule ? `<span class="hint-key">${interactKey}</span> Nâng Cấp: Lắp Động Cơ Bè 🚀` : 'Chế tạo Động Cơ Bè 🚀 để đạt tốc độ tối đa!';
-                showRaftPrompt = true;
-            }
-        }
-
-        if (showRaftPrompt && hasModule && this.engine.input.isKeyPressed('interact')) {
-            this.engine.input.consumeAction('interact');
-            
-            if (targetModule === 'raft_frame') {
-                this.inventory.removeItem('raft_frame', 1);
-                this.raftAssembly.framePlaced = true;
-                this._showNotification('🧱 Lắp Khung Bè thành công!');
-            } else if (targetModule === 'barrel_floats') {
-                this.inventory.removeItem('barrel_floats', 1);
-                this.raftAssembly.floatsPlaced = true;
-                this._showNotification('🛢️ Lắp Phao Thùng thành công!');
-            } else if (targetModule === 'paddle') {
-                this.inventory.removeItem('paddle', 1);
-                this.raftAssembly.paddlePlaced = true;
-                this._showNotification('🛶 Lắp Mái Chèo thành công!');
-            } else if (targetModule === 'raft_sail') {
-                this.inventory.removeItem('raft_sail', 1);
-                this.raftAssembly.sailPlaced = true;
-                this._showNotification('⛵ Lắp Cánh Buồm thành công! Bè lướt gió nhanh hơn.');
-            } else if (targetModule === 'raft_motor') {
-                this.inventory.removeItem('raft_motor', 1);
-                this.raftAssembly.motorPlaced = true;
-                this._showNotification('🚀 Lắp Động Cơ thành công! Đạt công suất phản lực.');
-            }
-
-            this.engine.audio.playRaftBuild(this.raftAssembly.position);
-            this.particleSystem.emit(
-                [this.raftAssembly.position[0], this.raftAssembly.position[1] + 0.5 * 0.45, this.raftAssembly.position[2]],
-                ParticleSystem.PRESET.BUILD
-            );
-        }
-
-        let showWaterfallPrompt = false;
-        if (this.waterfall && this.waterfall.isPlayerInPond(this.player.position)) {
-            showWaterfallPrompt = true;
-            if (this.engine.input.isKeyPressed('interact')) {
-                this.engine.input.consumeAction('interact');
-                this.vitals.drink(100);
-                this._showNotification('💧 Đã uống nước thác! Khôi phục hết Thối Khát.');
-                this.engine.audio.playDrink();
-                this.engine.audio.playSplash(this.player.position);
-                
-                this.particleSystem.emit(
-                    [this.player.position[0], this.player.position[1] - 0.5 * this.player.scaleFactor, this.player.position[2]],
-                    ParticleSystem.PRESET.SPLASH
-                );
-            }
-        }
-
-        let showFishingPrompt = false;
-        const fishingTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
-        const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
-        const hotbarItem = this.inventory.slots[hotbarIdx];
-        const hasFishingRod = hotbarItem && hotbarItem.id === 'fishing_rod';
-
-        if (fishingTerrainHeight <= 0.15 && hasFishingRod && !this.isFishing) {
-            showFishingPrompt = true;
-            if (this.engine.input.isKeyPressed('interact')) {
-                this.engine.input.consumeAction('interact');
-                this.isFishing = true;
-                this.fishingTimer = 4.0;
-                this.engine.audio.playSplash(this.player.position);
-            }
-        }
-
-        let showChestPrompt = false;
-        if (this.resourceManager.nearestPickable && this.resourceManager.nearestPickable.resourceId === 'treasure_chest') {
-            showChestPrompt = true;
-            if (this.engine.input.isKeyPressed('interact')) {
-                this.engine.input.consumeAction('interact');
-                this._openTreasureChest(this.resourceManager.nearestPickable);
-            }
-        }
-
-        const prevPickupCount = this._getTotalInventoryCount();
-        this.resourceManager.update(deltaTime, this.player.position, this.inventory, this.engine.input);
-        
-        if (this._getTotalInventoryCount() > prevPickupCount) {
-            this.stats.resourcesPicked++;
-            this.engine.audio.playPickup();
-            this.particleSystem.emit(this.player.position, ParticleSystem.PRESET.PICKUP);
-            this.tutorial.notifyPickup();
-        }
-
-        const prevDebrisCount = this._getTotalInventoryCount();
-        this.debrisManager.update(deltaTime, this.player.position, this.inventory, this.engine.input, this.terrain, this.gl, this.resourceManager.nearestPickable);
-
-        if (this._getTotalInventoryCount() > prevDebrisCount) {
-            this.stats.resourcesPicked++;
-            this.engine.audio.playPickup();
-            this.particleSystem.emit(this.player.position, ParticleSystem.PRESET.PICKUP);
-            this.tutorial.notifyPickup();
-        }
-
-        const hintEl = this._domCache.pickupHint;
-        if (showWaterfallPrompt && hintEl) {
-            hintEl.innerHTML = `<span class="hint-key">${interactKey}</span> Uống nước thác ngọt mát 💧`;
-            hintEl.classList.remove('hidden');
-        } else if (showFishingPrompt && hintEl) {
-            hintEl.innerHTML = `<span class="hint-key">${interactKey}</span> Thả cần câu cá 🎣`;
-            hintEl.classList.remove('hidden');
-        } else if (showChestPrompt && hintEl) {
-            hintEl.innerHTML = `<span class="hint-key">${interactKey}</span> Mở Rương Kho Báu 📦`;
-            hintEl.classList.remove('hidden');
-        } else if (showCampfirePrompt && hintEl) {
-            hintEl.innerHTML = campfirePromptText;
-            hintEl.classList.remove('hidden');
-        } else if (showWaterPrompt && hintEl) {
-            hintEl.innerHTML = waterPromptText;
-            hintEl.classList.remove('hidden');
-        } else if (showRaftPrompt && hintEl) {
-            hintEl.innerHTML = raftPromptText;
-            hintEl.classList.remove('hidden');
-        }
-
-        if (this.raftAssembly.isComplete() && !this.isEscaping) {
-            if (distToRaft < 4.0) {
-                if (this.escapeHud && this.escapeHud.classList.contains('hidden')) {
-                    this.escapeHud.classList.remove('hidden');
-                    if (document.pointerLockElement) {
-                        document.exitPointerLock();
-                    }
-                }
-            } else {
-                if (this.escapeHud && !this.escapeHud.classList.contains('hidden')) {
-                    this.escapeHud.classList.add('hidden');
-                }
-            }
-        }
-
+        this.interactionController.update(deltaTime);
         if (this.raftAssembly) {
             this.raftAssembly.update(deltaTime);
         }
@@ -1554,15 +1190,6 @@ export class GameScene extends Scene {
         el.classList.toggle('bad', fps < 25);
     }
 
-    _tickSaveStatus(deltaTime) {
-        if (this._saveStatusTimer <= 0) return;
-        this._saveStatusTimer -= deltaTime;
-        if (this._saveStatusTimer <= 0 && this._domCache.saveStatus) {
-            this._domCache.saveStatus.textContent = '';
-            this._domCache.saveStatus.classList.remove('error');
-        }
-    }
-
     _syncWaveField() {
         const island = this.world.terrainGenerator.island;
         const animate = this._domCache.water ? this._domCache.water.checked : true;
@@ -1855,250 +1482,6 @@ export class GameScene extends Scene {
         return total;
     }
 
-    _updateGridInventory() {
-        const gridEl = document.getElementById('inventory-grid');
-        const hotbarEl = document.getElementById('hotbar-hud');
-        const counterEl = document.getElementById('slot-counter');
-
-        if (counterEl) {
-            counterEl.textContent = `${this.inventory.getUsedSlots()}/${this.inventory.maxSlots}`;
-        }
-
-        if (gridEl) {
-            let html = '';
-            for (let i = 0; i < 20; i++) {
-                const slot = this.inventory.slots[i];
-                if (slot) {
-                    const resDef = getResourceDef(slot.id);
-                    const icon = resDef ? resDef.icon : '📦';
-                    const name = resDef ? resDef.name : slot.id;
-                    const isConsumable = resDef && resDef.consumable;
-                    const consumableClass = isConsumable ? ' consumable' : '';
-
-                    html += `
-                        <div class="inv-slot${consumableClass}" data-index="${i}" draggable="true" title="${name}">
-                            <span class="slot-icon">${icon}</span>
-                            <span class="slot-count">${slot.count}</span>
-                            <div class="slot-tooltip">${name}</div>
-                        </div>
-                    `;
-                } else {
-                    html += `
-                        <div class="inv-slot empty" data-index="${i}">
-                            <span class="slot-icon">·</span>
-                        </div>
-                    `;
-                }
-            }
-            gridEl.innerHTML = html;
-        }
-
-        if (hotbarEl) {
-            let html = '';
-            for (let i = 0; i < 8; i++) {
-                const slotIndex = 20 + i;
-                const slot = this.inventory.slots[slotIndex];
-                const isActive = (i === this.inventory.selectedHotbarIndex) ? ' active' : '';
-                
-                if (slot) {
-                    const resDef = getResourceDef(slot.id);
-                    const icon = resDef ? resDef.icon : '📦';
-                    const name = resDef ? resDef.name : slot.id;
-                    const isConsumable = resDef && resDef.consumable;
-                    const consumableClass = isConsumable ? ' consumable' : '';
-
-                    html += `
-                        <div class="hotbar-slot${isActive}${consumableClass}" data-index="${slotIndex}" draggable="true" title="${name}">
-                            <span class="hotbar-key">${i + 1}</span>
-                            <span class="slot-icon">${icon}</span>
-                            <span class="slot-count">${slot.count}</span>
-                            <div class="slot-tooltip">${name}</div>
-                        </div>
-                    `;
-                } else {
-                    html += `
-                        <div class="hotbar-slot empty${isActive}" data-index="${slotIndex}">
-                            <span class="hotbar-key">${i + 1}</span>
-                            <span class="slot-icon">·</span>
-                        </div>
-                    `;
-                }
-            }
-            hotbarEl.innerHTML = html;
-
-            const equippedSlot = this.inventory.slots[20 + this.inventory.selectedHotbarIndex];
-            if (equippedSlot && equippedSlot.id === 'bow') {
-                const arrowCount = this.inventory.getCount('arrow');
-                let ammoEl = document.getElementById('ammo-counter');
-                if (!ammoEl) {
-                    ammoEl = document.createElement('div');
-                    ammoEl.id = 'ammo-counter';
-                    ammoEl.className = 'ammo-counter';
-                    hotbarEl.parentNode.appendChild(ammoEl);
-                }
-                ammoEl.innerHTML = `➵ ${arrowCount}`;
-                ammoEl.style.display = '';
-            } else {
-                const ammoEl = document.getElementById('ammo-counter');
-                if (ammoEl) ammoEl.style.display = 'none';
-            }
-        }
-
-        this._bindDragAndDropEvents();
-        this._bindRightClickEvents();
-    }
-
-    _bindDragAndDropEvents() {
-        const slots = document.querySelectorAll('.inv-slot, .hotbar-slot');
-        let dragSourceIndex = null;
-
-        slots.forEach(slot => {
-            slot.addEventListener('dragstart', (e) => {
-                const indexAttr = slot.getAttribute('data-index');
-                if (indexAttr === null) return;
-                
-                dragSourceIndex = parseInt(indexAttr);
-                e.dataTransfer.setData('text/plain', dragSourceIndex);
-                slot.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-            });
-
-            slot.addEventListener('dragend', () => {
-                slot.classList.remove('dragging');
-                const trashEl = document.getElementById('trash-slot');
-                if (trashEl) trashEl.classList.remove('drag-over');
-            });
-
-            slot.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                return false;
-            });
-
-            slot.addEventListener('dragenter', (e) => {
-                e.preventDefault();
-                if (!slot.classList.contains('dragging')) {
-                    slot.classList.add('drag-over');
-                }
-            });
-
-            slot.addEventListener('dragleave', () => {
-                slot.classList.remove('drag-over');
-            });
-
-            slot.addEventListener('drop', (e) => {
-                e.preventDefault();
-                slot.classList.remove('drag-over');
-                
-                const srcIdxStr = e.dataTransfer.getData('text/plain');
-                if (!srcIdxStr) return;
-                
-                const srcIdx = parseInt(srcIdxStr);
-                const destIdx = parseInt(slot.getAttribute('data-index'));
-                
-                if (srcIdx !== destIdx) {
-                    this.inventory.moveOrMerge(srcIdx, destIdx);
-                    this.engine.audio.playClick();
-                }
-            });
-        });
-
-        const trashEl = document.getElementById('trash-slot');
-        if (trashEl) {
-            trashEl.addEventListener('dragover', (e) => {
-                e.preventDefault();
-            });
-
-            trashEl.addEventListener('dragenter', () => {
-                trashEl.classList.add('drag-over');
-            });
-
-            trashEl.addEventListener('dragleave', () => {
-                trashEl.classList.remove('drag-over');
-            });
-
-            trashEl.addEventListener('drop', (e) => {
-                e.preventDefault();
-                trashEl.classList.remove('drag-over');
-                
-                const srcIdxStr = e.dataTransfer.getData('text/plain');
-                if (!srcIdxStr) return;
-                
-                const srcIdx = parseInt(srcIdxStr);
-                const item = this.inventory.slots[srcIdx];
-                if (item) {
-                    const def = getResourceDef(item.id);
-                    const name = def ? def.name : item.id;
-                    this.inventory.slots[srcIdx] = null;
-                    this.inventory.onChange();
-                    this._showNotification(`🗑️ Đã vứt bỏ: ${item.count}x ${name}`);
-                    this.engine.audio.playClick();
-                }
-            });
-        }
-    }
-
-    _bindRightClickEvents() {
-        const slots = document.querySelectorAll('.inv-slot, .hotbar-slot');
-        slots.forEach(slot => {
-            slot.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                const indexAttr = slot.getAttribute('data-index');
-                if (indexAttr === null) return;
-                
-                const idx = parseInt(indexAttr);
-                const item = this.inventory.slots[idx];
-                if (!item) return;
-
-                const resDef = getResourceDef(item.id);
-                if (this._consumeItemAt(idx)) return;
-
-                if (resDef && (item.id === 'campfire' || item.id === 'water_collector')) {
-                    const hotbarOffset = idx - 20;
-                    if (hotbarOffset >= 0 && hotbarOffset < 8) {
-                        this.inventory.selectedHotbarIndex = hotbarOffset;
-                    }
-                    this._closeInventoryMenu();
-                    this._showNotification(`🔧 Đã chọn ${resDef.name}. Nhấn Q để đặt!`);
-                }
-            });
-
-            slot.addEventListener('dblclick', () => {
-                const indexAttr = slot.getAttribute('data-index');
-                if (indexAttr === null) return;
-                
-                const idx = parseInt(indexAttr);
-                this._consumeItemAt(idx);
-            });
-        });
-    }
-
-    _consumeItemAt(idx) {
-        const item = this.inventory.slots[idx];
-        if (!item) return false;
-
-        const resDef = getResourceDef(item.id);
-        const effect = resDef && resDef.consumable ? resDef.vitalEffect : null;
-        if (!effect) return false;
-
-        const action = VITAL_ACTIONS[effect.type];
-        if (!action) {
-            console.warn(`GameScene: '${item.id}' has an unknown vitalEffect type '${effect.type}'.`);
-            return false;
-        }
-
-        this.inventory.removeItemAt(idx, 1);
-        this.vitals[action.method](effect.amount);
-        this._showNotification(`${resDef.icon} ${action.verb} ${resDef.name}! ${action.label} +${effect.amount}`);
-
-        if (effect.type === 'hunger') this.engine.audio.playEat();
-        else if (effect.type === 'thirst') this.engine.audio.playDrink();
-        else if (effect.type === 'health') this.engine.audio.playHeal();
-
-        this.engine.audio.setHealthFraction(this.vitals.health / 100);
-        this._updateGridInventory();
-        return true;
-    }
-
     _updateVitalBar(vitalId, value, max) {
         const barEl = document.getElementById(`bar-${vitalId}`);
         const valEl = document.getElementById(`val-${vitalId}`);
@@ -2114,263 +1497,6 @@ export class GameScene extends Scene {
         }
         if (valEl) {
             valEl.textContent = Math.round(value);
-        }
-    }
-
-    _useActiveItem() {
-        const activeIdx = 20 + this.inventory.selectedHotbarIndex;
-        const activeItem = this.inventory.slots[activeIdx];
-        if (!activeItem) {
-            this._showNotification('❌ Ô hotbar đang chọn trống!');
-            this.engine.audio.playError();
-            return;
-        }
-
-        const resDef = getResourceDef(activeItem.id);
-        if (!resDef) return;
-
-        if (resDef.consumable) {
-            if (this._consumeItemAt(activeIdx)) return;
-
-            if (activeItem.id === 'campfire') {
-                this._placeStructure('campfire');
-            } else if (activeItem.id === 'water_collector') {
-                this._placeStructure('water_collector');
-            }
-        } else {
-            if (activeItem.id === 'stone_axe') {
-                this._showNotification('🪓 Đang trang bị Rìu Đá! Nhấn chuột trái để chặt cây hoặc tấn công.');
-            } else {
-                this._showNotification(`📦 Không thể sử dụng trực tiếp ${resDef.name}!`);
-            }
-        }
-    }
-
-    _placeStructure(type) {
-        if (type === 'campfire' && this.campfire && this.campfire.isBuilt) {
-            this._showNotification('🔥 Đã có Lửa Trại rồi! Không thể đặt thêm.');
-            this.engine.audio.playError();
-            return;
-        }
-        if (type === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) {
-            this._showNotification('💧 Đã có Bẫy Nước rồi! Không thể đặt thêm.');
-            this.engine.audio.playError();
-            return;
-        }
-
-        const dist = 2.0;
-        const yaw = this.player.rotation[1];
-        const placeX = this.player.position[0] + Math.sin(yaw) * dist;
-        const placeZ = this.player.position[2] + Math.cos(yaw) * dist;
-
-        const island = this.worldGenerator && this.world && this.world.terrainGenerator
-            ? this.world.terrainGenerator.island
-            : null;
-        const maxRadius = island ? Math.max(2.0, island.radius - 2.0) : 22.0;
-        const distFromCenter = Math.sqrt(placeX * placeX + placeZ * placeZ);
-        let clampedX = placeX;
-        let clampedZ = placeZ;
-        if (distFromCenter > maxRadius && distFromCenter > 0.0001) {
-            const scale = maxRadius / distFromCenter;
-            clampedX *= scale;
-            clampedZ *= scale;
-        }
-        const placeY = this.terrain.getHeight(clampedX, clampedZ);
-
-        const activeIdx = 20 + this.inventory.selectedHotbarIndex;
-
-        const buildPos = [clampedX, placeY + 0.5, clampedZ];
-
-        if (type === 'campfire') {
-            this.campfire.position[0] = clampedX;
-            this.campfire.position[1] = placeY;
-            this.campfire.position[2] = clampedZ;
-            this.campfire.isBuilt = true;
-            this.campfire.updateModelMatrix();
-            this.inventory.removeItemAt(activeIdx, 1);
-            this._showNotification('🔥 Đã đặt Lửa Trại! Đến gần để nấu ăn.');
-            this.engine.audio.addEmitter('campfire', 'campfire', buildPos, true);
-        } else if (type === 'water_collector') {
-            this.waterCollector.position[0] = clampedX;
-            this.waterCollector.position[1] = placeY;
-            this.waterCollector.position[2] = clampedZ;
-            this.waterCollector.isBuilt = true;
-            this.waterCollector.updateModelMatrix();
-            this.inventory.removeItemAt(activeIdx, 1);
-            this._showNotification('💧 Đã đặt Bẫy Nước Mưa! Nước hứng tự động.');
-        }
-
-        this.engine.audio.playRaftBuild(buildPos);
-        this.particleSystem.emit(
-            [clampedX, placeY + 0.5, clampedZ],
-            ParticleSystem.PRESET.BUILD
-        );
-    }
-
-    _toggleInventoryMenu() {
-        if (!this.inventoryMenu) return;
-        const isHidden = this.inventoryMenu.classList.contains('hidden');
-        if (isHidden) {
-            this.inventoryMenu.classList.remove('hidden');
-            if (document.pointerLockElement) {
-                document.exitPointerLock();
-            }
-            this._renderCraftingPanel();
-            this._updateGridInventory();
-            this.tutorial.notifyCraftingOpened();
-            this.engine.audio.playOpenPanel();
-            this.engine.audio.setDucked(true);
-        } else {
-            this._closeInventoryMenu();
-        }
-    }
-
-    _closeInventoryMenu() {
-        if (this.inventoryMenu) {
-            this.inventoryMenu.classList.add('hidden');
-            this.engine.audio.playClosePanel();
-            this.engine.audio.setDucked(false);
-
-            try {
-                this.engine.input.canvas.requestPointerLock();
-            } catch (e) {
-                console.warn('GameScene: requestPointerLock failed', e);
-            }
-        }
-    }
-
-    _renderCraftingPanel() {
-        const recipesListEl = document.getElementById('crafting-recipes-list');
-        const detailsEl = document.getElementById('recipe-details-panel');
-        if (!recipesListEl || !detailsEl) return;
-
-        const recipes = getAllRecipes();
-
-        const filtered = recipes.filter(recipe => {
-            if (recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) return false;
-            if (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt) return false;
-            
-            if (recipe.requiresBlueprint && !this.unlockedBlueprints.has(recipe.requiresBlueprint)) {
-                return false;
-            }
-            
-            return recipe.category === this.selectedCraftingCategory;
-        });
-
-        let html = '';
-        for (const recipe of filtered) {
-            const canCraft = CraftingSystem.canCraft(recipe.id, this.inventory);
-            const canCraftClass = canCraft ? ' can-craft' : '';
-            const isSelected = (recipe.id === this.selectedRecipeId) ? ' selected' : '';
-
-            html += `
-                <div class="recipe-item-card${canCraftClass}${isSelected}" data-recipe-id="${recipe.id}">
-                    <div class="recipe-item-icon">${recipe.icon}</div>
-                    <div class="recipe-item-info">
-                        <div class="recipe-item-name">${recipe.name}</div>
-                        <div class="recipe-item-desc">${recipe.description}</div>
-                    </div>
-                    <div class="recipe-item-status">${canCraft ? '✔️' : '❌'}</div>
-                </div>
-            `;
-        }
-
-        recipesListEl.innerHTML = html || `<div class="details-placeholder" style="margin-top: 20px;">Không có công thức nào trong nhóm này</div>`;
-
-        const cards = recipesListEl.querySelectorAll('.recipe-item-card');
-        cards.forEach(card => {
-            card.addEventListener('click', () => {
-                this.selectedRecipeId = card.getAttribute('data-recipe-id');
-                this._renderCraftingPanel();
-            });
-        });
-
-        this._renderRecipeDetails(detailsEl);
-    }
-
-    _renderRecipeDetails(detailsEl) {
-        if (!this.selectedRecipeId) {
-            detailsEl.innerHTML = `<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>`;
-            return;
-        }
-
-        const recipe = getRecipeDef(this.selectedRecipeId);
-        if (!recipe) {
-            detailsEl.innerHTML = `<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>`;
-            return;
-        }
-
-        if ((recipe.id === 'campfire' && this.campfire && this.campfire.isBuilt) ||
-            (recipe.id === 'water_collector' && this.waterCollector && this.waterCollector.isBuilt)) {
-            this.selectedRecipeId = null;
-            detailsEl.innerHTML = `<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>`;
-            return;
-        }
-
-        const canCraft = CraftingSystem.canCraft(recipe.id, this.inventory);
-
-        let ingredientsHtml = '';
-        for (const [ingredientId, requiredCount] of Object.entries(recipe.ingredients)) {
-            const currentCount = this.inventory.getCount(ingredientId);
-            const isMet = currentCount >= requiredCount;
-            const badgeClass = isMet ? 'met' : 'missing';
-
-            const resDef = getResourceDef(ingredientId);
-            const ingredientName = resDef ? resDef.name : ingredientId;
-            const ingredientIcon = resDef ? resDef.icon : '';
-
-            ingredientsHtml += `
-                <span class="ingredient-badge ${badgeClass}">
-                    ${ingredientIcon} ${ingredientName} ${currentCount}/${requiredCount}
-                </span>
-            `;
-        }
-
-        detailsEl.innerHTML = `
-            <div class="details-header">
-                <div class="details-icon">${recipe.icon}</div>
-                <div class="details-meta">
-                    <div class="details-name">${recipe.name}</div>
-                    <div class="details-desc">${recipe.description}</div>
-                </div>
-            </div>
-            <div class="details-ingredients">
-                ${ingredientsHtml}
-            </div>
-            <div class="details-craft-btn-row">
-                <button id="details-craft-btn" class="craft-btn" ${canCraft ? '' : 'disabled'}>
-                    Chế tạo
-                </button>
-            </div>
-        `;
-
-        const craftBtn = document.getElementById('details-craft-btn');
-        if (craftBtn) {
-            craftBtn.addEventListener('click', () => {
-                this._craftItem(recipe.id);
-            });
-        }
-    }
-
-    _craftItem(recipeId) {
-        const recipe = getRecipeDef(recipeId);
-        if (!recipe) return;
-
-        const success = CraftingSystem.craft(recipeId, this.inventory);
-        if (success) {
-            this.stats.itemsCrafted++;
-            this._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
-
-            this.engine.audio.playCraft();
-            this.particleSystem.emit(
-                [this.player.position[0], this.player.position[1] + 0.5 * this.player.scaleFactor, this.player.position[2]],
-                ParticleSystem.PRESET.CRAFT
-            );
-            this.tutorial.notifyCrafted();
-            this._renderCraftingPanel();
-        } else {
-            console.warn(`GameScene: Crafting failed for ${recipeId}`);
-            this.engine.audio.playError();
         }
     }
 
@@ -2410,7 +1536,7 @@ export class GameScene extends Scene {
         }
 
         this._showNotification(`🎉 Mở Rương: ${msg}`);
-        this._renderCraftingPanel();
+        this.inventoryController.renderCraftingPanel();
     }
 
     _quadrantRewardType(quadrant) {
@@ -2424,7 +1550,7 @@ export class GameScene extends Scene {
 
     _restartWorld() {
         if (!this.activeWorldId) return;
-        SaveSystem.resetWorld(this.activeWorldId);
+        this.saveController.reset();
         this.engine.pendingLoad = null;
         this.victoryScreen?.classList.add('hidden');
         this.gameoverScreen?.classList.add('hidden');
@@ -2434,7 +1560,7 @@ export class GameScene extends Scene {
     _showGameOver() {
         this._isGameOver = true;
 
-        if (this.activeWorldId) SaveSystem.finishWorld(this.activeWorldId, 'dead', this.survivalSeconds);
+        this.saveController.finish('dead');
         this.stats.survivalSeconds = this.survivalSeconds;
         this.achievements.evaluate(this.stats);
 
@@ -2484,7 +1610,7 @@ export class GameScene extends Scene {
         if (this.escapeHud) {
             this.escapeHud.classList.add('hidden');
         }
-        this._closeInventoryMenu();
+        this.inventoryController.closeMenu();
 
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');
@@ -2744,6 +1870,9 @@ export class GameScene extends Scene {
         if (chopResult.felled && this.collisionSystem) {
             this.collisionSystem.unregister(closestTree);
         }
+        if (chopResult.felled && closestTree.worldObjectId != null) {
+            this.removedEnvironmentObjectIds.add(closestTree.worldObjectId);
+        }
         return { ...chopResult, tree: closestTree };
     }
 
@@ -2843,6 +1972,15 @@ export class GameScene extends Scene {
 
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
+        if (this.saveController) {
+            this.saveController.dispose();
+            this.saveController = null;
+        }
+        if (this.inventoryController) {
+            this.inventoryController.dispose();
+            this.inventoryController = null;
+        }
+        this.interactionController = null;
 
         const dom = this._domCache || {};
         for (const el of [dom.compassBar, dom.timeWeatherWidget, dom.crosshair, dom.hitMarker]) {
@@ -2994,8 +2132,9 @@ export class GameScene extends Scene {
             }
         }
         this.environmentEntities = [];
+        this.removedEnvironmentObjectIds = new Set();
         
-        for (const obj of this.world.placedObjects) {
+        for (const [worldObjectIndex, obj] of this.world.placedObjects.entries()) {
             const mesh = this.engine.assets.models[obj.objPath];
             if (mesh) {
                 const entity = new EnvironmentObject(
@@ -3008,6 +2147,7 @@ export class GameScene extends Scene {
                     obj.navigationBlocker,
                     obj.category || ''
                 );
+                entity.worldObjectId = String(worldObjectIndex);
                 this.environmentEntities.push(entity);
             }
         }
