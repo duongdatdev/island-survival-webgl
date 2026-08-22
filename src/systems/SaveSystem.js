@@ -208,6 +208,7 @@ export class SaveSystem {
                 cloudCover: scene.weather.cloudCover,
                 windSpeed: scene.weather.windSpeed,
                 rainIntensity: scene.weather.rainIntensity,
+                removedObjectIds: Array.from(scene.removedEnvironmentObjectIds || []),
             },
             resources: scene.resourceManager.worldResources
                 .filter(r => !r.isCollected)
