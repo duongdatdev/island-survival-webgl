@@ -46,7 +46,7 @@ npm run build
 npm run preview
 ```
 
-The production output is written to `dist/`. Game assets are copied so the built game can load its models and textures.
+The production output is written to `dist/`. The build copies only models and manifests referenced at runtime; source textures, Blender/FBX files, and unused character variants are not shipped.
 
 ## Controls
 
@@ -62,7 +62,7 @@ The production output is written to `dist/`. Game assets are copied so the built
 | L | Lock the mouse cursor for direct camera look |
 | Escape | Pause the game |
 | F3 | Toggle the debug panel |
-| K | Developer cheat: move to the beach and receive raft modules |
+| K | Developer-only cheat while running the Vite development server |
 
 ![Raft escape sequence](docs/images/raft-escape.png)
 
@@ -86,7 +86,7 @@ npm test
 ## Project Structure
 
 ```text
-assets/       Game models, textures, audio resources, and manifests
+assets/       Runtime models/manifests plus source asset library
 docs/         Game design, technical documentation, and image placeholders
 scripts/      Asset and build helper scripts
 src/          Engine, rendering, gameplay, UI, and world-generation source code

@@ -2,7 +2,7 @@
 
 ## Island Survival: Escape
 
-**Version:** 1.0 (Pre-Production)
+**Version:** 1.0 (Release)
 
 # 1. High Concept
 
@@ -165,21 +165,16 @@ SFX: - Pickup - Craft - Build - Victory
 -   Browser-first
 -   Low memory usage
 
-# 17. MVP Scope
+# 17. Release Scope
 
-Included: - Exploration - Gathering - Debris - Inventory - Crafting -
-Raft Building - Escape Ending
+Version 1.0 includes exploration, gathering, drifting debris, grid inventory,
+crafting, survival vitals, cooking, fishing, treasure, procedural biomes,
+day/night and weather, wildlife combat, raft upgrades, achievements, settings,
+multiple local worlds, save/load, and the final escape sequence.
 
-Excluded: - Hunger - Thirst - Weather - Wildlife - Combat - Save/Load
+# 18. Post-Release Direction
 
-# 18. Future Roadmap
-
-Version 0.2 - Hunger - Thirst - Campfire - Cooking
-
-Version 0.3 - Fishing - Cave - Treasure
-
-Version 0.4 - Weather - Day/Night - Dynamic Ocean
-
-Version 0.5 - Wildlife - Combat
-
-Version 1.0 - Polish - Optimization - Save/Load
+- Connect weather more deeply to survival structures and wildlife behavior.
+- Add difficulty presets, scoring, and shareable challenge seeds.
+- Expand browser integration tests and save migration coverage.
+- Continue runtime asset compression and rendering performance work.
