@@ -1,6 +1,6 @@
 import { Mat4 } from '../math/Mat4.js';
 import { Mesh } from '../renderer/Mesh.js';
-import { AXE_SWING_DURATION } from '../systems/CombatConfig.js';
+import { AXE_IMPACT_TIME, AXE_SWING_DURATION } from '../systems/CombatConfig.js';
 
 const DEG_TO_RAD = Math.PI / 180;
 const SKIN_COLOR = [0.82, 0.62, 0.48, 1.0];
@@ -36,6 +36,7 @@ export class FirstPersonViewModel {
         this._moveAmount = 0;
         this._swingElapsed = Infinity;
         this._swingDuration = AXE_SWING_DURATION;
+        this._impactEmitted = false;
         this._activeSwingDirection = 1;
         this._nextSwingDirection = 1;
     }
@@ -48,13 +49,21 @@ export class FirstPersonViewModel {
         this._time += deltaTime;
         const targetMove = isMoving ? 1 : 0;
         this._moveAmount += (targetMove - this._moveAmount) * Math.min(1, deltaTime * 9);
+        const previousSwingElapsed = this._swingElapsed;
         this._swingElapsed += deltaTime;
+        if (!this._impactEmitted && previousSwingElapsed < AXE_IMPACT_TIME
+            && this._swingElapsed >= AXE_IMPACT_TIME) {
+            this._impactEmitted = true;
+            return true;
+        }
+        return false;
     }
 
     triggerSwing() {
         this._activeSwingDirection = this._nextSwingDirection;
         this._nextSwingDirection *= -1;
         this._swingElapsed = 0;
+        this._impactEmitted = false;
     }
 
     draw(shader, projectionMatrix, drawMode) {

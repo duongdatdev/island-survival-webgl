@@ -23,48 +23,106 @@ export class CombatSystem {
             return this._rangedAttack(playerPosition, playerYaw, weaponData, creatures, inventory);
         }
 
+        this._startCooldown(weaponData);
+        return this._resolveMeleeAttack(playerPosition, playerYaw, weaponData, creatures);
+    }
+
+    beginMeleeAttack(playerPosition, playerYaw, equippedItem, creatures) {
+        const weaponData = this._getWeaponData(equippedItem);
+        if (!weaponData || weaponData.type !== 'melee') {
+            return null;
+        }
+        if (this._globalCooldown > 0) {
+            return null;
+        }
+
+        this._startCooldown(weaponData);
+        return {
+            origin: [playerPosition[0], playerPosition[1], playerPosition[2]],
+            yaw: playerYaw,
+            weaponData,
+            target: this._findMeleeTarget(playerPosition, playerYaw, weaponData, creatures),
+            resolved: false,
+        };
+    }
+
+    resolveMeleeImpact(pendingAttack) {
+        if (!pendingAttack || pendingAttack.resolved) {
+            return { hit: false, creature: null, damage: 0, swung: false };
+        }
+        pendingAttack.resolved = true;
+        const target = pendingAttack.target;
+        if (!target || !this._isMeleeTargetValid(
+            target,
+            pendingAttack.origin,
+            pendingAttack.yaw,
+            pendingAttack.weaponData
+        )) {
+            return { hit: false, creature: null, damage: 0, swung: true };
+        }
+
+        target.takeDamage(pendingAttack.weaponData.damage);
+        return {
+            hit: true,
+            creature: target,
+            damage: pendingAttack.weaponData.damage,
+            swung: true,
+        };
+    }
+
+    _resolveMeleeAttack(playerPosition, playerYaw, weaponData, creatures) {
+        const closestCreature = this._findMeleeTarget(
+            playerPosition,
+            playerYaw,
+            weaponData,
+            creatures
+        );
+
+        if (closestCreature) {
+            closestCreature.takeDamage(weaponData.damage);
+            return { hit: true, creature: closestCreature, damage: weaponData.damage, swung: true };
+        }
+
+        return { hit: false, creature: null, damage: 0, swung: true };
+    }
+
+    _findMeleeTarget(playerPosition, playerYaw, weaponData, creatures) {
         const range = weaponData.range;
-        const damage = weaponData.damage;
-        const halfArc = Math.PI * 0.35;
-
-        const facingX = Math.sin(playerYaw);
-        const facingZ = Math.cos(playerYaw);
-
         let closestCreature = null;
         let closestDist = range;
 
         for (const creature of creatures) {
-            if (creature.state === 'dead') continue;
-
+            if (!this._isMeleeTargetValid(creature, playerPosition, playerYaw, weaponData)) continue;
             const dx = creature.position[0] - playerPosition[0];
             const dz = creature.position[2] - playerPosition[2];
-            const dy = creature.position[1] - playerPosition[1];
             const dist = Math.sqrt(dx * dx + dz * dz);
-
-            if (dist > range) continue;
-            if (Math.abs(dy) > range) continue;
-
-            if (dist > 0.0001) {
-                const dot = (dx / dist) * facingX + (dz / dist) * facingZ;
-                const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-                if (angle > halfArc) continue;
-            }
-
             if (dist < closestDist) {
                 closestDist = dist;
                 closestCreature = creature;
             }
         }
+        return closestCreature;
+    }
 
+    _isMeleeTargetValid(creature, playerPosition, playerYaw, weaponData) {
+        if (!creature || creature.state === 'dead') return false;
+        const dx = creature.position[0] - playerPosition[0];
+        const dz = creature.position[2] - playerPosition[2];
+        const dy = creature.position[1] - playerPosition[1];
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > weaponData.range || Math.abs(dy) > weaponData.range) return false;
+        if (dist <= 0.0001) return true;
+
+        const facingX = Math.sin(playerYaw);
+        const facingZ = Math.cos(playerYaw);
+        const dot = (dx / dist) * facingX + (dz / dist) * facingZ;
+        const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+        return angle <= Math.PI * 0.35;
+    }
+
+    _startCooldown(weaponData) {
         this._globalCooldown = weaponData.cooldown;
         this._lastWeaponType = weaponData.type;
-
-        if (closestCreature) {
-            closestCreature.takeDamage(damage);
-            return { hit: true, creature: closestCreature, damage, swung: true };
-        }
-
-        return { hit: false, creature: null, damage: 0, swung: true };
     }
 
     _rangedAttack(playerPosition, playerYaw, weaponData, creatures, inventory) {
@@ -108,8 +166,7 @@ export class CombatSystem {
             }
         }
 
-        this._globalCooldown = weaponData.cooldown;
-        this._lastWeaponType = weaponData.type;
+        this._startCooldown(weaponData);
 
         if (closestCreature) {
             closestCreature.takeDamage(damage);

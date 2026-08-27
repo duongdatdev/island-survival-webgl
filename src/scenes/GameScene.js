@@ -396,6 +396,7 @@ export class GameScene extends Scene {
 
         this.combatSystem = new CombatSystem();
         this._attackHoldBlocked = false;
+        this._pendingAxeImpact = null;
         this.creatures = [];
 
         this._spawnCrabs();
@@ -827,7 +828,11 @@ export class GameScene extends Scene {
         }
 
         this.combatSystem.update(deltaTime);
-        this.firstPersonViewModel.update(deltaTime, this.player.currentSpeed > 0.1);
+        const axeImpact = this.firstPersonViewModel.update(
+            deltaTime,
+            this.player.currentSpeed > 0.1
+        );
+        if (axeImpact) this._resolvePendingAxeImpact();
         this._updateFallingTrees(deltaTime);
 
         const attackHeld = !!this.engine.input.mouse.buttons[0];
@@ -848,6 +853,9 @@ export class GameScene extends Scene {
 
         if (this.engine.input.isKeyPressed('inventory')) {
             this.inventoryController.toggleMenu();
+            if (this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden')) {
+                this._cancelPendingAxeImpact();
+            }
         }
 
         if (!inventoryOpen && this.engine.input.isKeyPressed('useItem')) {
@@ -1458,6 +1466,7 @@ export class GameScene extends Scene {
 
     _pauseGame() {
         if (this.isPaused || this.isEscaping) return;
+        this._cancelPendingAxeImpact();
         this.isPaused = true;
 
         const pauseMenu = document.getElementById('pause-menu');
@@ -1589,6 +1598,7 @@ export class GameScene extends Scene {
     }
 
     _showGameOver() {
+        this._cancelPendingAxeImpact();
         this._isGameOver = true;
 
         this.saveController.finish('dead');
@@ -1635,6 +1645,7 @@ export class GameScene extends Scene {
     }
 
     _startEscapeCutscene() {
+        this._cancelPendingAxeImpact();
         this.isEscaping = true;
         if (this.escapeHud) {
             this.escapeHud.classList.add('hidden');
@@ -1782,6 +1793,21 @@ export class GameScene extends Scene {
         this.player.rotation[1] = aimYaw;
         this.player.updateModelMatrix();
 
+        if (equippedItem && equippedItem.id === 'stone_axe') {
+            const pendingAttack = this.combatSystem.beginMeleeAttack(
+                this.player.position,
+                aimYaw,
+                equippedItem,
+                this.creatures
+            );
+            if (!pendingAttack) return;
+
+            this._pendingAxeImpact = { pendingAttack, equippedItem };
+            this.firstPersonViewModel.triggerSwing();
+            this.engine.audio.playSwing(null);
+            return;
+        }
+
         const result = this.combatSystem.attack(
             this.player.position,
             aimYaw,
@@ -1798,13 +1824,33 @@ export class GameScene extends Scene {
 
         if (!result.swung) return;
 
-        let treeResult = null;
-        if (equippedItem && equippedItem.id === 'stone_axe') {
-            this.firstPersonViewModel.triggerSwing();
-            if (!result.hit) {
-                treeResult = this._tryChopTree(this.player.position, aimYaw, equippedItem);
-            }
-        }
+        this._applyCombatImpactFeedback(result, null, equippedItem, true);
+    }
+
+    _resolvePendingAxeImpact() {
+        const pending = this._pendingAxeImpact;
+        this._pendingAxeImpact = null;
+        if (!pending || this.isPaused || this._isGameOver || this.isEscaping) return;
+        const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+        if (inventoryOpen) return;
+
+        const result = this.combatSystem.resolveMeleeImpact(pending.pendingAttack);
+        const treeResult = result.hit
+            ? null
+            : this._tryChopTree(
+                pending.pendingAttack.origin,
+                pending.pendingAttack.yaw,
+                pending.equippedItem
+            );
+        this._applyCombatImpactFeedback(result, treeResult, pending.equippedItem, false);
+    }
+
+    _cancelPendingAxeImpact() {
+        this._pendingAxeImpact = null;
+    }
+
+    _applyCombatImpactFeedback(result, treeResult, equippedItem, playSwingAudio) {
+        if (!result.swung) return;
 
         const weaponType = equippedItem
             ? (getResourceDef(equippedItem.id) || {}).weaponType
@@ -1816,7 +1862,7 @@ export class GameScene extends Scene {
             this.engine.audio.playBowRelease(swingPos);
         } else if (treeResult && treeResult.hit) {
             this.engine.audio.playChop(swingPos);
-        } else {
+        } else if (playSwingAudio) {
             this.engine.audio.playSwing(swingPos);
         }
 
@@ -1999,6 +2045,7 @@ export class GameScene extends Scene {
 
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
+        this._cancelPendingAxeImpact();
         if (this.engine.input.onPointerLockChange === this._onPointerLockChange) {
             this.engine.input.onPointerLockChange = null;
         }
