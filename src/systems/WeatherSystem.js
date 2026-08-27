@@ -1,10 +1,12 @@
+import { ENVIRONMENT_BALANCE } from '../gameplay/BalanceConfig.js';
+
 export class WeatherSystem {
     constructor() {
         this.currentWeather = 'clear';
         this.nextWeather = 'clear';
         this.transitionTimer = 0;
-        this.transitionDuration = 5.0;
-        this.weatherDuration = 30.0;
+        this.transitionDuration = ENVIRONMENT_BALANCE.weatherTransitionSeconds;
+        this.weatherDuration = ENVIRONMENT_BALANCE.weatherDurationMinSeconds;
         this.weatherTimer = 0;
 
         this.cloudCover = 0.0;
@@ -79,7 +81,10 @@ export class WeatherSystem {
         } else if (this.currentWeather === 'storm') {
             this.nextWeather = r < 0.4 ? 'rain' : (r < 0.7 ? 'cloudy' : 'storm');
         }
-        this.weatherDuration = 20.0 + Math.random() * 30.0;
+        const durationRange = ENVIRONMENT_BALANCE.weatherDurationMaxSeconds
+            - ENVIRONMENT_BALANCE.weatherDurationMinSeconds;
+        this.weatherDuration = ENVIRONMENT_BALANCE.weatherDurationMinSeconds
+            + Math.random() * durationRange;
         this.weatherTimer = this.weatherDuration;
 
         this._fromValues = this._getWeatherValues(this.currentWeather);

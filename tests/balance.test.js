@@ -2,8 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { PLAYER_BALANCE, SURVIVAL_BALANCE, CREATURE_BALANCE } from '../src/gameplay/BalanceConfig.js';
+import {
+    PLAYER_BALANCE,
+    SURVIVAL_BALANCE,
+    ENVIRONMENT_BALANCE,
+    CREATURE_BALANCE,
+} from '../src/gameplay/BalanceConfig.js';
 import { VitalsSystem } from '../src/systems/VitalsSystem.js';
+import { DayNightCycle } from '../src/systems/DayNightCycle.js';
+import { WeatherSystem } from '../src/systems/WeatherSystem.js';
 import { CreatureState } from '../src/entities/Creature.js';
 import { Crab } from '../src/entities/Crab.js';
 import { Seagull } from '../src/entities/Seagull.js';
@@ -157,6 +164,32 @@ test('depletion damage is stable across different update sizes', () => {
     assert.ok(Math.abs(singleStep.hunger - smallSteps.hunger) < 0.001);
     assert.ok(Math.abs(singleStep.thirst - smallSteps.thirst) < 0.001);
     assert.ok(Math.abs(singleStep.health - smallSteps.health) < 0.01);
+});
+
+test('day night cycle completes one day in ten minutes', () => {
+    const cycle = new DayNightCycle();
+    const initialTime = cycle.timeOfDay;
+
+    cycle.update(ENVIRONMENT_BALANCE.dayDurationSeconds);
+
+    assert.ok(Math.abs(cycle.timeOfDay - initialTime) < 1e-9);
+    assert.equal(cycle.daySpeed, 1 / 600);
+});
+
+test('weather states last two to four minutes with a twelve second transition', () => {
+    const originalRandom = Math.random;
+    Math.random = () => 0.5;
+    try {
+        const weather = new WeatherSystem();
+        weather._pickNextWeather();
+
+        assert.equal(weather.transitionDuration, 12);
+        assert.equal(weather.weatherDuration, 180);
+        assert.ok(weather.weatherDuration >= ENVIRONMENT_BALANCE.weatherDurationMinSeconds);
+        assert.ok(weather.weatherDuration <= ENVIRONMENT_BALANCE.weatherDurationMaxSeconds);
+    } finally {
+        Math.random = originalRandom;
+    }
 });
 
 test('boar charge has a wind-up and locks its direction', () => {

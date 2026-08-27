@@ -1,7 +1,9 @@
+import { ENVIRONMENT_BALANCE } from '../gameplay/BalanceConfig.js';
+
 export class DayNightCycle {
     constructor() {
         this.timeOfDay = 0.2;
-        this.daySpeed = 0.02;
+        this.daySpeed = 1 / ENVIRONMENT_BALANCE.dayDurationSeconds;
         this.isPaused = false;
 
         this.dawnTime = 0.2;

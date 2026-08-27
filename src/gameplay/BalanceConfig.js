@@ -12,6 +12,13 @@ export const SURVIVAL_BALANCE = Object.freeze({
     depletedHealthDrainPerSecond: 1.5,
 });
 
+export const ENVIRONMENT_BALANCE = Object.freeze({
+    dayDurationSeconds: 600,
+    weatherDurationMinSeconds: 120,
+    weatherDurationMaxSeconds: 240,
+    weatherTransitionSeconds: 12,
+});
+
 export const CREATURE_BALANCE = Object.freeze({
     crab: Object.freeze({
         maxHealth: 10,
