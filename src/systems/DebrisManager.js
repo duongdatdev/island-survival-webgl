@@ -65,7 +65,16 @@ export class DebrisManager {
         console.log(`DebrisManager: Initial spawn — ${this.debris.length} debris in ocean`);
     }
 
-    update(deltaTime, playerPosition, inventory, inputManager, terrain, gl, resourcePickable = null) {
+    update(
+        deltaTime,
+        playerPosition,
+        inventory,
+        inputManager,
+        terrain,
+        gl,
+        resourcePickable = null,
+        environmentEffects = null
+    ) {
         if (gl) this._gl = gl;
 
         if (!this._initialSpawnDone && this._gl) {
@@ -84,7 +93,7 @@ export class DebrisManager {
                 continue;
             }
 
-            d.update(deltaTime, terrain);
+            d.update(deltaTime, terrain, environmentEffects);
 
             if (d.canPickup(playerPosition)) {
                 const dist = d.distanceTo(playerPosition);

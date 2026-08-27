@@ -133,6 +133,7 @@ export class WeatherSystem {
             rainFactor,
             windFactor,
             stormFactor,
+            windDirection: this.windDirection,
             debrisWindWeight: windFactor * WEATHER_GAMEPLAY_BALANCE.maxDebrisWindWeight,
             debrisSpeedMultiplier: 1
                 + windFactor * WEATHER_GAMEPLAY_BALANCE.maxDebrisSpeedBoost,

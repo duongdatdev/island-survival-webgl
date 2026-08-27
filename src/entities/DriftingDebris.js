@@ -4,6 +4,28 @@ import { Vec3 } from '../math/Vec3.js';
 import { randomInRange } from '../systems/DebrisDatabase.js';
 import { WaveField } from '../shaders/WaterWaves.js';
 
+export function blendDriftDirection(out, baseDirection, windDirection, windWeight) {
+    const weight = Math.max(0, Math.min(0.4, windWeight || 0));
+    const windLength = windDirection
+        ? Math.hypot(windDirection[0], windDirection[2])
+        : 0;
+    if (weight <= 0 || windLength <= 0.0001) {
+        Vec3.copy(out, baseDirection);
+        return out;
+    }
+
+    const windX = windDirection[0] / windLength;
+    const windZ = windDirection[2] / windLength;
+    Vec3.set(
+        out,
+        baseDirection[0] * (1 - weight) + windX * weight,
+        0,
+        baseDirection[2] * (1 - weight) + windZ * weight
+    );
+    Vec3.normalize(out, out);
+    return out;
+}
+
 export class DriftingDebris extends Entity {
     constructor(gl, debrisDef, spawnPos, mesh = null, meshScale = 1) {
         super();
@@ -40,6 +62,7 @@ export class DriftingDebris extends Entity {
             0,
             toCenter[0] * sinA + toCenter[2] * cosA
         );
+        this._effectiveDriftDirection = Vec3.create();
 
         this.driftSpeed = randomInRange(debrisDef.driftSpeed);
 
@@ -62,7 +85,7 @@ export class DriftingDebris extends Entity {
         this.updateModelMatrix();
     }
 
-    update(deltaTime, terrain) {
+    update(deltaTime, terrain, environmentEffects = null) {
         if (this.isCollected || this.isExpired) return;
 
         this.age += deltaTime;
@@ -74,8 +97,18 @@ export class DriftingDebris extends Entity {
         this.animTime += deltaTime;
 
         if (!this.isOnShore) {
-            const moveX = this.driftDirection[0] * this.driftSpeed * deltaTime;
-            const moveZ = this.driftDirection[2] * this.driftSpeed * deltaTime;
+            const direction = blendDriftDirection(
+                this._effectiveDriftDirection,
+                this.driftDirection,
+                environmentEffects?.windDirection,
+                environmentEffects?.debrisWindWeight
+            );
+            const speedMultiplier = Math.max(
+                1,
+                Math.min(1.35, environmentEffects?.debrisSpeedMultiplier || 1)
+            );
+            const moveX = direction[0] * this.driftSpeed * speedMultiplier * deltaTime;
+            const moveZ = direction[2] * this.driftSpeed * speedMultiplier * deltaTime;
             this.position[0] += moveX;
             this.position[2] += moveZ;
 

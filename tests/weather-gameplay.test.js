@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { WaterCollector } from '../src/entities/WaterCollector.js';
+import { blendDriftDirection, DriftingDebris } from '../src/entities/DriftingDebris.js';
 import { WeatherSystem } from '../src/systems/WeatherSystem.js';
 
 class TestWaterCollector extends WaterCollector {
@@ -56,4 +57,38 @@ test('full water collectors stop accumulating rain progress', () => {
 
     assert.equal(collector.waterStored, collector.maxWater);
     assert.equal(collector.rainProgress, 0.25);
+});
+
+test('wind blends debris drift without reversing its island bias', () => {
+    const out = new Float32Array(3);
+    const baseDirection = new Float32Array([1, 0, 0]);
+
+    blendDriftDirection(out, baseDirection, [-1, 0, 0], 0.4);
+    assert.ok(out[0] > 0);
+    assert.ok(Math.abs(out[2]) < 1e-6);
+
+    blendDriftDirection(out, baseDirection, [0, 0, 1], 0.4);
+    assert.ok(out[0] > out[2]);
+    assert.ok(Math.abs(Math.hypot(out[0], out[2]) - 1) < 1e-6);
+});
+
+test('strong wind caps debris drift speed at a thirty five percent boost', () => {
+    const definition = {
+        id: 'test_debris',
+        meshScale: [1, 1, 1],
+        color: [1, 1, 1],
+        driftSpeed: [1, 1],
+        lifetime: [100, 100],
+        pickupRadius: 1,
+    };
+    const debris = new DriftingDebris(null, definition, [10, 0.15, 0], {}, 1);
+    debris.driftDirection.set([1, 0, 0]);
+
+    debris.update(1, null, {
+        windDirection: [1, 0, 0],
+        debrisWindWeight: 1,
+        debrisSpeedMultiplier: 10,
+    });
+
+    assert.ok(Math.abs(debris.position[0] - 11.35) < 1e-6);
 });

@@ -181,7 +181,8 @@ export class InteractionController {
             scene.engine.input,
             scene.terrain,
             scene.gl,
-            scene.resourceManager.nearestPickable
+            scene.resourceManager.nearestPickable,
+            scene.weather?.getGameplayEffects?.() || null
         );
         this._notifyPickup(countBeforeDebris);
     }
