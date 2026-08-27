@@ -61,6 +61,21 @@ test('campfire exposes a compact flickering point light above the model', () => 
     assert.ok(Math.abs(movedLightPosition[2] + 2) < 1e-6);
 });
 
+test('rain weakens campfire light to a forty percent floor without extinguishing it', () => {
+    const clearCampfire = new Campfire(null, [0, 0, 0], { draw() {} });
+    const wetCampfire = new Campfire(null, [0, 0, 0], { draw() {} });
+    clearCampfire.isBuilt = true;
+    wetCampfire.isBuilt = true;
+
+    clearCampfire.update(0.25, { campfireIntensityMultiplier: 1 });
+    wetCampfire.update(0.25, { campfireIntensityMultiplier: 0 });
+
+    assert.ok(Math.abs(wetCampfire.lightIntensity / clearCampfire.lightIntensity - 0.4) < 1e-6);
+    assert.equal(wetCampfire.fireIntensityMultiplier, 0.4);
+    assert.equal(wetCampfire.isBuilt, true);
+    assert.ok(wetCampfire.lightIntensity > 0);
+});
+
 test('survival manifest keeps the campfire out of drifting debris', async () => {
     const manifestUrl = new URL('../Assets/survival-pack/survival-items.json', import.meta.url);
     const manifest = JSON.parse(await readFile(manifestUrl, 'utf8'));

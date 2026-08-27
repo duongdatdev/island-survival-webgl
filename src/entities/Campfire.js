@@ -17,6 +17,7 @@ export class Campfire extends Entity {
 
         this._fireTime = 0;
         this._fireFlicker = 1.0;
+        this.fireIntensityMultiplier = 1.0;
 
         this.lightPosition = Vec3.create(position[0], position[1] + 0.45, position[2]);
         this.lightColor = Vec3.create(1.0, 0.45, 0.12);
@@ -40,13 +41,19 @@ export class Campfire extends Entity {
         this.logMesh = this._createMesh(gl, this._logMeshData);
     }
 
-    update(deltaTime) {
+    update(deltaTime, environmentEffects = null) {
         if (!this.isBuilt) return;
+        this.fireIntensityMultiplier = Math.max(
+            0.4,
+            Math.min(1, environmentEffects?.campfireIntensityMultiplier ?? 1)
+        );
         this._fireTime += deltaTime;
-        this._fireFlicker = 0.7 + Math.sin(this._fireTime * 8) * 0.15 + Math.sin(this._fireTime * 13) * 0.1;
-        this.lightIntensity = 2.75
+        this._fireFlicker = (0.7
+            + Math.sin(this._fireTime * 8) * 0.15
+            + Math.sin(this._fireTime * 13) * 0.1) * this.fireIntensityMultiplier;
+        this.lightIntensity = (2.75
             + Math.sin(this._fireTime * 7.0) * 0.12
-            + Math.sin(this._fireTime * 13.0) * 0.06;
+            + Math.sin(this._fireTime * 13.0) * 0.06) * this.fireIntensityMultiplier;
     }
 
     getLightPosition() {

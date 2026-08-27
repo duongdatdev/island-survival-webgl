@@ -36,7 +36,8 @@ export class InteractionController {
         const scene = this.scene;
         const nearby = scene.campfire.isPlayerNear(scene.player.position);
         const hasRawFood = nearby && RAW_FOODS.some(id => scene.inventory.hasItem(id));
-        if (!hasRawFood) return '';
+        const weakenedByRain = nearby && scene.campfire.fireIntensityMultiplier < 0.999;
+        if (!hasRawFood) return weakenedByRain ? 'Lửa đang yếu vì mưa 🌧️' : '';
 
         if (scene.engine.input.isKeyPressed('interact')) {
             scene.engine.input.consumeAction('interact');
@@ -53,7 +54,8 @@ export class InteractionController {
                 );
             }
         }
-        return `<span class="hint-key">${interactKey}</span> Nấu thức ăn 🔥`;
+        const rainStatus = weakenedByRain ? ' · Lửa yếu vì mưa 🌧️' : '';
+        return `<span class="hint-key">${interactKey}</span> Nấu thức ăn 🔥${rainStatus}`;
     }
 
     _updateWaterCollector(interactKey) {

@@ -160,3 +160,20 @@ test('water collector prompt distinguishes dry, collecting, and full states', ()
     fixture.scene.waterCollector.waterStored = fixture.scene.waterCollector.maxWater;
     assert.match(controller._updateWaterCollector('E'), /Đã đầy/);
 });
+
+test('rain-weakened campfires still cook and report their status', () => {
+    const fixture = createScene();
+    fixture.scene.campfire.isPlayerNear = () => true;
+    fixture.scene.campfire.fireIntensityMultiplier = 0.4;
+    const controller = new InteractionController(fixture.scene);
+
+    assert.match(controller._updateCampfire('E'), /Lửa đang yếu vì mưa/);
+
+    fixture.items.set('raw_fish', 1);
+    fixture.addInventory(1);
+    fixture.pressInteract();
+    const prompt = controller._updateCampfire('E');
+    assert.match(prompt, /Lửa yếu vì mưa/);
+    assert.equal(fixture.items.get('raw_fish'), 0);
+    assert.equal(fixture.items.get('cooked_meal'), 1);
+});

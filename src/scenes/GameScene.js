@@ -931,7 +931,7 @@ export class GameScene extends Scene {
             this.raftAssembly.update(deltaTime);
         }
 
-        this.campfire.update(deltaTime);
+        this.campfire.update(deltaTime, weatherEffects);
         this.waterCollector.update(deltaTime, weatherEffects.rainFactor);
 
         this.particleSystem.update(deltaTime);
