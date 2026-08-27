@@ -871,6 +871,75 @@ body, html {
     pointer-events: none;
 }
 
+.objective-tracker {
+    position: absolute;
+    top: 168px;
+    left: 16px;
+    z-index: 5;
+    width: min(300px, calc(100vw - 32px));
+    padding: 11px 13px;
+    border: 1px solid var(--wood-border);
+    border-left: 3px solid var(--yellow-fire);
+    border-radius: var(--panel-radius);
+    background: rgba(18, 13, 6, 0.86);
+    color: var(--text-parchment);
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    pointer-events: none;
+}
+
+.objective-tracker.hidden { display: none; }
+
+.objective-kicker {
+    margin-bottom: 5px;
+    color: var(--text-gold);
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+}
+
+.objective-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-bright);
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.objective-description {
+    margin-top: 4px;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.objective-ingredients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.objective-ingredient {
+    padding: 3px 6px;
+    border: 1px solid rgba(184, 92, 56, 0.55);
+    border-radius: 2px;
+    color: #e8a894;
+    background: rgba(84, 33, 20, 0.28);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+}
+
+.objective-ingredient.complete {
+    border-color: rgba(95, 160, 110, 0.58);
+    color: #b3dfba;
+    background: rgba(36, 78, 48, 0.28);
+}
+
 .vital-row {
     display: flex;
     align-items: center;
@@ -3119,6 +3188,11 @@ input:checked + .slider:before {
 
 /* Narrow screens: stack the settings grid so labels stay readable */
 @media (max-width: 620px) {
+    .objective-tracker {
+        top: 164px;
+        left: 8px;
+        width: min(270px, calc(100vw - 16px));
+    }
     .setting-row {
         grid-template-columns: 1fr 60px;
         grid-template-areas:

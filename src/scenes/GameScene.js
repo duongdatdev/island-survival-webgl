@@ -46,6 +46,7 @@ import { CollisionLayers } from '../systems/CollisionLayers.js';
 import { GameSaveController } from '../systems/GameSaveController.js';
 import { InteractionController } from '../systems/InteractionController.js';
 import { InventoryController } from '../systems/InventoryController.js';
+import { ObjectiveTracker } from '../systems/ObjectiveTracker.js';
 import { MenuUI } from '../systems/MenuUI.js';
 import { createStats } from '../systems/AchievementSystem.js';
 import { PostProcessing } from '../renderer/PostProcessing.js';
@@ -451,6 +452,8 @@ export class GameScene extends Scene {
         this.menuUI = new MenuUI(this.engine);
         this.inventoryController = new InventoryController(this);
         this.inventoryController.init();
+        this.objectiveTracker = new ObjectiveTracker(this);
+        this.objectiveTracker.init();
 
         this._domCache = {
             wireframe: document.getElementById('toggle-wireframe'),
@@ -1035,6 +1038,7 @@ export class GameScene extends Scene {
         }
 
         this._updateCompass(deltaTime);
+        this.objectiveTracker?.update();
 
         if (dom.crosshair) {
             const hotbarIdx = 20 + this.inventory.selectedHotbarIndex;
@@ -1997,6 +2001,10 @@ export class GameScene extends Scene {
         if (this.inventoryController) {
             this.inventoryController.dispose();
             this.inventoryController = null;
+        }
+        if (this.objectiveTracker) {
+            this.objectiveTracker.dispose();
+            this.objectiveTracker = null;
         }
         this.interactionController = null;
 
