@@ -1,6 +1,8 @@
 export const PLAYER_BALANCE = Object.freeze({
     walkSpeed: 3.2,
     sprintSpeed: 4.4,
+    groundAcceleration: 18,
+    groundDeceleration: 24,
     staminaDrainPerSecond: 18,
     staminaRegenPerSecond: 14,
     sprintRecoveryThreshold: 20,

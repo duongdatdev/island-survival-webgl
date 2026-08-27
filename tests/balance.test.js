@@ -16,6 +16,7 @@ import { Crab } from '../src/entities/Crab.js';
 import { Seagull } from '../src/entities/Seagull.js';
 import { Boar } from '../src/entities/Boar.js';
 import { Shark } from '../src/entities/Shark.js';
+import { Player } from '../src/entities/Player.js';
 import { AssetManager } from '../src/core/AssetManager.js';
 import { ModelAsset } from '../src/renderer/ModelAsset.js';
 
@@ -138,6 +139,30 @@ test('walking is free and exhausted sprint recovers without flicker', () => {
 
     vitals.update(0.5, false);
     assert.equal(vitals.canSprint(), true);
+});
+
+test('player movement accelerates, decelerates, and normalizes diagonals', () => {
+    const player = new Player();
+    const pressed = new Set(['moveForward']);
+    const input = { isKeyDown: action => pressed.has(action) };
+    const camera = { position: [0, 1, 0], target: [0, 1, 1] };
+    const terrain = { getHeight: () => 0, generator: null };
+
+    player.update(0.1, input, camera, terrain);
+    assert.ok(Math.abs(player.currentSpeed - 1.8) < 1e-6);
+
+    player.update(0.1, input, camera, terrain);
+    assert.ok(Math.abs(player.currentSpeed - PLAYER_BALANCE.walkSpeed) < 1e-6);
+
+    pressed.add('moveRight');
+    player.update(1, input, camera, terrain);
+    assert.ok(Math.abs(player.currentSpeed - PLAYER_BALANCE.walkSpeed) < 1e-6);
+
+    pressed.clear();
+    player.update(0.1, input, camera, terrain);
+    assert.ok(player.currentSpeed < PLAYER_BALANCE.walkSpeed);
+    player.update(0.1, input, camera, terrain);
+    assert.equal(player.currentSpeed, 0);
 });
 
 test('survival vitals reach the intended five minute pressure point', () => {

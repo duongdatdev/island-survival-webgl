@@ -8,6 +8,7 @@ export class Player extends Entity {
         super();
         this.speed = PLAYER_BALANCE.walkSpeed;
         this.currentSpeed = 0.0;
+        this.velocity = Vec3.create();
 
         const PLAYER_SCALE = 0.32;
         this.scaleFactor = PLAYER_SCALE;
@@ -27,7 +28,6 @@ export class Player extends Entity {
     update(deltaTime, inputManager, camera, terrain) {
         const forward = Vec3.create();
         const right = Vec3.create();
-        const moveDir = Vec3.create();
 
         Vec3.subtract(forward, camera.target, camera.position);
         forward[1] = 0.0;
@@ -45,7 +45,11 @@ export class Player extends Entity {
         if (inputManager.isKeyDown('moveLeft')) moveX -= 1;
         if (inputManager.isKeyDown('moveRight')) moveX += 1;
 
-        if (moveX !== 0 || moveZ !== 0) {
+        let targetVelocityX = 0;
+        let targetVelocityZ = 0;
+        const hasMovementInput = moveX !== 0 || moveZ !== 0;
+
+        if (hasMovementInput && this.speed > 0) {
             const targetMoveDir = Vec3.create();
             const tempF = Vec3.create();
             const tempR = Vec3.create();
@@ -55,14 +59,29 @@ export class Player extends Entity {
             Vec3.add(targetMoveDir, tempF, tempR);
             Vec3.normalize(targetMoveDir, targetMoveDir);
 
-            Vec3.scale(moveDir, targetMoveDir, this.speed * deltaTime);
-
-            Vec3.add(this.position, this.position, moveDir);
-            this.currentSpeed = this.speed;
-
-        } else {
-            this.currentSpeed = 0.0;
+            targetVelocityX = targetMoveDir[0] * this.speed;
+            targetVelocityZ = targetMoveDir[2] * this.speed;
         }
+
+        const acceleration = hasMovementInput && this.speed > 0
+            ? PLAYER_BALANCE.groundAcceleration
+            : PLAYER_BALANCE.groundDeceleration;
+        const velocityDeltaX = targetVelocityX - this.velocity[0];
+        const velocityDeltaZ = targetVelocityZ - this.velocity[2];
+        const velocityDeltaLength = Math.hypot(velocityDeltaX, velocityDeltaZ);
+        const maxVelocityChange = acceleration * deltaTime;
+        if (velocityDeltaLength <= maxVelocityChange || velocityDeltaLength < 0.0001) {
+            this.velocity[0] = targetVelocityX;
+            this.velocity[2] = targetVelocityZ;
+        } else {
+            const velocityScale = maxVelocityChange / velocityDeltaLength;
+            this.velocity[0] += velocityDeltaX * velocityScale;
+            this.velocity[2] += velocityDeltaZ * velocityScale;
+        }
+
+        this.position[0] += this.velocity[0] * deltaTime;
+        this.position[2] += this.velocity[2] * deltaTime;
+        this.currentSpeed = Math.hypot(this.velocity[0], this.velocity[2]);
 
         let boundaryLimit = 46.0;
         const island = terrain && terrain.generator ? terrain.generator.island : null;
@@ -77,6 +96,14 @@ export class Player extends Entity {
             const scale = boundaryLimit / dist;
             this.position[0] = px * scale;
             this.position[2] = pz * scale;
+            const normalX = px / dist;
+            const normalZ = pz / dist;
+            const outwardSpeed = this.velocity[0] * normalX + this.velocity[2] * normalZ;
+            if (outwardSpeed > 0) {
+                this.velocity[0] -= normalX * outwardSpeed;
+                this.velocity[2] -= normalZ * outwardSpeed;
+                this.currentSpeed = Math.hypot(this.velocity[0], this.velocity[2]);
+            }
         }
         
         const PLAYER_SCALE = 0.32;
@@ -89,12 +116,12 @@ export class Player extends Entity {
 
         this.updateModelMatrix();
 
-        const posEl = document.getElementById('debug-pos');
+        const posEl = globalThis.document?.getElementById('debug-pos');
         if (posEl) {
             posEl.textContent = `X: ${this.position[0].toFixed(2)}, Y: ${this.position[1].toFixed(2)}, Z: ${this.position[2].toFixed(2)}`;
         }
         
-        const speedEl = document.getElementById('debug-speed');
+        const speedEl = globalThis.document?.getElementById('debug-speed');
         if (speedEl) {
             speedEl.textContent = `${this.currentSpeed.toFixed(1)} m/s`;
         }
