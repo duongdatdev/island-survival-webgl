@@ -128,6 +128,64 @@ test('mouse movement accumulates all events until the frame resets', () => {
     }
 });
 
+test('pointer lock capture click is consumed and unlock clears mouse state', () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    const windowListeners = new Map();
+    const documentListeners = new Map();
+    const canvasListeners = new Map();
+    let lockRequests = 0;
+    let prevented = false;
+
+    const canvas = {
+        addEventListener(type, listener) { canvasListeners.set(type, listener); },
+        requestPointerLock() { lockRequests++; },
+    };
+    const fakeDocument = {
+        pointerLockElement: null,
+        addEventListener(type, listener) { documentListeners.set(type, listener); },
+        getElementById() { return null; },
+        exitPointerLock() { this.pointerLockElement = null; },
+    };
+    globalThis.window = {
+        addEventListener(type, listener) { windowListeners.set(type, listener); },
+    };
+    globalThis.document = fakeDocument;
+
+    try {
+        const input = new InputManager(canvas);
+        const lockStates = [];
+        input.setPointerLockEnabled(true);
+        input.onPointerLockChange = (locked, wasLocked) => lockStates.push([locked, wasLocked]);
+
+        canvasListeners.get('mousedown')({
+            button: 0,
+            clientX: 10,
+            clientY: 20,
+            preventDefault() { prevented = true; },
+        });
+        assert.equal(lockRequests, 1);
+        assert.equal(prevented, true);
+        assert.equal(input.mouse.buttons[0], false);
+
+        fakeDocument.pointerLockElement = canvas;
+        documentListeners.get('pointerlockchange')();
+        canvasListeners.get('mousedown')({ button: 0, clientX: 10, clientY: 20 });
+        windowListeners.get('mousemove')({ movementX: 6, movementY: -2 });
+        assert.equal(input.mouse.buttons[0], true);
+        assert.equal(input.mouse.deltaX, 6);
+
+        fakeDocument.pointerLockElement = null;
+        documentListeners.get('pointerlockchange')();
+        assert.equal(input.mouse.buttons[0], false);
+        assert.equal(input.mouse.deltaX, 0);
+        assert.deepEqual(lockStates, [[true, false], [false, true]]);
+    } finally {
+        globalThis.window = originalWindow;
+        globalThis.document = originalDocument;
+    }
+});
+
 test('SettingsManager persists and resets keyBindings', () => {
     const storage = {};
     globalThis.localStorage = {

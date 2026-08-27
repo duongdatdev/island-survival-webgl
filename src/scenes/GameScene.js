@@ -77,6 +77,25 @@ export class GameScene extends Scene {
         console.log('GameScene: Initializing gameplay state...');
         const gl = this.gl;
 
+        this._hasPointerLocked = false;
+        this._pointerUnlockPauseGuard = 0;
+        this._pointerLockHint = document.getElementById('pointer-lock-hint');
+        this.engine.input.setPointerLockEnabled(true);
+        this._onPointerLockChange = (locked, wasLocked) => {
+            if (locked) this._hasPointerLocked = true;
+            const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+            const auxiliaryMenuOpen = this.menuUI && this.menuUI.isAnyOpen();
+            const escapePromptOpen = this.escapeHud && !this.escapeHud.classList.contains('hidden');
+            if (!locked && wasLocked && this._hasPointerLocked && !this.isPaused
+                && !inventoryOpen && !auxiliaryMenuOpen && !escapePromptOpen
+                && !this._isGameOver && !this.isEscaping) {
+                this._pointerUnlockPauseGuard = 0.25;
+                this._pauseGame();
+            }
+            this._syncPointerLockHint();
+        };
+        this.engine.input.onPointerLockChange = this._onPointerLockChange;
+
         this.basicShader = new ShaderProgram(gl, BasicShader.vertex, BasicShader.fragment);
         this.waterShader = new ShaderProgram(gl, WaterShader.vertex, WaterShader.fragment);
         this.unlitShader = new ShaderProgram(gl, UnlitShader.vertex, UnlitShader.fragment);
@@ -410,24 +429,7 @@ export class GameScene extends Scene {
             this._pendingSave = null;
         }
 
-        try {
-            this.engine.input.canvas.requestPointerLock();
-        } catch (e) {
-            console.warn('GameScene: requestPointerLock failed', e);
-        }
-
-        this._onCanvasClick = () => {
-            if (!this.isPaused && (!this.inventoryMenu || this.inventoryMenu.classList.contains('hidden')) && !this._isGameOver && !this.isEscaping) {
-                if (!document.pointerLockElement) {
-                    try {
-                        this.gl.canvas.requestPointerLock();
-                    } catch (e) {
-                        console.warn('GameScene: requestPointerLock on click failed', e);
-                    }
-                }
-            }
-        };
-        this.gl.canvas.addEventListener('click', this._onCanvasClick);
+        this._syncPointerLockHint();
     }
 
 
@@ -533,7 +535,15 @@ export class GameScene extends Scene {
         this._updateFpsCounter();
         this.saveController.updateStatus(deltaTime);
 
+        if (this._pointerUnlockPauseGuard > 0) {
+            this._pointerUnlockPauseGuard = Math.max(0, this._pointerUnlockPauseGuard - deltaTime);
+        }
+
         if (this.engine.input.isKeyPressed('Escape')) {
+            if (this._pointerUnlockPauseGuard > 0) {
+                this.engine.input.consumeKey('Escape');
+                return;
+            }
             const isInventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
             if (isInventoryOpen) {
                 this.inventoryController.closeMenu();
@@ -641,9 +651,7 @@ export class GameScene extends Scene {
                         }
                     }
 
-                    if (document.pointerLockElement) {
-                        document.exitPointerLock();
-                    }
+                    this.engine.input.releasePointerLock();
 
                     this.stats.escaped = 1;
                     this.stats.survivalSeconds = this.survivalSeconds;
@@ -699,10 +707,11 @@ export class GameScene extends Scene {
         }
 
         const input = this.engine.input;
-        const hasMovementInput = input.isActionDown('moveForward')
+        const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+        const hasMovementInput = !inventoryOpen && (input.isActionDown('moveForward')
             || input.isActionDown('moveBackward')
             || input.isActionDown('moveLeft')
-            || input.isActionDown('moveRight');
+            || input.isActionDown('moveRight'));
         const sprintHeld = input.isActionDown('sprint') || input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight');
         const isSprinting = !this.isFishing && hasMovementInput && sprintHeld
             && this.vitals.canSprint();
@@ -732,7 +741,7 @@ export class GameScene extends Scene {
         }
         this.camera.update(this.engine.input, this.player.position, eyeOffset, deltaTime, faceOffset);
 
-        const movementInput = this.isFishing 
+        const movementInput = (this.isFishing || inventoryOpen)
             ? { isKeyDown: () => false, isKeyPressed: () => false, isActionDown: () => false, isActionPressed: () => false, keys: {} } 
             : this.engine.input;
         this.player.update(deltaTime, movementInput, this.camera, this.terrain);
@@ -827,11 +836,11 @@ export class GameScene extends Scene {
             this.inventoryController.toggleMenu();
         }
 
-        if (this.engine.input.isKeyPressed('useItem')) {
+        if (!inventoryOpen && this.engine.input.isKeyPressed('useItem')) {
             this.inventoryController.useActiveItem();
         }
 
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; !inventoryOpen && i < 8; i++) {
             const action = 'hotbar' + (i + 1);
             if (this.engine.input.isKeyPressed(action) ||
                 this.engine.input.isKeyPressed('Digit' + (i + 1)) ||
@@ -886,7 +895,8 @@ export class GameScene extends Scene {
 
         this._updateInvViewProj();
 
-        this.interactionController.update(deltaTime);
+        const gameplayMenuOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+        if (!gameplayMenuOpen) this.interactionController.update(deltaTime);
         if (this.raftAssembly) {
             this.raftAssembly.update(deltaTime);
         }
@@ -1440,9 +1450,8 @@ export class GameScene extends Scene {
 
         this._updatePauseSoundButton(this.engine.audio.isMuted);
 
-        if (document.pointerLockElement) {
-            document.exitPointerLock();
-        }
+        this.engine.input.releasePointerLock();
+        this._syncPointerLockHint();
 
         this.engine.audio.playClick();
         this.engine.audio.setDucked(true);
@@ -1456,11 +1465,18 @@ export class GameScene extends Scene {
         if (pauseMenu) pauseMenu.classList.add('hidden');
         this.engine.audio.setDucked(false);
 
-        try {
-            this.engine.input.canvas.requestPointerLock();
-        } catch (e) {
-            console.warn('GameScene: requestPointerLock failed', e);
-        }
+        this.engine.input.requestPointerLock();
+        this._syncPointerLockHint();
+    }
+
+    _syncPointerLockHint() {
+        if (!this._pointerLockHint) return;
+        const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+        const auxiliaryMenuOpen = this.menuUI && this.menuUI.isAnyOpen();
+        const escapePromptOpen = this.escapeHud && !this.escapeHud.classList.contains('hidden');
+        const show = !this.engine.input.mouse.isLocked && !this.isPaused && !inventoryOpen
+            && !auxiliaryMenuOpen && !escapePromptOpen && !this._isGameOver && !this.isEscaping;
+        this._pointerLockHint.classList.toggle('hidden', !show);
     }
 
     _updatePauseSoundButton(isMuted) {
@@ -1582,9 +1598,7 @@ export class GameScene extends Scene {
             this.gameoverTimeEl.textContent = `${mins}:${secs}`;
         }
 
-        if (document.pointerLockElement) {
-            document.exitPointerLock();
-        }
+        this.engine.input.releasePointerLock();
     }
 
     _showNotification(message) {
@@ -1614,9 +1628,7 @@ export class GameScene extends Scene {
 
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');
-        if (document.pointerLockElement) {
-            document.exitPointerLock();
-        }
+        this.engine.input.releasePointerLock();
 
         this.tutorial.skip();
 
@@ -1972,6 +1984,12 @@ export class GameScene extends Scene {
 
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
+        if (this.engine.input.onPointerLockChange === this._onPointerLockChange) {
+            this.engine.input.onPointerLockChange = null;
+        }
+        this.engine.input.releasePointerLock();
+        this.engine.input.setPointerLockEnabled(false);
+        if (this._pointerLockHint) this._pointerLockHint.classList.add('hidden');
         if (this.saveController) {
             this.saveController.dispose();
             this.saveController = null;
@@ -2108,10 +2126,6 @@ export class GameScene extends Scene {
         const toastContainer = document.getElementById('pickup-notification');
         if (toastContainer) toastContainer.innerHTML = '';
 
-        if (this._onCanvasClick) {
-            this.gl.canvas.removeEventListener('click', this._onCanvasClick);
-            this._onCanvasClick = null;
-        }
     }
 
     _regenerateWorld() {

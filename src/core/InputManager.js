@@ -109,6 +109,8 @@ export class InputManager {
         this.bindings = JSON.parse(JSON.stringify(DEFAULT_KEY_BINDINGS));
 
         this._rebindCallback = null;
+        this.pointerLockEnabled = false;
+        this.onPointerLockChange = null;
 
         this._setupListeners();
     }
@@ -228,6 +230,43 @@ export class InputManager {
         this._prevMouseButtons = { ...this.mouse.buttons };
     }
 
+    setPointerLockEnabled(enabled) {
+        this.pointerLockEnabled = !!enabled;
+        if (!this.pointerLockEnabled) {
+            this.mouse.deltaX = 0;
+            this.mouse.deltaY = 0;
+            for (const button of Object.keys(this.mouse.buttons)) {
+                this.mouse.buttons[button] = false;
+            }
+        }
+    }
+
+    requestPointerLock() {
+        if (!this.pointerLockEnabled || !this.canvas || typeof document === 'undefined') return false;
+        if (document.pointerLockElement === this.canvas) return true;
+        try {
+            const request = this.canvas.requestPointerLock();
+            if (request && typeof request.catch === 'function') {
+                request.catch(error => console.warn('InputManager: requestPointerLock failed', error));
+            }
+            return true;
+        } catch (error) {
+            console.warn('InputManager: requestPointerLock failed', error);
+            return false;
+        }
+    }
+
+    releasePointerLock() {
+        if (typeof document === 'undefined' || document.pointerLockElement !== this.canvas) return false;
+        try {
+            document.exitPointerLock();
+            return true;
+        } catch (error) {
+            console.warn('InputManager: exitPointerLock failed', error);
+            return false;
+        }
+    }
+
     _setupListeners() {
         if (typeof window === 'undefined') return;
 
@@ -276,10 +315,6 @@ export class InputManager {
             this.keys[e.code] = true;
             this._updateDebugKeyUI();
 
-            if (e.code === 'KeyL' && !isTextInput) {
-                this.togglePointerLock();
-            }
-
             if (!isTextInput && (this.isActionPressed('toggleDebug') || e.code === 'F3')) {
                 e.preventDefault();
                 if (typeof document !== 'undefined') {
@@ -302,6 +337,11 @@ export class InputManager {
             });
 
             this.canvas.addEventListener('mousedown', (e) => {
+                if (this.pointerLockEnabled && !this.mouse.isLocked) {
+                    if (e.preventDefault) e.preventDefault();
+                    this.requestPointerLock();
+                    return;
+                }
                 this.mouse.buttons[e.button] = true;
                 this.mouse.lastX = e.clientX;
                 this.mouse.lastY = e.clientY;
@@ -318,12 +358,6 @@ export class InputManager {
                 } else {
                     this.mouse.x = e.clientX;
                     this.mouse.y = e.clientY;
-
-                    if (this.mouse.buttons[0]) {
-                        this.mouse.deltaX += e.clientX - this.mouse.lastX;
-                        this.mouse.deltaY += e.clientY - this.mouse.lastY;
-                    }
-
                     this.mouse.lastX = e.clientX;
                     this.mouse.lastY = e.clientY;
                 }
@@ -336,17 +370,19 @@ export class InputManager {
 
         if (typeof document !== 'undefined') {
             document.addEventListener('pointerlockchange', () => {
-                this.mouse.isLocked = (document.pointerLockElement === this.canvas);
+                const wasLocked = this.mouse.isLocked;
+                const isLocked = document.pointerLockElement === this.canvas;
+                this.mouse.isLocked = isLocked;
+                if (!isLocked) {
+                    this.mouse.deltaX = 0;
+                    this.mouse.deltaY = 0;
+                    for (const button of Object.keys(this.mouse.buttons)) {
+                        this.mouse.buttons[button] = false;
+                        this._prevMouseButtons[button] = false;
+                    }
+                }
+                if (this.onPointerLockChange) this.onPointerLockChange(isLocked, wasLocked);
             });
-        }
-    }
-
-    togglePointerLock() {
-        if (!this.canvas || typeof document === 'undefined') return;
-        if (this.mouse.isLocked) {
-            document.exitPointerLock();
-        } else {
-            this.canvas.requestPointerLock();
         }
     }
 

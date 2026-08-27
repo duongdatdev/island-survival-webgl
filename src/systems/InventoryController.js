@@ -359,7 +359,7 @@ export class InventoryController {
         if (!this.menu) return;
         if (this.menu.classList.contains('hidden')) {
             this.menu.classList.remove('hidden');
-            if (this.document.pointerLockElement) this.document.exitPointerLock();
+            this.scene.engine.input.releasePointerLock();
             this.renderCraftingPanel();
             this.renderInventory();
             this.scene.tutorial.notifyCraftingOpened();
@@ -375,11 +375,8 @@ export class InventoryController {
         this.menu.classList.add('hidden');
         this.scene.engine.audio.playClosePanel();
         this.scene.engine.audio.setDucked(false);
-        try {
-            this.scene.engine.input.canvas.requestPointerLock();
-        } catch (error) {
-            console.warn('InventoryController: requestPointerLock failed', error);
-        }
+        this.scene.engine.input.requestPointerLock();
+        this.scene._syncPointerLockHint?.();
     }
 
     renderCraftingPanel() {

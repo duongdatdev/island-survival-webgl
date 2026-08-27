@@ -3432,6 +3432,26 @@ input:checked + .slider:before {
     pointer-events: none;
 }
 
+.pointer-lock-hint {
+    position: absolute;
+    top: 58%;
+    left: 50%;
+    z-index: 205;
+    transform: translate(-50%, -50%);
+    padding: 9px 16px;
+    border: 1px solid var(--text-gold);
+    border-radius: var(--panel-radius);
+    background: rgba(10, 8, 4, 0.82);
+    color: var(--text-bright);
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.7px;
+    pointer-events: none;
+    box-shadow: var(--panel-shadow);
+}
+
+.pointer-lock-hint.hidden { display: none; }
+
 .toast-item {
     padding: 8px 18px;
     background: linear-gradient(135deg, rgba(42, 31, 14, 0.94), rgba(26, 18, 7, 0.96));

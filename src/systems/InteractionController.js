@@ -206,10 +206,12 @@ export class InteractionController {
         if (distance < 4.0) {
             if (scene.escapeHud.classList.contains('hidden')) {
                 scene.escapeHud.classList.remove('hidden');
-                if (globalThis.document?.pointerLockElement) document.exitPointerLock();
+                scene.engine.input.releasePointerLock();
+                scene._syncPointerLockHint?.();
             }
         } else if (!scene.escapeHud.classList.contains('hidden')) {
             scene.escapeHud.classList.add('hidden');
+            scene._syncPointerLockHint?.();
         }
     }
 }

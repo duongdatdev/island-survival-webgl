@@ -171,7 +171,7 @@ export class Camera {
 
     _handleInput(input, config) {
         if (!input || !input.mouse) return;
-        if (input.mouse.isLocked || input.mouse.buttons[0]) {
+        if (input.mouse.isLocked) {
             const pitchDirection = config.invertY ? 1 : -1;
             this._yaw -= input.mouse.deltaX * config.mouseSensitivity;
             this._pitch += input.mouse.deltaY * config.mouseSensitivity * pitchDirection;
