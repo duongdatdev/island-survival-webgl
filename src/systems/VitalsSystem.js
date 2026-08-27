@@ -1,4 +1,4 @@
-import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
+import { PLAYER_BALANCE, SURVIVAL_BALANCE } from '../gameplay/BalanceConfig.js';
 
 
 export class VitalsSystem {
@@ -8,13 +8,9 @@ export class VitalsSystem {
         this.stamina = 100;
         this.health = 100;
 
-        this._hungerTimer = 0;
-        this._thirstTimer = 0;
-        this._healthDrainTimer = 0;
-
-        this.hungerDrainInterval = 30;
-        this.thirstDrainInterval = 20;
-        this.healthDrainInterval = 5;
+        this.hungerDrainRate = SURVIVAL_BALANCE.hungerDrainPerSecond;
+        this.thirstDrainRate = SURVIVAL_BALANCE.thirstDrainPerSecond;
+        this.healthDrainRate = SURVIVAL_BALANCE.depletedHealthDrainPerSecond;
 
         this.staminaDrainRate = PLAYER_BALANCE.staminaDrainPerSecond;
         this.staminaRegenRate = PLAYER_BALANCE.staminaRegenPerSecond;
@@ -29,19 +25,21 @@ export class VitalsSystem {
     }
 
     update(deltaTime, isSprinting) {
-        if (this._isGameOver) return;
+        if (this._isGameOver || deltaTime <= 0) return;
 
-        this._hungerTimer += deltaTime;
-        if (this._hungerTimer >= this.hungerDrainInterval) {
-            this._hungerTimer -= this.hungerDrainInterval;
-            this._setVital('hunger', this.hunger - 1);
-        }
+        const hungerTimeToZero = this.hungerDrainRate > 0
+            ? this.hunger / this.hungerDrainRate
+            : Infinity;
+        const thirstTimeToZero = this.thirstDrainRate > 0
+            ? this.thirst / this.thirstDrainRate
+            : Infinity;
+        const depletedDuration = Math.max(
+            0,
+            deltaTime - Math.min(hungerTimeToZero, thirstTimeToZero)
+        );
 
-        this._thirstTimer += deltaTime;
-        if (this._thirstTimer >= this.thirstDrainInterval) {
-            this._thirstTimer -= this.thirstDrainInterval;
-            this._setVital('thirst', this.thirst - 1);
-        }
+        this._setVital('hunger', this.hunger - this.hungerDrainRate * deltaTime);
+        this._setVital('thirst', this.thirst - this.thirstDrainRate * deltaTime);
 
         if (this.stamina <= 0) this._sprintLocked = true;
 
@@ -57,14 +55,8 @@ export class VitalsSystem {
             }
         }
 
-        if (this.hunger <= 0 || this.thirst <= 0) {
-            this._healthDrainTimer += deltaTime;
-            if (this._healthDrainTimer >= this.healthDrainInterval) {
-                this._healthDrainTimer -= this.healthDrainInterval;
-                this._setVital('health', this.health - 1);
-            }
-        } else {
-            this._healthDrainTimer = 0;
+        if (depletedDuration > 0) {
+            this._setVital('health', this.health - this.healthDrainRate * depletedDuration);
         }
 
         if (this.health <= 0 && !this._isGameOver) {
@@ -103,9 +95,6 @@ export class VitalsSystem {
     reset() {
         this._isGameOver = false;
         this._sprintLocked = false;
-        this._hungerTimer = 0;
-        this._thirstTimer = 0;
-        this._healthDrainTimer = 0;
         this._setVital('hunger', 100);
         this._setVital('thirst', 100);
         this._setVital('stamina', 100);

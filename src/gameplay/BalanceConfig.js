@@ -6,6 +6,12 @@ export const PLAYER_BALANCE = Object.freeze({
     sprintRecoveryThreshold: 20,
 });
 
+export const SURVIVAL_BALANCE = Object.freeze({
+    hungerDrainPerSecond: 0.10,
+    thirstDrainPerSecond: 0.14,
+    depletedHealthDrainPerSecond: 1.5,
+});
+
 export const CREATURE_BALANCE = Object.freeze({
     crab: Object.freeze({
         maxHealth: 10,

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { PLAYER_BALANCE, CREATURE_BALANCE } from '../src/gameplay/BalanceConfig.js';
+import { PLAYER_BALANCE, SURVIVAL_BALANCE, CREATURE_BALANCE } from '../src/gameplay/BalanceConfig.js';
 import { VitalsSystem } from '../src/systems/VitalsSystem.js';
 import { CreatureState } from '../src/entities/Creature.js';
 import { Crab } from '../src/entities/Crab.js';
@@ -131,6 +131,32 @@ test('walking is free and exhausted sprint recovers without flicker', () => {
 
     vitals.update(0.5, false);
     assert.equal(vitals.canSprint(), true);
+});
+
+test('survival vitals reach the intended five minute pressure point', () => {
+    const vitals = new VitalsSystem();
+
+    vitals.update(300, false);
+
+    assert.ok(Math.abs(vitals.hunger - 70) < 1e-9);
+    assert.ok(Math.abs(vitals.thirst - 58) < 1e-9);
+    assert.equal(vitals.health, 100);
+    assert.equal(vitals.hungerDrainRate, SURVIVAL_BALANCE.hungerDrainPerSecond);
+    assert.equal(vitals.thirstDrainRate, SURVIVAL_BALANCE.thirstDrainPerSecond);
+});
+
+test('depletion damage is stable across different update sizes', () => {
+    const singleStep = new VitalsSystem();
+    const smallSteps = new VitalsSystem();
+
+    singleStep.update(720, false);
+    for (let elapsed = 0; elapsed < 720; elapsed += 0.1) {
+        smallSteps.update(0.1, false);
+    }
+
+    assert.ok(Math.abs(singleStep.hunger - smallSteps.hunger) < 0.001);
+    assert.ok(Math.abs(singleStep.thirst - smallSteps.thirst) < 0.001);
+    assert.ok(Math.abs(singleStep.health - smallSteps.health) < 0.01);
 });
 
 test('boar charge has a wind-up and locks its direction', () => {
