@@ -183,6 +183,9 @@ export class SaveSystem {
                 slots: scene.inventory.slots.map(s => (s ? { id: s.id, count: s.count } : null)),
                 selectedHotbarIndex: scene.inventory.selectedHotbarIndex,
             },
+            ui: {
+                pinnedRecipeId: scene.objectiveTracker?.getPinnedRecipeId() || null,
+            },
             raft: {
                 framePlaced: raft.framePlaced,
                 floatsPlaced: raft.floatsPlaced,

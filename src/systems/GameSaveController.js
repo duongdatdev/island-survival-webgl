@@ -146,6 +146,7 @@ export class GameSaveController {
         scene.waterCollector.updateModelMatrix();
 
         scene.unlockedBlueprints = new Set(save.blueprints || []);
+        scene.objectiveTracker?.setPinnedRecipe(save.ui?.pinnedRecipeId || null);
         if (save.environment) {
             scene.dayNight.timeOfDay = save.environment.timeOfDay;
             scene.weather.currentWeather = save.environment.weather;

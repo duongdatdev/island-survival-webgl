@@ -7,6 +7,26 @@ const REQUIRED_RAFT_STEPS = Object.freeze([
     Object.freeze({ flag: 'paddlePlaced', recipeId: 'paddle' }),
 ]);
 
+const COMPLETION_CHECKS = Object.freeze({
+    raft_frame: scene => scene.raftAssembly?.framePlaced,
+    barrel_floats: scene => scene.raftAssembly?.floatsPlaced,
+    paddle: scene => scene.raftAssembly?.paddlePlaced,
+    raft_sail: scene => scene.raftAssembly?.sailPlaced,
+    raft_motor: scene => scene.raftAssembly?.motorPlaced,
+    campfire: scene => scene.campfire?.isBuilt,
+    water_collector: scene => scene.waterCollector?.isBuilt,
+});
+
+export function isRecipeTrackable(scene, recipeId) {
+    const recipe = getRecipeDef(recipeId);
+    if (!recipe) return false;
+    if (recipe.requiresBlueprint && !scene.unlockedBlueprints?.has(recipe.requiresBlueprint)) {
+        return false;
+    }
+    const completionCheck = COMPLETION_CHECKS[recipeId];
+    return !completionCheck || !completionCheck(scene);
+}
+
 export function buildRecipeObjective(recipeId, inventory, source = 'recipe') {
     const recipe = getRecipeDef(recipeId);
     if (!recipe) return null;
@@ -68,6 +88,7 @@ export class ObjectiveTracker {
         this.scene = scene;
         this.document = options.document || globalThis.document;
         this.element = null;
+        this.pinnedRecipeId = null;
         this._lastSignature = '';
     }
 
@@ -77,7 +98,33 @@ export class ObjectiveTracker {
     }
 
     getCurrentObjective() {
+        if (this.pinnedRecipeId && !isRecipeTrackable(this.scene, this.pinnedRecipeId)) {
+            this.pinnedRecipeId = null;
+        }
+        if (this.pinnedRecipeId) {
+            return buildRecipeObjective(this.pinnedRecipeId, this.scene.inventory, 'pinned');
+        }
         return buildAutomaticObjective(this.scene);
+    }
+
+    getPinnedRecipeId() {
+        return this.pinnedRecipeId;
+    }
+
+    setPinnedRecipe(recipeId) {
+        const nextRecipeId = recipeId || null;
+        if (nextRecipeId && !isRecipeTrackable(this.scene, nextRecipeId)) {
+            this.pinnedRecipeId = null;
+            this.update(true);
+            return false;
+        }
+        this.pinnedRecipeId = nextRecipeId;
+        this.update(true);
+        return true;
+    }
+
+    togglePinnedRecipe(recipeId) {
+        return this.setPinnedRecipe(this.pinnedRecipeId === recipeId ? null : recipeId);
     }
 
     update(force = false) {
@@ -98,8 +145,9 @@ export class ObjectiveTracker {
             </span>
         `).join('');
 
+        const kicker = objective.source === 'pinned' ? 'CÔNG THỨC GHIM' : 'MỤC TIÊU';
         this.element.innerHTML = `
-            <div class="objective-kicker">MỤC TIÊU</div>
+            <div class="objective-kicker">${kicker}</div>
             <div class="objective-title"><span>${objective.icon}</span>${objective.title}</div>
             <div class="objective-description">${objective.description}</div>
             ${ingredients ? `<div class="objective-ingredients">${ingredients}</div>` : ''}

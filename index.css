@@ -1844,8 +1844,32 @@ input:checked + .slider:before {
 
 .details-craft-btn-row {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: 8px;
     margin-top: 4px;
+}
+
+.recipe-pin-btn {
+    padding: 7px 10px;
+    border: 1px solid var(--wood-border);
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.22);
+    color: var(--text-gold);
+    font-family: var(--font-heading);
+    font-size: 0.68rem;
+    cursor: pointer;
+}
+
+.recipe-pin-btn:hover,
+.recipe-pin-btn[aria-pressed="true"] {
+    border-color: var(--yellow-fire);
+    background: rgba(212, 160, 40, 0.16);
+    color: var(--text-bright);
+}
+
+.recipe-pin-btn:focus-visible {
+    outline: 2px solid var(--text-gold);
+    outline-offset: 2px;
 }
 
 /* === Inventory Column === */

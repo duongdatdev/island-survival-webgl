@@ -431,6 +431,7 @@ export class InventoryController {
         }
 
         const canCraft = CraftingSystem.canCraft(recipe.id, scene.inventory);
+        const isPinned = scene.objectiveTracker?.getPinnedRecipeId() === recipe.id;
         const ingredients = Object.entries(recipe.ingredients).map(([id, required]) => {
             const current = scene.inventory.getCount(id);
             const definition = getResourceDef(id);
@@ -450,9 +451,17 @@ export class InventoryController {
             </div>
             <div class="details-ingredients">${ingredients}</div>
             <div class="details-craft-btn-row">
+                <button id="details-pin-btn" class="recipe-pin-btn" aria-pressed="${isPinned ? 'true' : 'false'}">
+                    ${isPinned ? 'Bỏ ghim' : 'Ghim công thức'}
+                </button>
                 <button id="details-craft-btn" class="craft-btn" ${canCraft ? '' : 'disabled'}>Chế tạo</button>
             </div>
         `;
+        this.document.getElementById('details-pin-btn')?.addEventListener('click', () => {
+            scene.objectiveTracker?.togglePinnedRecipe(recipe.id);
+            scene.engine.audio.playClick();
+            this._renderRecipeDetails(detailsEl);
+        });
         this.document.getElementById('details-craft-btn')?.addEventListener('click', () => {
             this.craftItem(recipe.id);
         });

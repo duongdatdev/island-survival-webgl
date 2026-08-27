@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildAutomaticObjective } from '../src/systems/ObjectiveTracker.js';
+import { buildAutomaticObjective, ObjectiveTracker } from '../src/systems/ObjectiveTracker.js';
 
 function makeScene({ flags = {}, counts = {} } = {}) {
     return {
@@ -11,6 +11,9 @@ function makeScene({ flags = {}, counts = {} } = {}) {
             paddlePlaced: false,
             ...flags,
         },
+        campfire: { isBuilt: false },
+        waterCollector: { isBuilt: false },
+        unlockedBlueprints: new Set(),
         inventory: {
             hasItem(id, amount = 1) { return (counts[id] || 0) >= amount; },
             getCount(id) { return counts[id] || 0; },
@@ -53,4 +56,34 @@ test('automatic objective advances through required raft modules', () => {
     assert.equal(paddle.recipeId, 'paddle');
     assert.equal(escape.recipeId, null);
     assert.equal(escape.title, 'Rời khỏi đảo');
+});
+
+test('pinned recipes override the automatic objective and report progress', () => {
+    const scene = makeScene({ counts: { wood: 2, stone: 1 } });
+    const tracker = new ObjectiveTracker(scene, { document: null });
+
+    assert.equal(tracker.setPinnedRecipe('stone_axe'), true);
+    const objective = tracker.getCurrentObjective();
+
+    assert.equal(objective.source, 'pinned');
+    assert.equal(objective.recipeId, 'stone_axe');
+    assert.deepEqual(
+        objective.ingredients.map(item => [item.resourceId, item.current, item.complete]),
+        [['wood', 2, true], ['stone', 1, false]]
+    );
+});
+
+test('completed or locked recipes cannot remain pinned', () => {
+    const scene = makeScene();
+    const tracker = new ObjectiveTracker(scene, { document: null });
+
+    assert.equal(tracker.setPinnedRecipe('fishing_rod'), false);
+    assert.equal(tracker.getPinnedRecipeId(), null);
+
+    assert.equal(tracker.setPinnedRecipe('raft_frame'), true);
+    scene.raftAssembly.framePlaced = true;
+    const objective = tracker.getCurrentObjective();
+
+    assert.equal(tracker.getPinnedRecipeId(), null);
+    assert.equal(objective.recipeId, 'barrel_floats');
 });

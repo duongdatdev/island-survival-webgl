@@ -57,6 +57,7 @@ test('captured saves retain removed environment objects', () => {
         player: { position: [1, 2, 3], rotation: [0, 0.5, 0] },
         vitals: { health: 90, hunger: 80, thirst: 70, stamina: 60 },
         inventory: { slots: [], selectedHotbarIndex: 0 },
+        objectiveTracker: { getPinnedRecipeId: () => 'stone_axe' },
         raftAssembly: {
             framePlaced: false,
             floatsPlaced: false,
@@ -81,6 +82,7 @@ test('captured saves retain removed environment objects', () => {
 
     const save = SaveSystem.captureScene(scene);
     assert.deepEqual(save.environment.removedObjectIds, ['4', '19']);
+    assert.equal(save.ui.pinnedRecipeId, 'stone_axe');
 });
 
 test('page lifecycle saves hidden sessions and unregisters cleanly', () => {
