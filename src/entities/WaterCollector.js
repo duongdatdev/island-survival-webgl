@@ -2,6 +2,7 @@ import { Entity } from './Entity.js';
 import { Vec3 } from '../math/Vec3.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Mesh } from '../renderer/Mesh.js';
+import { WEATHER_GAMEPLAY_BALANCE } from '../gameplay/BalanceConfig.js';
 
 const COLLECTOR_SCALE = 0.45;
 
@@ -16,8 +17,8 @@ export class WaterCollector extends Entity {
 
         this.waterStored = 0;
         this.maxWater = 3;
-        this.generateInterval = 30;
-        this._generateTimer = 0;
+        this.rainProgress = 0;
+        this._rainFactor = 0;
 
         this._dripTime = 0;
 
@@ -37,15 +38,17 @@ export class WaterCollector extends Entity {
         this.leafMesh = this._createMesh(gl, this._leafData);
     }
 
-    update(deltaTime) {
+    update(deltaTime, rainFactor = 0) {
         if (!this.isBuilt) return;
 
-        this._dripTime += deltaTime;
+        this._rainFactor = Math.max(0, Math.min(1, rainFactor));
+        if (this._rainFactor > 0) this._dripTime += deltaTime;
 
         if (this.waterStored < this.maxWater) {
-            this._generateTimer += deltaTime;
-            if (this._generateTimer >= this.generateInterval) {
-                this._generateTimer -= this.generateInterval;
+            this.rainProgress += this._rainFactor * deltaTime
+                / WEATHER_GAMEPLAY_BALANCE.waterCollectorSecondsPerUnitAtFullRain;
+            while (this.rainProgress >= 1 && this.waterStored < this.maxWater) {
+                this.rainProgress -= 1;
                 this.waterStored = Math.min(this.waterStored + 1, this.maxWater);
             }
         }
@@ -122,7 +125,7 @@ export class WaterCollector extends Entity {
         }
 
         const dripPhase = (this._dripTime * 0.8) % 1.0;
-        if (this.waterStored < this.maxWater) {
+        if (this._rainFactor > 0 && this.waterStored < this.maxWater) {
             Mat4.identity(tempMatrix);
             Mat4.translate(tempMatrix, tempMatrix, [
                 this.position[0],

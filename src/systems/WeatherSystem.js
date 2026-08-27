@@ -1,4 +1,11 @@
-import { ENVIRONMENT_BALANCE } from '../gameplay/BalanceConfig.js';
+import {
+    ENVIRONMENT_BALANCE,
+    WEATHER_GAMEPLAY_BALANCE,
+} from '../gameplay/BalanceConfig.js';
+
+function clamp01(value) {
+    return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
 
 export class WeatherSystem {
     constructor() {
@@ -116,6 +123,32 @@ export class WeatherSystem {
 
     getLightningModulation() {
         return this.lightningModulation;
+    }
+
+    getGameplayEffects() {
+        const rainFactor = clamp01(this.rainIntensity);
+        const windFactor = clamp01((this.windSpeed - 1) / 4);
+        const stormFactor = clamp01((this.windSpeed - 3) / 2) * rainFactor;
+        return {
+            rainFactor,
+            windFactor,
+            stormFactor,
+            debrisWindWeight: windFactor * WEATHER_GAMEPLAY_BALANCE.maxDebrisWindWeight,
+            debrisSpeedMultiplier: 1
+                + windFactor * WEATHER_GAMEPLAY_BALANCE.maxDebrisSpeedBoost,
+            sharkDetectionMultiplier: 1 + Math.min(
+                WEATHER_GAMEPLAY_BALANCE.maxSharkDetectionBoost,
+                rainFactor * 0.25 + stormFactor * 0.15
+            ),
+            sharkSpeedMultiplier: 1 + Math.min(
+                WEATHER_GAMEPLAY_BALANCE.maxSharkSpeedBoost,
+                rainFactor * 0.12 + stormFactor * 0.08
+            ),
+            campfireIntensityMultiplier: Math.max(
+                WEATHER_GAMEPLAY_BALANCE.minimumCampfireIntensity,
+                1 - rainFactor * 0.6
+            ),
+        };
     }
 
     getWeatherLabel() {

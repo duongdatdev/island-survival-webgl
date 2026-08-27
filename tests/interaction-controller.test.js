@@ -145,3 +145,18 @@ test('resource and debris pickups update stats and tutorial feedback independent
     assert.equal(fixture.events.filter(event => event === 'pickup-audio').length, 2);
     assert.equal(fixture.events.filter(event => event === 'tutorial-pickup').length, 2);
 });
+
+test('water collector prompt distinguishes dry, collecting, and full states', () => {
+    const fixture = createScene();
+    fixture.scene.waterCollector.isPlayerNear = () => true;
+    fixture.scene.weather = {
+        getGameplayEffects: () => ({ rainFactor: 0 }),
+    };
+    const controller = new InteractionController(fixture.scene);
+
+    assert.match(controller._updateWaterCollector('E'), /Cần trời mưa/);
+    fixture.scene.weather.getGameplayEffects = () => ({ rainFactor: 0.6 });
+    assert.match(controller._updateWaterCollector('E'), /Đang hứng nước/);
+    fixture.scene.waterCollector.waterStored = fixture.scene.waterCollector.maxWater;
+    assert.match(controller._updateWaterCollector('E'), /Đã đầy/);
+});

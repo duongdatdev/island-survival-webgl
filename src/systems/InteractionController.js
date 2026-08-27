@@ -61,9 +61,19 @@ export class InteractionController {
         if (!scene.waterCollector.isPlayerNear(scene.player.position)) return '';
 
         const stored = scene.waterCollector.waterStored;
-        const prompt = stored > 0
-            ? `<span class="hint-key">${interactKey}</span> Lấy nước (${stored}/${scene.waterCollector.maxWater}) 💧`
-            : `Bẫy nước đang hứng... (0/${scene.waterCollector.maxWater}) 💧`;
+        const maxWater = scene.waterCollector.maxWater;
+        const rainFactor = scene.weather?.getGameplayEffects?.().rainFactor || 0;
+        let prompt;
+        if (stored >= maxWater) {
+            prompt = `<span class="hint-key">${interactKey}</span> Lấy nước — Đã đầy (${stored}/${maxWater}) 💧`;
+        } else if (stored > 0) {
+            const status = rainFactor > 0 ? 'Đang hứng' : 'Cần mưa';
+            prompt = `<span class="hint-key">${interactKey}</span> Lấy nước (${stored}/${maxWater}) · ${status} 💧`;
+        } else if (rainFactor > 0) {
+            prompt = `Đang hứng nước... (0/${maxWater}) 💧`;
+        } else {
+            prompt = `Cần trời mưa để hứng nước (0/${maxWater}) 💧`;
+        }
 
         if (stored > 0 && scene.engine.input.isKeyPressed('interact')) {
             scene.engine.input.consumeAction('interact');

@@ -143,6 +143,7 @@ export class GameSaveController {
         scene.waterCollector.isBuilt = !!collector.isBuilt;
         scene.waterCollector.position.set(collector.position);
         scene.waterCollector.waterStored = collector.waterStored || 0;
+        scene.waterCollector.rainProgress = collector.rainProgress || 0;
         scene.waterCollector.updateModelMatrix();
 
         scene.unlockedBlueprints = new Set(save.blueprints || []);

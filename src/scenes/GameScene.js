@@ -788,6 +788,8 @@ export class GameScene extends Scene {
             }
         }
 
+        this.weather.update(deltaTime);
+        const weatherEffects = this.weather.getGameplayEffects();
         const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         for (let i = this.creatures.length - 1; i >= 0; i--) {
             const creature = this.creatures[i];
@@ -924,7 +926,7 @@ export class GameScene extends Scene {
         }
 
         this.campfire.update(deltaTime);
-        this.waterCollector.update(deltaTime);
+        this.waterCollector.update(deltaTime, weatherEffects.rainFactor);
 
         this.particleSystem.update(deltaTime);
 
@@ -933,8 +935,6 @@ export class GameScene extends Scene {
         }
 
         this.tutorial.update(deltaTime, this.engine.input, this.player);
-
-        this.weather.update(deltaTime);
 
         const rotateLight = this._domCache.lightRot ? this._domCache.lightRot.checked : true;
         if (rotateLight) {

@@ -66,7 +66,12 @@ test('captured saves retain removed environment objects', () => {
             motorPlaced: false,
         },
         campfire: { isBuilt: false, position: [0, 0, 0] },
-        waterCollector: { isBuilt: false, position: [0, 0, 0], waterStored: 0 },
+        waterCollector: {
+            isBuilt: false,
+            position: [0, 0, 0],
+            waterStored: 0,
+            rainProgress: 0.625,
+        },
         unlockedBlueprints: new Set(),
         dayNight: { timeOfDay: 0.25 },
         weather: {
@@ -83,6 +88,7 @@ test('captured saves retain removed environment objects', () => {
     const save = SaveSystem.captureScene(scene);
     assert.deepEqual(save.environment.removedObjectIds, ['4', '19']);
     assert.equal(save.ui.pinnedRecipeId, 'stone_axe');
+    assert.equal(save.structures.waterCollector.rainProgress, 0.625);
 });
 
 test('page lifecycle saves hidden sessions and unregisters cleanly', () => {

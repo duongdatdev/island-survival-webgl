@@ -202,6 +202,7 @@ export class SaveSystem {
                     isBuilt: scene.waterCollector.isBuilt,
                     position: [scene.waterCollector.position[0], scene.waterCollector.position[1], scene.waterCollector.position[2]],
                     waterStored: scene.waterCollector.waterStored,
+                    rainProgress: scene.waterCollector.rainProgress || 0,
                 },
             },
             blueprints: Array.from(scene.unlockedBlueprints),

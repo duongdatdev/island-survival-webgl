@@ -32,6 +32,15 @@ export const MOVEMENT_FEEL = Object.freeze({
     sprintBobMultiplier: 1.4,
 });
 
+export const WEATHER_GAMEPLAY_BALANCE = Object.freeze({
+    waterCollectorSecondsPerUnitAtFullRain: 45,
+    maxDebrisWindWeight: 0.4,
+    maxDebrisSpeedBoost: 0.35,
+    maxSharkDetectionBoost: 0.4,
+    maxSharkSpeedBoost: 0.2,
+    minimumCampfireIntensity: 0.4,
+});
+
 export const CREATURE_BALANCE = Object.freeze({
     crab: Object.freeze({
         maxHealth: 10,
