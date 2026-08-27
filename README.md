@@ -1,6 +1,6 @@
 # Island Survival: Escape
 
-Island Survival: Escape is a browser-based third-person survival game built with WebGL 2 and vanilla JavaScript. Explore a procedurally generated tropical island, manage your condition, gather resources, craft a raft, and escape before the island defeats you.
+Island Survival: Escape is a browser-based first-person survival game built with WebGL 2 and vanilla JavaScript. Explore a procedurally generated tropical island, manage your condition, gather resources, craft a raft, and escape before the island defeats you.
 
 ![Gameplay overview](docs/images/gameplay-overview.png)
 
@@ -54,11 +54,13 @@ The production output is written to `dist/`. The build copies only models and ma
 | --- | --- |
 | W, A, S, D | Move |
 | Shift | Sprint while stamina is available |
-| Left mouse button and drag | Orbit the camera |
-| Mouse wheel | Zoom the camera |
+| Mouse | Look around while the pointer is locked |
+| Left mouse button | Attack or chop with the equipped weapon |
+| Mouse wheel | Select a hotbar slot |
 | E | Interact, collect, or install raft parts |
-| Tab | Toggle the inventory HUD |
-| C | Open or close crafting |
+| Tab or C | Open or close inventory and crafting |
+| Q | Use or place the active item |
+| Esc | Pause and release the pointer |
 | L | Lock the mouse cursor for direct camera look |
 | Escape | Pause the game |
 | F3 | Toggle the debug panel |

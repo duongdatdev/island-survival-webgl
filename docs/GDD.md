@@ -8,7 +8,7 @@
 
 ## Elevator Pitch
 
-Island Survival: Escape is a third-person 3D survival and crafting game
+Island Survival: Escape is a first-person 3D survival and crafting game
 built with WebGL. The player wakes up alone on a deserted island after a
 shipwreck. Instead of surviving forever, the objective is to gather
 resources, collect floating debris carried by ocean currents, craft raft
@@ -19,7 +19,7 @@ modules, assemble a raft, and escape.
 -   Survival
 -   Crafting
 -   Exploration
--   Third Person
+-   First Person
 
 ## Platform
 
@@ -52,10 +52,13 @@ Craft Equipment → Craft Raft Modules → Assemble Raft → Escape
 # 5. Controls
 
 -   WASD: Move
--   Mouse: Camera
+-   Mouse: First-person camera while pointer-locked
+-   Left Mouse: Attack / Chop
+-   Mouse Wheel: Select hotbar slot
 -   E: Interact / Pickup
--   Tab: Inventory
--   C: Craft
+-   Tab / C: Inventory and Crafting
+-   Q: Use / Place active item
+-   Esc: Pause and release pointer lock
 -   ESC: Pause
 
 # 6. World
