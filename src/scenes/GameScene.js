@@ -47,6 +47,7 @@ import { GameSaveController } from '../systems/GameSaveController.js';
 import { InteractionController } from '../systems/InteractionController.js';
 import { InventoryController } from '../systems/InventoryController.js';
 import { ObjectiveTracker } from '../systems/ObjectiveTracker.js';
+import { MovementFeedback } from '../systems/MovementFeedback.js';
 import { MenuUI } from '../systems/MenuUI.js';
 import { createStats } from '../systems/AchievementSystem.js';
 import { PostProcessing } from '../renderer/PostProcessing.js';
@@ -347,8 +348,9 @@ export class GameScene extends Scene {
         this.time = 0.0;
         this.tempMatrix = Mat4.create();
 
-        this._footstepTimer = 0;
-        this._footstepInterval = 0.4;
+        this.movementFeedback = new MovementFeedback({
+            reducedMotion: !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+        });
 
         this.collisionSystem = new CollisionSystem();
         this.collisionDebug = new CollisionDebug(gl);
@@ -753,18 +755,29 @@ export class GameScene extends Scene {
             this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain, CollisionLayers.Creature);
         }
 
-        if (this.player.currentSpeed > 0.1) {
-            this._footstepTimer += deltaTime;
-            const running = this.player.currentSpeed > PLAYER_BALANCE.walkSpeed + 0.1;
-            if (this._footstepTimer >= (running ? this._footstepInterval * 0.7 : this._footstepInterval)) {
-                this._footstepTimer = 0.0;
-                const px = this.player.position[0];
-                const pz = this.player.position[2];
-                const h = this.terrain ? this.terrain.getHeight(px, pz) : 0;
-                const biomeGen = this.world ? this.world.biomeGenerator : null;
-                const biome = biomeGen ? biomeGen.getBiome(px, pz, h) : null;
-                this.engine.audio.playFootstep(biomeToSurface(biome), running);
+        const distanceMoved = Math.hypot(
+            this.player.position[0] - prevPlayerPos[0],
+            this.player.position[2] - prevPlayerPos[2]
+        );
+        const movementFeel = this.movementFeedback.update(
+            deltaTime,
+            distanceMoved,
+            this.player.currentSpeed,
+            isSprinting
+        );
+        this.camera.setMotionOffset(movementFeel.horizontalOffset, movementFeel.verticalOffset);
+        this.camera.setGameplayFov(this.engine.settings.get('fov'), movementFeel.fovBoostDegrees);
 
+        if (movementFeel.stepCount > 0) {
+            const px = this.player.position[0];
+            const pz = this.player.position[2];
+            const h = this.terrain ? this.terrain.getHeight(px, pz) : 0;
+            const biomeGen = this.world ? this.world.biomeGenerator : null;
+            const biome = biomeGen ? biomeGen.getBiome(px, pz, h) : null;
+            const surface = biomeToSurface(biome);
+            this.engine.audio.playFootstep(surface, movementFeel.running);
+
+            if (surface !== 'water') {
                 const dustPos = [
                     this.player.position[0],
                     this.player.position[1] - this.player.collider.height * 0.5 + 0.1,
@@ -772,8 +785,6 @@ export class GameScene extends Scene {
                 ];
                 this.particleSystem.emit(dustPos, ParticleSystem.PRESET.DUST);
             }
-        } else {
-            this._footstepTimer = this._footstepInterval * 0.8;
         }
 
         const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);

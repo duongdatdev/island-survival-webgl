@@ -21,6 +21,17 @@ export const ENVIRONMENT_BALANCE = Object.freeze({
     weatherTransitionSeconds: 12,
 });
 
+export const MOVEMENT_FEEL = Object.freeze({
+    walkStepDistance: 1.25,
+    sprintStepDistance: 1.35,
+    sprintFovBoostDegrees: 4,
+    fovResponse: 9,
+    motionResponse: 8,
+    walkBobHorizontal: 0.008,
+    walkBobVertical: 0.014,
+    sprintBobMultiplier: 1.4,
+});
+
 export const CREATURE_BALANCE = Object.freeze({
     crab: Object.freeze({
         maxHealth: 10,

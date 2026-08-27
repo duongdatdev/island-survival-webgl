@@ -14,6 +14,7 @@ export class Camera {
         this.projectionMatrix = Mat4.create();
         this.position = Vec3.create(0, 0, 0);
         this.target = Vec3.create(0, 0, 1);
+        this._motionOffset = Vec3.create();
 
         this._cfg = new CameraConfig();
         this.config = {};
@@ -71,6 +72,15 @@ export class Camera {
         }
     }
 
+    setGameplayFov(baseDegrees, boostDegrees = 0) {
+        this.setFov((baseDegrees + boostDegrees) * Math.PI / 180);
+    }
+
+    setMotionOffset(horizontal = 0, vertical = 0) {
+        this._motionOffset[0] = horizontal;
+        this._motionOffset[1] = vertical;
+    }
+
     setLookSettings(multiplier, invertY = false) {
         this.config.mouseSensitivity = this._cfg.Orbit.mouseSensitivity * multiplier;
         this.config.invertY = invertY;
@@ -115,9 +125,11 @@ export class Camera {
 
         Vec3.set(
             this.position,
-            playerPos[0] + Math.sin(this._smoothYaw) * forwardOffset,
-            playerPos[1] + eyeOffset,
+            playerPos[0] + Math.sin(this._smoothYaw) * forwardOffset
+                + Math.cos(this._smoothYaw) * this._motionOffset[0],
+            playerPos[1] + eyeOffset + this._motionOffset[1],
             playerPos[2] + Math.cos(this._smoothYaw) * forwardOffset
+                - Math.sin(this._smoothYaw) * this._motionOffset[0]
         );
 
         const cosPitch = Math.cos(this._smoothPitch);
