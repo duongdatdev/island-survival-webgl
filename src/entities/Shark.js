@@ -47,7 +47,7 @@ export class Shark extends Creature {
         this.updateModelMatrix();
     }
 
-    update(deltaTime, playerPosition, terrain, playerTerrainHeight) {
+    update(deltaTime, playerPosition, terrain, playerTerrainHeight, environmentEffects = null) {
         if (this.state === CreatureState.DEAD) {
             this.deadTimer += deltaTime;
             this.position[1] -= deltaTime * 0.5;
@@ -65,11 +65,20 @@ export class Shark extends Creature {
         const distToPlayer = Math.sqrt(dx * dx + dz * dz);
 
         const playerInWater = playerTerrainHeight !== undefined && playerTerrainHeight <= 0.3;
+        const detectionMultiplier = Math.max(
+            1,
+            Math.min(1.4, environmentEffects?.sharkDetectionMultiplier || 1)
+        );
+        const chaseSpeedMultiplier = Math.max(
+            1,
+            Math.min(1.2, environmentEffects?.sharkSpeedMultiplier || 1)
+        );
+        const detectionRadius = this.detectionRadius * detectionMultiplier;
 
         switch (this.state) {
             case CreatureState.IDLE:
                 this._patrolWater(deltaTime);
-                if (distToPlayer < this.detectionRadius && playerInWater) {
+                if (distToPlayer < detectionRadius && playerInWater) {
                     this.state = CreatureState.CHASE;
                     this._stateTimer = 0;
                 }
@@ -81,7 +90,7 @@ export class Shark extends Creature {
 
             case CreatureState.PATROL:
                 this._patrolWater(deltaTime);
-                if (distToPlayer < this.detectionRadius && playerInWater) {
+                if (distToPlayer < detectionRadius && playerInWater) {
                     this.state = CreatureState.CHASE;
                     this._stateTimer = 0;
                 }
@@ -110,8 +119,8 @@ export class Shark extends Creature {
                     && distToPlayer > 0.0001) {
                     const rushX = dx / distToPlayer;
                     const rushZ = dz / distToPlayer;
-                    this.position[0] += rushX * this._rushSpeed * deltaTime;
-                    this.position[2] += rushZ * this._rushSpeed * deltaTime;
+                    this.position[0] += rushX * this._rushSpeed * chaseSpeedMultiplier * deltaTime;
+                    this.position[2] += rushZ * this._rushSpeed * chaseSpeedMultiplier * deltaTime;
                     this.rotation[1] = Math.atan2(rushX, rushZ);
                 } else {
                     const angleToPlayer = Math.atan2(dx, dz);
@@ -122,8 +131,10 @@ export class Shark extends Creature {
                     const toTargetZ = targetZ - this.position[2];
                     const toTargetLen = Math.hypot(toTargetX, toTargetZ);
                     if (toTargetLen > 0.1) {
-                        this.position[0] += (toTargetX / toTargetLen) * this.speed * deltaTime;
-                        this.position[2] += (toTargetZ / toTargetLen) * this.speed * deltaTime;
+                        this.position[0] += (toTargetX / toTargetLen)
+                            * this.speed * chaseSpeedMultiplier * deltaTime;
+                        this.position[2] += (toTargetZ / toTargetLen)
+                            * this.speed * chaseSpeedMultiplier * deltaTime;
                         this.rotation[1] = Math.atan2(toTargetX, toTargetZ);
                     }
                 }

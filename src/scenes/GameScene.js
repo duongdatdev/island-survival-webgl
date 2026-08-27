@@ -794,7 +794,13 @@ export class GameScene extends Scene {
         for (let i = this.creatures.length - 1; i >= 0; i--) {
             const creature = this.creatures[i];
 
-            creature.update(deltaTime, this.player.position, this.terrain, playerTerrainHeight);
+            creature.update(
+                deltaTime,
+                this.player.position,
+                this.terrain,
+                playerTerrainHeight,
+                weatherEffects
+            );
 
             if (this.collisionSystem) {
                 this.collisionSystem.resolvePlayerCollisions(creature, this.terrain);

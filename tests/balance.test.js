@@ -241,3 +241,32 @@ test('shark rush uses one capped movement step', () => {
     assert.ok(Math.abs(shark.position[0] - CREATURE_BALANCE.shark.rushSpeed * 0.1) < 1e-6);
     assert.ok(Math.abs(shark.position[2]) < 1e-6);
 });
+
+test('storms increase shark detection without changing clear behavior', () => {
+    const clearShark = new Shark(null, [0, 0.1, 0]);
+    clearShark.update(0.01, [9, 0.1, 0], null, 0, {
+        sharkDetectionMultiplier: 1,
+        sharkSpeedMultiplier: 1,
+    });
+    assert.notEqual(clearShark.state, CreatureState.CHASE);
+
+    const stormShark = new Shark(null, [0, 0.1, 0]);
+    stormShark.update(0.01, [9, 0.1, 0], null, 0, {
+        sharkDetectionMultiplier: 10,
+        sharkSpeedMultiplier: 1,
+    });
+    assert.equal(stormShark.state, CreatureState.CHASE);
+});
+
+test('storms cap shark chase and rush speed at a twenty percent boost', () => {
+    const shark = new Shark(null, [0, 0.1, 0]);
+    shark.state = CreatureState.CHASE;
+    shark.update(0.1, [4, 0.1, 0], null, 0, {
+        sharkDetectionMultiplier: 1,
+        sharkSpeedMultiplier: 10,
+    });
+
+    const expectedDistance = CREATURE_BALANCE.shark.rushSpeed * 1.2 * 0.1;
+    assert.ok(Math.abs(shark.position[0] - expectedDistance) < 1e-6);
+    assert.ok(Math.abs(shark.position[2]) < 1e-6);
+});
