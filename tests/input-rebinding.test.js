@@ -92,6 +92,42 @@ test('consumeAction consumes all keys bound to action', () => {
     assert.equal(input.isActionDown('interact'), false);
 });
 
+test('mouse movement accumulates all events until the frame resets', () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    const windowListeners = new Map();
+    const canvasListeners = new Map();
+
+    globalThis.window = {
+        addEventListener(type, listener) { windowListeners.set(type, listener); },
+    };
+    globalThis.document = {
+        addEventListener() {},
+        getElementById() { return null; },
+    };
+    const canvas = {
+        addEventListener(type, listener) { canvasListeners.set(type, listener); },
+    };
+
+    try {
+        const input = new InputManager(canvas);
+        input.mouse.isLocked = true;
+
+        windowListeners.get('mousemove')({ movementX: 4, movementY: -3 });
+        windowListeners.get('mousemove')({ movementX: -1, movementY: 5 });
+
+        assert.equal(input.mouse.deltaX, 3);
+        assert.equal(input.mouse.deltaY, 2);
+
+        input.resetDeltas();
+        assert.equal(input.mouse.deltaX, 0);
+        assert.equal(input.mouse.deltaY, 0);
+    } finally {
+        globalThis.window = originalWindow;
+        globalThis.document = originalDocument;
+    }
+});
+
 test('SettingsManager persists and resets keyBindings', () => {
     const storage = {};
     globalThis.localStorage = {

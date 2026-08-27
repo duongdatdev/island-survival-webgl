@@ -313,15 +313,15 @@ export class InputManager {
 
             window.addEventListener('mousemove', (e) => {
                 if (this.mouse.isLocked) {
-                    this.mouse.deltaX = e.movementX;
-                    this.mouse.deltaY = e.movementY;
+                    this.mouse.deltaX += e.movementX;
+                    this.mouse.deltaY += e.movementY;
                 } else {
                     this.mouse.x = e.clientX;
                     this.mouse.y = e.clientY;
 
                     if (this.mouse.buttons[0]) {
-                        this.mouse.deltaX = e.clientX - this.mouse.lastX;
-                        this.mouse.deltaY = e.clientY - this.mouse.lastY;
+                        this.mouse.deltaX += e.clientX - this.mouse.lastX;
+                        this.mouse.deltaY += e.clientY - this.mouse.lastY;
                     }
 
                     this.mouse.lastX = e.clientX;
