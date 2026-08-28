@@ -94,6 +94,31 @@ export const COMBAT_BALANCE = Object.freeze({
     }),
 });
 
+export const EXPOSURE_BALANCE = Object.freeze({
+    maximum: 100,
+    maximumSubstep: 0.1,
+    wetness: Object.freeze({
+        waterGainPerSecond: 10,
+        rainGainPerSecond: 0.8,
+        dayDryPerSecond: 0.25,
+        nightDryPerSecond: 0.12,
+        campfireDryPerSecond: 4,
+    }),
+    warmth: Object.freeze({
+        nightLossPerSecond: 0.08,
+        rainLossPerSecond: 0.12,
+        wetnessLossPerSecond: 0.35,
+        waterLossPerSecond: 0.20,
+        dayRecoveryPerSecond: 0.18,
+        campfireRecoveryPerSecond: 2.5,
+    }),
+    coldThreshold: 40,
+    freezingThreshold: 20,
+    minimumStaminaRegenMultiplier: 0.5,
+    freezingSpeedMultiplier: 0.85,
+    maximumHealthLossPerSecond: 0.5,
+});
+
 export const CREATURE_BALANCE = Object.freeze({
     crab: Object.freeze({
         maxHealth: 10,
