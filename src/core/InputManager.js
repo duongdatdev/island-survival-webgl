@@ -288,32 +288,10 @@ export class InputManager {
                 return;
             }
 
-            const isTextInput = e.target && (
-                e.target.tagName === 'INPUT' && e.target.type === 'text' ||
-                e.target.tagName === 'TEXTAREA'
-            );
+            const isTextInput = this._isEditableTarget(e.target);
 
-            if (!isTextInput) {
-                if ([
-                    'Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-                    'PageUp', 'PageDown', 'Home', 'End'
-                ].includes(e.code)) {
-                    e.preventDefault();
-                }
-
-                if (['F1', 'F3', 'F7'].includes(e.code)) {
-                    e.preventDefault();
-                }
-
-                if (e.ctrlKey || e.metaKey) {
-                    if (['KeyS', 'KeyP', 'KeyF', 'KeyG', 'KeyD', 'KeyH', 'KeyJ', 'KeyU'].includes(e.code)) {
-                        e.preventDefault();
-                    }
-                }
-
-                if (e.code === 'Escape') {
-                    e.preventDefault();
-                }
+            if (this.pointerLockEnabled && !isTextInput) {
+                e.preventDefault();
             }
 
             this.keys[e.code] = true;
@@ -328,12 +306,15 @@ export class InputManager {
                     }
                 }
             }
-        });
+        }, { capture: true });
 
         window.addEventListener('keyup', (e) => {
+            if (this.pointerLockEnabled && !this._isEditableTarget(e.target)) {
+                e.preventDefault();
+            }
             this.keys[e.code] = false;
             this._updateDebugKeyUI();
-        });
+        }, { capture: true });
 
         if (this.canvas) {
             this.canvas.addEventListener('contextmenu', (e) => {
@@ -368,8 +349,9 @@ export class InputManager {
             });
 
             this.canvas.addEventListener('wheel', (e) => {
+                if (this.pointerLockEnabled) e.preventDefault();
                 this.mouse.wheelDelta = Math.sign(e.deltaY);
-            }, { passive: true });
+            }, { passive: false });
         }
 
         if (typeof document !== 'undefined') {
@@ -388,6 +370,18 @@ export class InputManager {
                 if (this.onPointerLockChange) this.onPointerLockChange(isLocked, wasLocked);
             });
         }
+    }
+
+    _isEditableTarget(target) {
+        if (!target) return false;
+        if (target.isContentEditable) return true;
+
+        const tagName = target.tagName?.toUpperCase();
+        if (tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+        if (tagName !== 'INPUT') return false;
+
+        const type = (target.type || 'text').toLowerCase();
+        return !['button', 'checkbox', 'radio', 'range', 'reset', 'submit'].includes(type);
     }
 
     _updateDebugKeyUI() {

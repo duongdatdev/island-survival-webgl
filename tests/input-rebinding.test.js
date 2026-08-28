@@ -201,6 +201,90 @@ test('pointer lock capture click is consumed and unlock clears mouse state', () 
     }
 });
 
+test('gameplay captures browser keyboard shortcuts but menus and text fields do not', () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    const windowListeners = new Map();
+
+    globalThis.window = {
+        addEventListener(type, listener) { windowListeners.set(type, listener); },
+    };
+    globalThis.document = {
+        addEventListener() {},
+        getElementById() { return null; },
+    };
+
+    const makeEvent = (code, overrides = {}) => {
+        let prevented = false;
+        return {
+            code,
+            target: null,
+            preventDefault() { prevented = true; },
+            wasPrevented() { return prevented; },
+            ...overrides,
+        };
+    };
+
+    try {
+        const input = new InputManager(null);
+        const keydown = windowListeners.get('keydown');
+
+        const menuShortcut = makeEvent('KeyR', { ctrlKey: true });
+        keydown(menuShortcut);
+        assert.equal(menuShortcut.wasPrevented(), false);
+
+        input.setPointerLockEnabled(true);
+        for (const event of [
+            makeEvent('Tab'),
+            makeEvent('F5'),
+            makeEvent('KeyR', { ctrlKey: true }),
+            makeEvent('ArrowLeft', { altKey: true }),
+            makeEvent('Equal', { ctrlKey: true }),
+        ]) {
+            keydown(event);
+            assert.equal(event.wasPrevented(), true, `${event.code} should be captured during gameplay`);
+        }
+
+        const typing = makeEvent('KeyA', { target: { tagName: 'INPUT', type: 'text' } });
+        keydown(typing);
+        assert.equal(typing.wasPrevented(), false);
+    } finally {
+        globalThis.window = originalWindow;
+        globalThis.document = originalDocument;
+    }
+});
+
+test('gameplay wheel input cannot scroll or zoom the browser', () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    const canvasListeners = new Map();
+
+    globalThis.window = { addEventListener() {} };
+    globalThis.document = {
+        addEventListener() {},
+        getElementById() { return null; },
+    };
+    const canvas = {
+        addEventListener(type, listener) { canvasListeners.set(type, listener); },
+    };
+
+    try {
+        const input = new InputManager(canvas);
+        input.setPointerLockEnabled(true);
+        let prevented = false;
+        canvasListeners.get('wheel')({
+            deltaY: 10,
+            preventDefault() { prevented = true; },
+        });
+
+        assert.equal(prevented, true);
+        assert.equal(input.mouse.wheelDelta, 1);
+    } finally {
+        globalThis.window = originalWindow;
+        globalThis.document = originalDocument;
+    }
+});
+
 test('SettingsManager persists and resets keyBindings', () => {
     const storage = {};
     globalThis.localStorage = {
