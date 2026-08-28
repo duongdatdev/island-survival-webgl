@@ -3480,6 +3480,27 @@ input:checked + .slider:before {
     border-radius: 50%;
 }
 
+.crosshair-charge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    opacity: 0;
+    background: conic-gradient(
+        rgba(243, 207, 122, 0.95) var(--bow-charge-angle, 0deg),
+        rgba(255, 255, 255, 0.12) 0
+    );
+    -webkit-mask: radial-gradient(circle, transparent 57%, #000 61%);
+    mask: radial-gradient(circle, transparent 57%, #000 61%);
+}
+
+.crosshair.bow-charging .crosshair-charge {
+    opacity: 1;
+}
+
 /* ============================================
    v1.1 — Hit Marker
    ============================================ */
@@ -3659,6 +3680,7 @@ input:checked + .slider:before {
     /* Narrower only — the height carries three fixed lanes. */
     .compass-bar { width: 170px; }
     .crosshair-ring { width: 14px; height: 14px; }
+    .crosshair-charge { width: 26px; height: 26px; }
     .settings-tab { font-size: 11px; }
 }
 

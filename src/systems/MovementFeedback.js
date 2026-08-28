@@ -7,6 +7,12 @@ export class MovementFeedback {
         this.phase = 0;
         this.motionAmount = 0;
         this.fovBoostDegrees = 0;
+        this.combatKick = 0;
+    }
+
+    triggerCombatKick(amount = 0.012) {
+        if (this.reducedMotion) return;
+        this.combatKick = Math.max(this.combatKick, Math.max(0, amount));
     }
 
     update(deltaTime, distanceMoved, currentSpeed, isSprinting) {
@@ -34,9 +40,13 @@ export class MovementFeedback {
             : 0;
         const fovResponse = 1 - Math.exp(-MOVEMENT_FEEL.fovResponse * deltaTime);
         this.fovBoostDegrees += (targetFovBoost - this.fovBoostDegrees) * fovResponse;
+        const kickOffset = this.combatKick;
+        this.combatKick *= Math.exp(-18 * deltaTime);
+        if (this.combatKick < 0.0001) this.combatKick = 0;
 
         if (this.reducedMotion) {
             this.fovBoostDegrees = 0;
+            this.combatKick = 0;
             return {
                 stepCount,
                 running,
@@ -54,7 +64,8 @@ export class MovementFeedback {
             horizontalOffset: Math.sin(this.phase) * MOVEMENT_FEEL.walkBobHorizontal
                 * bobMultiplier * this.motionAmount,
             verticalOffset: (Math.abs(Math.cos(this.phase)) - 0.5)
-                * MOVEMENT_FEEL.walkBobVertical * bobMultiplier * this.motionAmount,
+                * MOVEMENT_FEEL.walkBobVertical * bobMultiplier * this.motionAmount
+                - kickOffset,
         };
     }
 }

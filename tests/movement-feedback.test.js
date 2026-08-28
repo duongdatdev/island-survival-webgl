@@ -22,6 +22,19 @@ test('reduced motion keeps footsteps but disables camera motion', () => {
     assert.equal(state.verticalOffset, 0);
 });
 
+test('combat kick decays and reduced motion suppresses it', () => {
+    const feedback = new MovementFeedback();
+    feedback.triggerCombatKick(0.02);
+    const kicked = feedback.update(1 / 60, 0, 0, false);
+    const decayed = feedback.update(0.2, 0, 0, false);
+    assert.ok(kicked.verticalOffset < -0.019);
+    assert.ok(Math.abs(decayed.verticalOffset) < Math.abs(kicked.verticalOffset));
+
+    const reduced = new MovementFeedback({ reducedMotion: true });
+    reduced.triggerCombatKick(0.02);
+    assert.equal(reduced.update(1 / 60, 0, 0, false).verticalOffset, 0);
+});
+
 test('sprint feedback smoothly approaches its fov boost', () => {
     const feedback = new MovementFeedback();
     const state = feedback.update(0.5, 2.2, 4.4, true);

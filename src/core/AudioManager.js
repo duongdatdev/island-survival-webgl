@@ -463,6 +463,35 @@ export class AudioManager {
         });
     }
 
+    playPunch(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position, SpatialProfiles.prop);
+        const now = this.ctx.currentTime;
+        this._playBuffer(this._softBuffer(), {
+            destination,
+            when: now,
+            gain: 0.16,
+            playbackRate: 0.48,
+            decay: 0.12,
+            filters: [{ type: 'bandpass', frequency: 720, Q: 0.9, sweepTo: 240, sweepTime: 0.1 }],
+        });
+        this._tone({
+            freq: 115, freqTo: 72, glide: 0.08, type: 'triangle',
+            gain: 0.08, attack: 0.002, decay: 0.09, when: now, destination,
+        });
+    }
+
+    playThrust(position = null) {
+        if (!this._ensureContext()) return;
+        this._playBuffer(this._softBuffer(), {
+            destination: this._target(position, SpatialProfiles.prop),
+            gain: 0.14,
+            playbackRate: 0.7,
+            decay: 0.16,
+            filters: [{ type: 'highpass', frequency: 780, sweepTo: 2600, sweepTime: 0.14 }],
+        });
+    }
+
     playBowRelease(position = null) {
         if (!this._ensureContext()) return;
         const destination = this._target(position, SpatialProfiles.prop);
@@ -490,6 +519,23 @@ export class AudioManager {
         this._tone({
             freq: rand(90, 130), freqTo: 55, glide: 0.13, type: 'sine',
             gain: 0.17, attack: 0.003, decay: 0.14, when: now, destination,
+        });
+    }
+
+    playArrowImpact(position = null) {
+        if (!this._ensureContext()) return;
+        const destination = this._target(position);
+        const now = this.ctx.currentTime;
+        this._playBuffer(this._impactBuffer(), {
+            destination,
+            when: now,
+            gain: 0.2,
+            decay: 0.09,
+            filters: [{ type: 'highpass', frequency: 650, Q: 1.3 }],
+        });
+        this._tone({
+            freq: 780, freqTo: 310, glide: 0.07, type: 'triangle',
+            gain: 0.07, attack: 0.001, decay: 0.08, when: now, destination,
         });
     }
 

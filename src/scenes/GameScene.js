@@ -1095,6 +1095,11 @@ export class GameScene extends Scene {
                 (getResourceDef(equipped.id) || {}).weaponType
             );
             dom.crosshair.classList.toggle('hidden', !isWeapon || this.isPaused || this.isEscaping);
+            const bowCharge = this._pendingBowCharge
+                ? this.firstPersonViewModel.getBowCharge()
+                : 0;
+            dom.crosshair.classList.toggle('bow-charging', !!this._pendingBowCharge);
+            dom.crosshair.style.setProperty('--bow-charge-angle', `${bowCharge * 360}deg`);
         }
     }
 
@@ -1834,8 +1839,9 @@ export class GameScene extends Scene {
             if (!pendingAttack) return;
 
             this._pendingMeleeImpact = { pendingAttack, equippedItem };
-            this.firstPersonViewModel.beginAttack(equippedItem?.id || 'fist');
-            this.engine.audio.playSwing(null);
+            const weaponId = equippedItem?.id || 'fist';
+            this.firstPersonViewModel.beginAttack(weaponId);
+            this._playWeaponStartFeedback(weaponId);
             return;
         }
 
@@ -1886,9 +1892,25 @@ export class GameScene extends Scene {
         if (!spec || spec.reason) return;
         this.projectileSystem.spawnArrow(spec);
         this.engine.audio.playBowRelease(null);
+        this.movementFeedback.triggerCombatKick(0.014);
     }
 
     _handleProjectileImpact(impact) {
+        this.engine.audio.playArrowImpact(impact.point);
+        this.particleSystem.emit(impact.point, {
+            count: 5,
+            color: impact.creature ? [0.95, 0.45, 0.12] : [0.58, 0.48, 0.34],
+            colorVariance: 0.12,
+            size: 3,
+            sizeVariance: 2,
+            speed: 1.6,
+            speedVariance: 0.7,
+            lifetime: 0.28,
+            lifetimeVariance: 0.1,
+            gravity: -2.5,
+            spread: 0.4,
+            yBias: 0.8,
+        });
         if (!impact.creature) return;
         this._applyCombatImpactFeedback({
             hit: true,
@@ -1896,6 +1918,19 @@ export class GameScene extends Scene {
             damage: impact.damage,
             swung: true,
         }, null, { id: 'bow' }, false);
+    }
+
+    _playWeaponStartFeedback(weaponId) {
+        if (weaponId === 'fist') {
+            this.engine.audio.playPunch(null);
+            this.movementFeedback.triggerCombatKick(0.008);
+        } else if (weaponId === 'spear') {
+            this.engine.audio.playThrust(null);
+            this.movementFeedback.triggerCombatKick(0.012);
+        } else {
+            this.engine.audio.playSwing(null);
+            this.movementFeedback.triggerCombatKick(0.018);
+        }
     }
 
     _resolvePendingMeleeImpact(weaponEvent) {
@@ -1953,7 +1988,9 @@ export class GameScene extends Scene {
                 this.engine.audio.playCreatureDie(creatureKind, result.creature.position);
                 this._showHitMarker(true);
             } else {
-                this.engine.audio.playHit(result.creature.position);
+                if (weaponType !== 'ranged') {
+                    this.engine.audio.playHit(result.creature.position);
+                }
                 this.engine.audio.playCreatureHurt(creatureKind, result.creature.position);
                 this._showHitMarker(false);
             }
