@@ -1,7 +1,10 @@
 import { Mat4 } from '../math/Mat4.js';
 import { Mesh } from '../renderer/Mesh.js';
-import { AXE_IMPACT_TIME, AXE_SWING_DURATION } from '../systems/CombatConfig.js';
-import { getWeaponProfile } from '../systems/CombatConfig.js';
+import {
+    AXE_IMPACT_TIME,
+    AXE_SWING_DURATION,
+    getWeaponProfile,
+} from '../systems/CombatConfig.js';
 
 const DEG_TO_RAD = Math.PI / 180;
 const SKIN_COLOR = [0.82, 0.62, 0.48, 1.0];
@@ -74,9 +77,9 @@ export class FirstPersonViewModel {
         if (!this._impactEmitted && previousSwingElapsed < impactTime
             && this._swingElapsed >= impactTime) {
             this._impactEmitted = true;
-            return true;
+            return { type: 'impact', weaponId: this.weaponId };
         }
-        return false;
+        return null;
     }
 
     triggerSwing() {
@@ -212,6 +215,7 @@ export class FirstPersonViewModel {
             pitch: -10 * DEG_TO_RAD * strike,
             z: -0.30 * strike,
             charge: 0,
+            shoulderSide: this._activeSwingDirection,
         };
     }
 
@@ -259,7 +263,8 @@ export class FirstPersonViewModel {
         Mat4.identity(out);
         Mat4.translate(out, out, [bobX, bobY, 0]);
         Mat4.translate(out, out, [0, 0, pose.z || 0]);
-        Mat4.translate(out, out, SHOULDER_PIVOT);
+        const shoulderSide = pose.shoulderSide || 1;
+        Mat4.translate(out, out, [SHOULDER_PIVOT[0] * shoulderSide, SHOULDER_PIVOT[1], SHOULDER_PIVOT[2]]);
         Mat4.rotateZ(out, out, pose.roll);
         Mat4.rotateX(out, out, pose.pitch);
         Mat4.translate(out, out, [

@@ -67,9 +67,50 @@ test('first person axe view model emits one impact event per swing', () => {
     viewModel._nextSwingDirection = 1;
 
     viewModel.triggerSwing();
-    assert.equal(viewModel.update(0.23, false), false);
-    assert.equal(viewModel.update(0.02, false), true);
-    assert.equal(viewModel.update(0.1, false), false);
+    assert.equal(viewModel.update(0.23, false), null);
+    assert.deepEqual(viewModel.update(0.02, false), { type: 'impact', weaponId: 'stone_axe' });
+    assert.equal(viewModel.update(0.1, false), null);
+});
+
+test('fist and spear attacks resolve once at their configured impact', () => {
+    for (const weaponId of ['fist', 'spear']) {
+        const combat = new CombatSystem();
+        const creature = createCreature([0, 0, weaponId === 'fist' ? 1 : 2.5]);
+        const pending = combat.beginAttack({
+            origin: [0, 0, 0],
+            direction: [0, 0, 1],
+            yaw: 0,
+            equippedItem: weaponId === 'fist' ? null : { id: weaponId },
+            creatures: [creature],
+        });
+
+        assert.ok(pending);
+        assert.equal(creature.health, 30);
+        const impact = combat.resolveImpact(pending);
+        assert.equal(impact.hit, true);
+        assert.equal(creature.health, 30 - getWeaponProfile(weaponId).damage);
+        assert.equal(combat.resolveImpact(pending).swung, false);
+    }
+});
+
+test('spear uses the locked 3d aim ray instead of a horizontal cone', () => {
+    const combat = new CombatSystem();
+    const onRay = createCreature([0, 1.5, 2.5]);
+    onRay.collider = { radius: 0.15 };
+    const besideRay = createCreature([0.8, 0, 2.5]);
+    besideRay.collider = { radius: 0.15 };
+    const directionLength = Math.hypot(0, 1.5, 2.5);
+    const pending = combat.beginAttack({
+        origin: [0, 0, 0],
+        direction: [0, 1.5 / directionLength, 2.5 / directionLength],
+        yaw: 0,
+        equippedItem: { id: 'spear' },
+        creatures: [besideRay, onRay],
+    });
+
+    assert.equal(pending.target, onRay);
+    assert.equal(combat.resolveImpact(pending).hit, true);
+    assert.equal(besideRay.health, 30);
 });
 
 test('first person view model exposes fist spear and bow states', () => {
@@ -99,4 +140,29 @@ test('first person view model exposes fist spear and bow states', () => {
     assert.equal(viewModel.getBowCharge(), 0.5);
     assert.equal(viewModel.releaseBow(), 0.5);
     assert.equal(viewModel._bowCharging, false);
+});
+
+test('fist and spear viewmodels emit impact at their own timing', () => {
+    for (const weaponId of ['fist', 'spear']) {
+        const profile = getWeaponProfile(weaponId);
+        const viewModel = Object.create(FirstPersonViewModel.prototype);
+        Object.assign(viewModel, {
+            weaponId,
+            _time: 0,
+            _moveAmount: 0,
+            _swingElapsed: Infinity,
+            _swingDuration: profile.duration,
+            _impactEmitted: true,
+            _activeSwingDirection: 1,
+            _nextSwingDirection: 1,
+            _bowCharging: false,
+            _bowChargeElapsed: 0,
+            _bowReleaseElapsed: Infinity,
+        });
+
+        viewModel.beginAttack(weaponId);
+        assert.equal(viewModel.update(profile.impactTime - 0.01, false), null);
+        assert.deepEqual(viewModel.update(0.02, false), { type: 'impact', weaponId });
+        assert.equal(viewModel.update(profile.duration, false), null);
+    }
 });

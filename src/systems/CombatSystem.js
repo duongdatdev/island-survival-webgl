@@ -28,6 +28,15 @@ export class CombatSystem {
     }
 
     beginMeleeAttack(playerPosition, playerYaw, equippedItem, creatures) {
+        return this.beginAttack({
+            origin: playerPosition,
+            yaw: playerYaw,
+            equippedItem,
+            creatures,
+        });
+    }
+
+    beginAttack({ origin, direction = null, yaw = 0, equippedItem = null, creatures = [] }) {
         const weaponData = this._getWeaponData(equippedItem);
         if (!weaponData || weaponData.type !== 'melee') {
             return null;
@@ -37,16 +46,22 @@ export class CombatSystem {
         }
 
         this._startCooldown(weaponData);
+        const aimDirection = this._normalizeDirection(direction, yaw);
         return {
-            origin: [playerPosition[0], playerPosition[1], playerPosition[2]],
-            yaw: playerYaw,
+            origin: [origin[0], origin[1], origin[2]],
+            direction: aimDirection,
+            yaw,
             weaponData,
-            target: this._findMeleeTarget(playerPosition, playerYaw, weaponData, creatures),
+            target: this._findMeleeTarget(origin, yaw, aimDirection, weaponData, creatures),
             resolved: false,
         };
     }
 
     resolveMeleeImpact(pendingAttack) {
+        return this.resolveImpact(pendingAttack);
+    }
+
+    resolveImpact(pendingAttack) {
         if (!pendingAttack || pendingAttack.resolved) {
             return { hit: false, creature: null, damage: 0, swung: false };
         }
@@ -56,6 +71,7 @@ export class CombatSystem {
             target,
             pendingAttack.origin,
             pendingAttack.yaw,
+            pendingAttack.direction,
             pendingAttack.weaponData
         )) {
             return { hit: false, creature: null, damage: 0, swung: true };
@@ -71,9 +87,11 @@ export class CombatSystem {
     }
 
     _resolveMeleeAttack(playerPosition, playerYaw, weaponData, creatures) {
+        const direction = this._normalizeDirection(null, playerYaw);
         const closestCreature = this._findMeleeTarget(
             playerPosition,
             playerYaw,
+            direction,
             weaponData,
             creatures
         );
@@ -86,16 +104,25 @@ export class CombatSystem {
         return { hit: false, creature: null, damage: 0, swung: true };
     }
 
-    _findMeleeTarget(playerPosition, playerYaw, weaponData, creatures) {
+    _findMeleeTarget(playerPosition, playerYaw, direction, weaponData, creatures) {
         const range = weaponData.range;
         let closestCreature = null;
         let closestDist = range;
 
         for (const creature of creatures) {
-            if (!this._isMeleeTargetValid(creature, playerPosition, playerYaw, weaponData)) continue;
+            if (!this._isMeleeTargetValid(
+                creature,
+                playerPosition,
+                playerYaw,
+                direction,
+                weaponData
+            )) continue;
             const dx = creature.position[0] - playerPosition[0];
+            const dy = creature.position[1] - playerPosition[1];
             const dz = creature.position[2] - playerPosition[2];
-            const dist = Math.sqrt(dx * dx + dz * dz);
+            const dist = weaponData.shape === 'thrust'
+                ? dx * direction[0] + dy * direction[1] + dz * direction[2]
+                : Math.sqrt(dx * dx + dz * dz);
             if (dist < closestDist) {
                 closestDist = dist;
                 closestCreature = creature;
@@ -104,11 +131,23 @@ export class CombatSystem {
         return closestCreature;
     }
 
-    _isMeleeTargetValid(creature, playerPosition, playerYaw, weaponData) {
+    _isMeleeTargetValid(creature, playerPosition, playerYaw, direction, weaponData) {
         if (!creature || creature.state === 'dead') return false;
         const dx = creature.position[0] - playerPosition[0];
         const dz = creature.position[2] - playerPosition[2];
         const dy = creature.position[1] - playerPosition[1];
+
+        if (weaponData.shape === 'thrust') {
+            const hitDirection = direction || this._normalizeDirection(null, playerYaw);
+            const along = dx * hitDirection[0] + dy * hitDirection[1] + dz * hitDirection[2];
+            const radius = (creature.collider?.radius ?? 0.3) + (weaponData.hitRadius ?? 0);
+            if (along < -radius || along > weaponData.range + radius) return false;
+            const perpendicularX = dx - hitDirection[0] * along;
+            const perpendicularY = dy - hitDirection[1] * along;
+            const perpendicularZ = dz - hitDirection[2] * along;
+            return Math.hypot(perpendicularX, perpendicularY, perpendicularZ) <= radius;
+        }
+
         const dist = Math.sqrt(dx * dx + dz * dz);
         if (dist > weaponData.range || Math.abs(dy) > weaponData.range) return false;
         if (dist <= 0.0001) return true;
@@ -117,7 +156,14 @@ export class CombatSystem {
         const facingZ = Math.cos(playerYaw);
         const dot = (dx / dist) * facingX + (dz / dist) * facingZ;
         const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-        return angle <= Math.PI * 0.35;
+        return angle <= (weaponData.halfArc ?? Math.PI * 0.35);
+    }
+
+    _normalizeDirection(direction, yaw) {
+        const source = direction || [Math.sin(yaw), 0, Math.cos(yaw)];
+        const length = Math.hypot(source[0], source[1], source[2]);
+        if (length <= 0.0001) return [Math.sin(yaw), 0, Math.cos(yaw)];
+        return [source[0] / length, source[1] / length, source[2] / length];
     }
 
     _startCooldown(weaponData) {

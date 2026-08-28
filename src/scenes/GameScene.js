@@ -396,7 +396,7 @@ export class GameScene extends Scene {
 
         this.combatSystem = new CombatSystem();
         this._attackHoldBlocked = false;
-        this._pendingAxeImpact = null;
+        this._pendingMeleeImpact = null;
         this.creatures = [];
 
         this._spawnCrabs();
@@ -841,11 +841,11 @@ export class GameScene extends Scene {
         this.firstPersonViewModel.setWeapon(
             activeViewDef?.weaponType ? activeViewItem.id : 'fist'
         );
-        const axeImpact = this.firstPersonViewModel.update(
+        const weaponEvent = this.firstPersonViewModel.update(
             deltaTime,
             this.player.currentSpeed > 0.1
         );
-        if (axeImpact) this._resolvePendingAxeImpact();
+        if (weaponEvent?.type === 'impact') this._resolvePendingMeleeImpact(weaponEvent);
         this._updateFallingTrees(deltaTime);
 
         const attackHeld = !!this.engine.input.mouse.buttons[0];
@@ -859,7 +859,7 @@ export class GameScene extends Scene {
             this._attackHoldBlocked = true;
         }
 
-        if (attackHeld && !this._attackHoldBlocked && !combatUnavailable
+        if (this.engine.input.isMousePressed(0) && !this._attackHoldBlocked && !combatUnavailable
             && this.combatSystem.canAttack()) {
             this._handleCombatInput();
         }
@@ -867,7 +867,7 @@ export class GameScene extends Scene {
         if (this.engine.input.isKeyPressed('inventory')) {
             this.inventoryController.toggleMenu();
             if (this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden')) {
-                this._cancelPendingAxeImpact();
+                this._cancelPendingMeleeImpact();
             }
         }
 
@@ -881,6 +881,7 @@ export class GameScene extends Scene {
                 this.engine.input.isKeyPressed('Digit' + (i + 1)) ||
                 this.engine.input.isKeyPressed('Numpad' + (i + 1))) {
                 if (this.inventory.selectedHotbarIndex !== i) {
+                    this._cancelPendingMeleeImpact();
                     this.inventory.selectedHotbarIndex = i;
                     this.engine.audio.playClick();
                     this.inventoryController.renderInventory();
@@ -892,6 +893,7 @@ export class GameScene extends Scene {
         if (!isMenuOpen) {
             const scroll = this.engine.input.mouse.wheelDelta;
             if (scroll !== 0) {
+                this._cancelPendingMeleeImpact();
                 let nextIndex = this.inventory.selectedHotbarIndex + scroll;
                 if (nextIndex < 0) nextIndex = 7;
                 else if (nextIndex > 7) nextIndex = 0;
@@ -1478,7 +1480,7 @@ export class GameScene extends Scene {
 
     _pauseGame() {
         if (this.isPaused || this.isEscaping) return;
-        this._cancelPendingAxeImpact();
+        this._cancelPendingMeleeImpact();
         this.isPaused = true;
 
         const pauseMenu = document.getElementById('pause-menu');
@@ -1610,7 +1612,7 @@ export class GameScene extends Scene {
     }
 
     _showGameOver() {
-        this._cancelPendingAxeImpact();
+        this._cancelPendingMeleeImpact();
         this._isGameOver = true;
 
         this.saveController.finish('dead');
@@ -1657,7 +1659,7 @@ export class GameScene extends Scene {
     }
 
     _startEscapeCutscene() {
-        this._cancelPendingAxeImpact();
+        this._cancelPendingMeleeImpact();
         this.isEscaping = true;
         if (this.escapeHud) {
             this.escapeHud.classList.add('hidden');
@@ -1805,17 +1807,19 @@ export class GameScene extends Scene {
         this.player.rotation[1] = aimYaw;
         this.player.updateModelMatrix();
 
-        if (equippedItem && equippedItem.id === 'stone_axe') {
-            const pendingAttack = this.combatSystem.beginMeleeAttack(
-                this.player.position,
-                aimYaw,
+        const equippedDef = equippedItem ? getResourceDef(equippedItem.id) : null;
+        if (!equippedDef || equippedDef.weaponType === 'melee') {
+            const pendingAttack = this.combatSystem.beginAttack({
+                origin: this.camera.position,
+                direction: this._getAimDirection(),
+                yaw: aimYaw,
                 equippedItem,
-                this.creatures
-            );
+                creatures: this.creatures,
+            });
             if (!pendingAttack) return;
 
-            this._pendingAxeImpact = { pendingAttack, equippedItem };
-            this.firstPersonViewModel.triggerSwing();
+            this._pendingMeleeImpact = { pendingAttack, equippedItem };
+            this.firstPersonViewModel.beginAttack(equippedItem?.id || 'fist');
             this.engine.audio.playSwing(null);
             return;
         }
@@ -1839,15 +1843,16 @@ export class GameScene extends Scene {
         this._applyCombatImpactFeedback(result, null, equippedItem, true);
     }
 
-    _resolvePendingAxeImpact() {
-        const pending = this._pendingAxeImpact;
-        this._pendingAxeImpact = null;
+    _resolvePendingMeleeImpact(weaponEvent) {
+        const pending = this._pendingMeleeImpact;
+        this._pendingMeleeImpact = null;
         if (!pending || this.isPaused || this._isGameOver || this.isEscaping) return;
+        if (weaponEvent.weaponId !== pending.pendingAttack.weaponData.id) return;
         const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
         if (inventoryOpen) return;
 
-        const result = this.combatSystem.resolveMeleeImpact(pending.pendingAttack);
-        const treeResult = result.hit
+        const result = this.combatSystem.resolveImpact(pending.pendingAttack);
+        const treeResult = result.hit || pending.pendingAttack.weaponData.id !== 'stone_axe'
             ? null
             : this._tryChopTree(
                 pending.pendingAttack.origin,
@@ -1857,8 +1862,9 @@ export class GameScene extends Scene {
         this._applyCombatImpactFeedback(result, treeResult, pending.equippedItem, false);
     }
 
-    _cancelPendingAxeImpact() {
-        this._pendingAxeImpact = null;
+    _cancelPendingMeleeImpact() {
+        this._pendingMeleeImpact = null;
+        this.firstPersonViewModel?.cancel();
     }
 
     _applyCombatImpactFeedback(result, treeResult, equippedItem, playSwingAudio) {
@@ -2024,6 +2030,15 @@ export class GameScene extends Scene {
         return Math.atan2(dx, dz);
     }
 
+    _getAimDirection() {
+        const dx = this.camera.target[0] - this.camera.position[0];
+        const dy = this.camera.target[1] - this.camera.position[1];
+        const dz = this.camera.target[2] - this.camera.position[2];
+        const length = Math.hypot(dx, dy, dz);
+        if (length <= 0.0001) return [Math.sin(this.player.rotation[1]), 0, Math.cos(this.player.rotation[1])];
+        return [dx / length, dy / length, dz / length];
+    }
+
     _nearestThreatDistance() {
         let closest = Infinity;
         for (const creature of this.creatures) {
@@ -2057,7 +2072,7 @@ export class GameScene extends Scene {
 
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
-        this._cancelPendingAxeImpact();
+        this._cancelPendingMeleeImpact();
         if (this.engine.input.onPointerLockChange === this._onPointerLockChange) {
             this.engine.input.onPointerLockChange = null;
         }
