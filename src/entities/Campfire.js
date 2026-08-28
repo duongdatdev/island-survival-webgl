@@ -14,6 +14,7 @@ export class Campfire extends Entity {
 
         this.isBuilt = false;
         this.interactRadius = 3.0;
+        this.warmthRadius = 4.5;
 
         this._fireTime = 0;
         this._fireFlicker = 1.0;
@@ -71,6 +72,13 @@ export class Campfire extends Entity {
         const dx = playerPos[0] - this.position[0];
         const dz = playerPos[2] - this.position[2];
         return Math.sqrt(dx * dx + dz * dz) < this.interactRadius;
+    }
+
+    isPlayerInWarmthRange(playerPos) {
+        if (!this.isBuilt) return false;
+        const dx = playerPos[0] - this.position[0];
+        const dz = playerPos[2] - this.position[2];
+        return Math.hypot(dx, dz) < this.warmthRadius;
     }
 
     draw(shader, drawMode) {

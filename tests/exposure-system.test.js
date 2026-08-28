@@ -69,3 +69,20 @@ test('rain and water increase wetness while clear weather dries it', () => {
     nightDrying.update(10, { isNight: true });
     closeTo(nightDrying.wetness, 48.8);
 });
+
+test('campfires warm and dry players even at storm intensity', () => {
+    const clearFire = new ExposureSystem({ warmth: 50, wetness: 100 });
+    clearFire.update(10, { nearCampfire: true, fireIntensityMultiplier: 1 });
+    closeTo(clearFire.wetness, 57.5);
+    assert.ok(clearFire.warmth > 70);
+
+    const stormFire = new ExposureSystem({ warmth: 20, wetness: 100 });
+    stormFire.update(10, {
+        rainFactor: 1,
+        isNight: true,
+        nearCampfire: true,
+        fireIntensityMultiplier: 0.4,
+    });
+    assert.ok(stormFire.wetness < 100);
+    assert.ok(stormFire.warmth > 20);
+});

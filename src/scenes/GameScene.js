@@ -728,11 +728,12 @@ export class GameScene extends Scene {
         const isNight = this.dayNight.timeOfDay >= this.dayNight.duskTime
             || this.dayNight.timeOfDay < this.dayNight.dawnTime;
         const inWater = this._isPlayerInExposureWater();
+        const nearCampfire = this.campfire.isPlayerInWarmthRange(this.player.position);
         this._exposureModifiers = this.exposure.update(deltaTime, {
             rainFactor: weatherEffects.rainFactor,
             inWater,
             isNight,
-            nearCampfire: false,
+            nearCampfire,
             fireIntensityMultiplier: weatherEffects.campfireIntensityMultiplier,
         });
         if (this._exposureModifiers.damage > 0) {

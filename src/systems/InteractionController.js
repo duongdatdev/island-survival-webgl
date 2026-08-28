@@ -35,8 +35,15 @@ export class InteractionController {
     _updateCampfire(interactKey) {
         const scene = this.scene;
         const nearby = scene.campfire.isPlayerNear(scene.player.position);
+        const inWarmthRange = scene.campfire.isPlayerInWarmthRange
+            ? scene.campfire.isPlayerInWarmthRange(scene.player.position)
+            : nearby;
         const hasRawFood = nearby && RAW_FOODS.some(id => scene.inventory.hasItem(id));
-        const weakenedByRain = nearby && scene.campfire.fireIntensityMultiplier < 0.999;
+        const weakenedByRain = inWarmthRange && scene.campfire.fireIntensityMultiplier < 0.999;
+        if (!hasRawFood && inWarmthRange) {
+            const rainStatus = weakenedByRain ? ' · Lửa đang yếu vì mưa 🌧️' : '';
+            return `Sưởi ấm · Hong khô 🔥${rainStatus}`;
+        }
         if (!hasRawFood) return weakenedByRain ? 'Lửa đang yếu vì mưa 🌧️' : '';
 
         if (scene.engine.input.isKeyPressed('interact')) {

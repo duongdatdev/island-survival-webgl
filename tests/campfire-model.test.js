@@ -76,6 +76,14 @@ test('rain weakens campfire light to a forty percent floor without extinguishing
     assert.ok(wetCampfire.lightIntensity > 0);
 });
 
+test('built campfires warm players within four and a half meters', () => {
+    const campfire = new Campfire(null, [0, 0, 0], { draw() {} });
+    assert.equal(campfire.isPlayerInWarmthRange([0, 0, 1]), false);
+    campfire.isBuilt = true;
+    assert.equal(campfire.isPlayerInWarmthRange([4.4, 0, 0]), true);
+    assert.equal(campfire.isPlayerInWarmthRange([4.6, 0, 0]), false);
+});
+
 test('survival manifest keeps the campfire out of drifting debris', async () => {
     const manifestUrl = new URL('../Assets/survival-pack/survival-items.json', import.meta.url);
     const manifest = JSON.parse(await readFile(manifestUrl, 'utf8'));

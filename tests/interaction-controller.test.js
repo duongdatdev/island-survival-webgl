@@ -39,6 +39,7 @@ function createScene() {
         campfire: {
             position: new Float32Array([0, 0, 0]),
             isPlayerNear: () => false,
+            isPlayerInWarmthRange: () => false,
         },
         waterCollector: {
             waterStored: 0,
@@ -164,6 +165,7 @@ test('water collector prompt distinguishes dry, collecting, and full states', ()
 test('rain-weakened campfires still cook and report their status', () => {
     const fixture = createScene();
     fixture.scene.campfire.isPlayerNear = () => true;
+    fixture.scene.campfire.isPlayerInWarmthRange = () => true;
     fixture.scene.campfire.fireIntensityMultiplier = 0.4;
     const controller = new InteractionController(fixture.scene);
 
@@ -176,4 +178,15 @@ test('rain-weakened campfires still cook and report their status', () => {
     assert.match(prompt, /Lửa yếu vì mưa/);
     assert.equal(fixture.items.get('raw_fish'), 0);
     assert.equal(fixture.items.get('cooked_meal'), 1);
+});
+
+test('campfire prompt offers passive warming when there is no food to cook', () => {
+    const fixture = createScene();
+    fixture.scene.campfire.isPlayerInWarmthRange = () => true;
+    fixture.scene.campfire.fireIntensityMultiplier = 1;
+
+    const prompt = new InteractionController(fixture.scene)._updateCampfire('E');
+    assert.match(prompt, /Sưởi ấm/);
+    assert.match(prompt, /Hong khô/);
+    assert.doesNotMatch(prompt, /hint-key/);
 });
