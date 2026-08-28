@@ -3733,6 +3733,16 @@ input:checked + .slider:before {
         font-size: 11px;
         padding: 4px 8px;
     }
+    .hotbar-hud {
+        bottom: 12px;
+        padding: 6px;
+        gap: 4px;
+    }
+    .hotbar-slot {
+        width: clamp(28px, 10vw, 42px);
+        height: clamp(28px, 10vw, 42px);
+    }
+    .hotbar-slot .slot-icon { font-size: 1.1rem; }
     /* Narrower only — the height carries three fixed lanes. */
     .compass-bar { width: 170px; }
     .crosshair-ring { width: 14px; height: 14px; }
