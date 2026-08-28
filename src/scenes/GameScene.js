@@ -836,6 +836,11 @@ export class GameScene extends Scene {
         }
 
         this.combatSystem.update(deltaTime);
+        const activeViewItem = this.inventory.getEquippedItem();
+        const activeViewDef = activeViewItem ? getResourceDef(activeViewItem.id) : null;
+        this.firstPersonViewModel.setWeapon(
+            activeViewDef?.weaponType ? activeViewItem.id : 'fist'
+        );
         const axeImpact = this.firstPersonViewModel.update(
             deltaTime,
             this.player.currentSpeed > 0.1
@@ -1429,8 +1434,7 @@ export class GameScene extends Scene {
             );
         }
 
-        const equippedItem = this.inventory.getEquippedItem();
-        if (!this.isEscaping && equippedItem && equippedItem.id === 'stone_axe') {
+        if (!this.isEscaping && !this.isFishing) {
             this.firstPersonViewModel.draw(this.basicShader, this.camera.projectionMatrix, drawMode);
         }
 

@@ -71,3 +71,32 @@ test('first person axe view model emits one impact event per swing', () => {
     assert.equal(viewModel.update(0.02, false), true);
     assert.equal(viewModel.update(0.1, false), false);
 });
+
+test('first person view model exposes fist spear and bow states', () => {
+    const viewModel = Object.create(FirstPersonViewModel.prototype);
+    Object.assign(viewModel, {
+        weaponId: 'fist',
+        _time: 0,
+        _moveAmount: 0,
+        _swingElapsed: Infinity,
+        _swingDuration: 0.42,
+        _impactEmitted: true,
+        _activeSwingDirection: 1,
+        _nextSwingDirection: 1,
+        _bowCharging: false,
+        _bowChargeElapsed: 0,
+        _bowReleaseElapsed: Infinity,
+    });
+
+    assert.equal(viewModel.beginAttack('fist'), true);
+    assert.equal(viewModel.weaponId, 'fist');
+    assert.equal(viewModel.beginAttack('spear'), true);
+    assert.equal(viewModel.weaponId, 'spear');
+
+    viewModel.beginBowCharge();
+    viewModel.update(0.5, false);
+    assert.equal(viewModel.weaponId, 'bow');
+    assert.equal(viewModel.getBowCharge(), 0.5);
+    assert.equal(viewModel.releaseBow(), 0.5);
+    assert.equal(viewModel._bowCharging, false);
+});
