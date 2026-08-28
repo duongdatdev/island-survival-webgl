@@ -160,7 +160,9 @@ const FRAGMENT = `#version 300 es
         }
 
         if (moonDir.y > -0.10) {
-            float moonVisibility = smoothstep(-0.10, 0.05, moonDir.y);
+            float moonColorBrightness = max(uMoonColor.r, max(uMoonColor.g, uMoonColor.b));
+            float moonColorVisibility = smoothstep(0.02, 0.15, moonColorBrightness);
+            float moonVisibility = smoothstep(-0.10, 0.05, moonDir.y) * moonColorVisibility;
 
             col += uMoonColor * 0.15 * (pow(md, 12.0) * moonVisibility);
             col += uMoonColor * 0.06 * (pow(md, 4.0) * moonVisibility);

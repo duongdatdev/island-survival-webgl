@@ -201,6 +201,27 @@ test('day night cycle completes one day in ten minutes', () => {
     assert.equal(cycle.daySpeed, 1 / 600);
 });
 
+test('celestial orbit keeps the sun above the horizon during daytime', () => {
+    const cycle = new DayNightCycle();
+    cycle.timeOfDay = (13 * 60 + 28) / (24 * 60);
+
+    const sunDirection = cycle.getSunDirection();
+    const moonDirection = cycle.getMoonDirection();
+    assert.ok(sunDirection[1] > 0);
+    assert.ok(moonDirection[1] < 0);
+    for (let index = 0; index < 3; index++) {
+        assert.ok(Math.abs(sunDirection[index] + moonDirection[index]) < 1e-9);
+    }
+});
+
+test('celestial orbit raises the moon at midnight', () => {
+    const cycle = new DayNightCycle();
+    cycle.timeOfDay = 0;
+
+    assert.ok(cycle.getSunDirection()[1] < 0);
+    assert.ok(cycle.getMoonDirection()[1] > 0);
+});
+
 test('weather states last two to four minutes with a twelve second transition', () => {
     const originalRandom = Math.random;
     Math.random = () => 0.5;

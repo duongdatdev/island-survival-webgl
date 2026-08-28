@@ -951,26 +951,28 @@ export class GameScene extends Scene {
         const sunColor = this.dayNight.getSunColor();
         const sunIntensity = this.dayNight.getSunIntensity();
 
-        const sunAngle = this.dayNight.timeOfDay * Math.PI * 2;
         const celestialDist = 80.0;
-        
-        const sunDirRaw = [
-            Math.cos(sunAngle) * 0.6,
-            Math.sin(sunAngle),
-            Math.sin(sunAngle) * 0.6
-        ];
-        const len = Math.sqrt(sunDirRaw[0]*sunDirRaw[0] + sunDirRaw[1]*sunDirRaw[1] + sunDirRaw[2]*sunDirRaw[2]);
-        const sunDirNorm = len > 0.001 ? [sunDirRaw[0]/len, sunDirRaw[1]/len, sunDirRaw[2]/len] : [0, 1, 0];
+        const sunLen = Math.hypot(sunDir[0], sunDir[1], sunDir[2]);
+        const sunDirNorm = sunLen > 0.001
+            ? [sunDir[0] / sunLen, sunDir[1] / sunLen, sunDir[2] / sunLen]
+            : [0, 1, 0];
+        const moonDir = this.dayNight.getMoonDirection();
+        const moonLen = Math.hypot(moonDir[0], moonDir[1], moonDir[2]);
+        const moonDirNorm = moonLen > 0.001
+            ? [moonDir[0] / moonLen, moonDir[1] / moonLen, moonDir[2] / moonLen]
+            : [0, -1, 0];
 
         this.sunSprite.position[0] = this.camera.position[0] + sunDirNorm[0] * celestialDist;
         this.sunSprite.position[1] = this.camera.position[1] + sunDirNorm[1] * celestialDist;
         this.sunSprite.position[2] = this.camera.position[2] + sunDirNorm[2] * celestialDist;
         this.sunSprite.visible = sunDirNorm[1] > -0.1 && sunIntensity > 0.15;
 
-        this.moonSprite.position[0] = this.camera.position[0] - sunDirNorm[0] * celestialDist;
-        this.moonSprite.position[1] = this.camera.position[1] - sunDirNorm[1] * celestialDist;
-        this.moonSprite.position[2] = this.camera.position[2] - sunDirNorm[2] * celestialDist;
-        this.moonSprite.visible = sunDirNorm[1] < -0.1 && sunIntensity < 0.5;
+        this.moonSprite.position[0] = this.camera.position[0] + moonDirNorm[0] * celestialDist;
+        this.moonSprite.position[1] = this.camera.position[1] + moonDirNorm[1] * celestialDist;
+        this.moonSprite.position[2] = this.camera.position[2] + moonDirNorm[2] * celestialDist;
+        const moonColor = this.dayNight.getMoonColor();
+        const moonBrightness = Math.max(moonColor[0], moonColor[1], moonColor[2]);
+        this.moonSprite.visible = moonDirNorm[1] > -0.1 && moonBrightness > 0.02;
 
         const sunCol = this.dayNight.getSunColor();
         this.sunSprite.setColor(

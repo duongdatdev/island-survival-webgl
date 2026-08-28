@@ -23,19 +23,16 @@ export class DayNightCycle {
     }
 
     getSunDirection() {
-        const angle = this.timeOfDay * Math.PI * 2;
+        const angle = (this.timeOfDay - 0.25) * Math.PI * 2;
         const lx = Math.cos(angle) * 0.6;
         const ly = Math.sin(angle);
         const lz = Math.sin(angle) * 0.6;
-        return [lx, Math.max(-0.3, ly), lz];
+        return [lx, ly, lz];
     }
 
     getMoonDirection() {
-        const angle = this.timeOfDay * Math.PI * 2;
-        const lx = -Math.cos(angle) * 0.6;
-        const ly = -Math.sin(angle);
-        const lz = -Math.sin(angle) * 0.6;
-        return [lx, Math.max(-0.3, ly), lz];
+        const sunDirection = this.getSunDirection();
+        return [-sunDirection[0], -sunDirection[1], -sunDirection[2]];
     }
 
     getSunColor() {
