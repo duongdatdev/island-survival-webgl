@@ -179,6 +179,7 @@ export class SaveSystem {
                 thirst: vitals.thirst,
                 stamina: vitals.stamina,
             },
+            exposure: scene.exposure?.getSnapshot?.() || { warmth: 100, wetness: 0 },
             inventory: {
                 slots: scene.inventory.slots.map(s => (s ? { id: s.id, count: s.count } : null)),
                 selectedHotbarIndex: scene.inventory.selectedHotbarIndex,

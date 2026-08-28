@@ -93,6 +93,15 @@ export class GameSaveController {
         return !!scene.activeWorldId && this.storage.resetWorld(scene.activeWorldId);
     }
 
+    _applyExposure(savedExposure) {
+        const scene = this.scene;
+        if (!scene.exposure?.setState) return;
+        scene.exposure.setState(savedExposure || { warmth: 100, wetness: 0 });
+        scene._exposureModifiers = scene.exposure.getModifiers();
+        scene._lastExposureState = scene._exposureModifiers.state;
+        scene._updateExposureStatus?.();
+    }
+
     apply(save) {
         const scene = this.scene;
         console.log('GameScene: Restoring saved run...');
@@ -119,6 +128,7 @@ export class GameSaveController {
         for (const id of ['health', 'hunger', 'thirst', 'stamina']) {
             scene._updateVitalBar(id, scene.vitals[id], 100);
         }
+        this._applyExposure(save.exposure);
 
         for (let index = 0; index < scene.inventory.slots.length; index++) {
             const stored = save.inventory.slots[index];

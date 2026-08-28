@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GameSaveController } from '../src/systems/GameSaveController.js';
 import { SaveSystem, SAVE_VERSION } from '../src/systems/SaveSystem.js';
+import { ExposureSystem } from '../src/systems/ExposureSystem.js';
 
 function installStorage() {
     const storage = {};
@@ -56,6 +57,7 @@ test('captured saves retain removed environment objects', () => {
         survivalSeconds: 42,
         player: { position: [1, 2, 3], rotation: [0, 0.5, 0] },
         vitals: { health: 90, hunger: 80, thirst: 70, stamina: 60 },
+        exposure: new ExposureSystem({ warmth: 62.5, wetness: 37.25 }),
         inventory: { slots: [], selectedHotbarIndex: 0 },
         objectiveTracker: { getPinnedRecipeId: () => 'stone_axe' },
         raftAssembly: {
@@ -89,6 +91,25 @@ test('captured saves retain removed environment objects', () => {
     assert.deepEqual(save.environment.removedObjectIds, ['4', '19']);
     assert.equal(save.ui.pinnedRecipeId, 'stone_axe');
     assert.equal(save.structures.waterCollector.rainProgress, 0.625);
+    assert.deepEqual(save.exposure, { warmth: 62.5, wetness: 37.25 });
+    assert.equal('projectiles' in save, false);
+    assert.equal('bowCharge' in save, false);
+});
+
+test('exposure save fields restore per world and old saves use warm dry defaults', () => {
+    const scene = {
+        exposure: new ExposureSystem({ warmth: 1, wetness: 99 }),
+        _updateExposureStatus() {},
+    };
+    const controller = new GameSaveController(scene, { storage: SaveSystem });
+
+    controller._applyExposure({ warmth: 24, wetness: 76 });
+    assert.deepEqual(scene.exposure.getSnapshot(), { warmth: 24, wetness: 76 });
+    assert.equal(scene._lastExposureState, 'cold');
+
+    controller._applyExposure(undefined);
+    assert.deepEqual(scene.exposure.getSnapshot(), { warmth: 100, wetness: 0 });
+    assert.equal(scene._lastExposureState, 'normal');
 });
 
 test('page lifecycle saves hidden sessions and unregisters cleanly', () => {
