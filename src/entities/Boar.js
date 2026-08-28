@@ -110,4 +110,9 @@ export class Boar extends Creature {
         this.state = CreatureState.CHASE;
         this._stateTimer = 0;
     }
+
+    _onNavigationBlocked() {
+        this._chargePhase = 'ready';
+        this._chargeTimer = 0;
+    }
 }

@@ -836,6 +836,7 @@ export class GameScene extends Scene {
 
             if (this.collisionSystem) {
                 this.collisionSystem.resolvePlayerCollisions(creature, this.terrain);
+                creature.constrainToNavigationSurface(this.terrain);
             }
 
             if (creature.attackDamage > 0 &&

@@ -12,6 +12,8 @@ export const CreatureState = {
     DEAD:   'dead'
 };
 
+const LAND_BOUNDARY_EPSILON = 0.05;
+
 export class Creature extends Entity {
     constructor(opts = {}) {
         super();
@@ -35,6 +37,8 @@ export class Creature extends Entity {
         this._fleeTimer = 0;
         this._fleeDuration = opts.fleeDuration ?? 4.0;
         this.fleeSpeedMultiplier = opts.fleeSpeedMultiplier ?? 1.3;
+        this.navigationSurface = opts.navigationSurface ?? 'land';
+        this._lastNavigablePosition = null;
 
         this.fleeThreshold = opts.fleeThreshold !== undefined ? opts.fleeThreshold : null;
 
@@ -80,13 +84,17 @@ export class Creature extends Entity {
             return;
         }
 
+        this.constrainToNavigationSurface(terrain);
+
         this.animTime += deltaTime;
         this._stateTimer += deltaTime;
         if (this._attackTimer > 0) this._attackTimer -= deltaTime;
 
         const dx = playerPosition[0] - this.position[0];
         const dz = playerPosition[2] - this.position[2];
-        const distToPlayer = Math.sqrt(dx * dx + dz * dz);
+        const playerIsReachable = this.navigationSurface !== 'land'
+            || this._isNavigableLandPosition(terrain, playerPosition[0], playerPosition[2], 0);
+        const distToPlayer = playerIsReachable ? Math.sqrt(dx * dx + dz * dz) : Infinity;
 
         switch (this.state) {
             case CreatureState.IDLE:
@@ -106,6 +114,8 @@ export class Creature extends Entity {
                 break;
         }
 
+        this.constrainToNavigationSurface(terrain);
+
         if (terrain && this.state !== CreatureState.DEAD) {
             const h = terrain.getHeight(this.position[0], this.position[2]);
             if (h > -0.5) {
@@ -115,6 +125,100 @@ export class Creature extends Entity {
 
         this.updateModelMatrix();
     }
+
+    constrainToNavigationSurface(terrain) {
+        if (this.navigationSurface !== 'land' || !terrain || this.state === CreatureState.DEAD) {
+            return false;
+        }
+
+        const x = this.position[0];
+        const z = this.position[2];
+        if (this._isNavigableLandPosition(terrain, x, z)) {
+            if (!this._lastNavigablePosition) this._lastNavigablePosition = [x, z];
+            else {
+                this._lastNavigablePosition[0] = x;
+                this._lastNavigablePosition[1] = z;
+            }
+            return false;
+        }
+
+        const fallback = this._lastNavigablePosition;
+        if (fallback && this._isNavigableLandPosition(terrain, fallback[0], fallback[1])) {
+            this.position[0] = fallback[0];
+            this.position[2] = fallback[1];
+        } else {
+            this._projectInsideLandBoundary(terrain);
+        }
+
+        this._faceIslandInterior(terrain);
+        this.state = CreatureState.IDLE;
+        this._stateTimer = 0;
+        this._fleeTimer = 0;
+        this._onNavigationBlocked();
+
+        const height = terrain.getHeight(this.position[0], this.position[2]);
+        this.position[1] = height + this.meshScale[1] * 0.5;
+        this._lastNavigablePosition = [this.position[0], this.position[2]];
+        this.updateModelMatrix();
+        return true;
+    }
+
+    _isNavigableLandPosition(terrain, x, z, footprint = this.collider?.radius ?? 0) {
+        if (!terrain) return true;
+
+        const island = terrain.generator?.island;
+        if (island && Number.isFinite(island.radius)) {
+            const centerX = island.center?.[0] ?? 0;
+            const centerZ = island.center?.[1] ?? 0;
+            const maximumRadius = Math.max(0, island.radius - footprint - LAND_BOUNDARY_EPSILON);
+            return Math.hypot(x - centerX, z - centerZ) <= maximumRadius;
+        }
+
+        const height = terrain.getHeight?.(x, z);
+        return !Number.isFinite(height) || height >= 0;
+    }
+
+    _projectInsideLandBoundary(terrain) {
+        const island = terrain.generator?.island;
+        if (!island || !Number.isFinite(island.radius)) {
+            this.position[0] = this._spawnPosition[0];
+            this.position[2] = this._spawnPosition[2];
+            return;
+        }
+
+        const centerX = island.center?.[0] ?? 0;
+        const centerZ = island.center?.[1] ?? 0;
+        const dx = this.position[0] - centerX;
+        const dz = this.position[2] - centerZ;
+        const distance = Math.hypot(dx, dz);
+        const footprint = this.collider?.radius ?? 0;
+        const maximumRadius = Math.max(0, island.radius - footprint - LAND_BOUNDARY_EPSILON);
+
+        if (distance > 0.0001) {
+            const scale = maximumRadius / distance;
+            this.position[0] = centerX + dx * scale;
+            this.position[2] = centerZ + dz * scale;
+        } else {
+            this.position[0] = centerX;
+            this.position[2] = centerZ;
+        }
+    }
+
+    _faceIslandInterior(terrain) {
+        const island = terrain.generator?.island;
+        const targetX = island?.center?.[0] ?? this._spawnPosition[0];
+        const targetZ = island?.center?.[1] ?? this._spawnPosition[2];
+        const dirX = targetX - this.position[0];
+        const dirZ = targetZ - this.position[2];
+        const length = Math.hypot(dirX, dirZ);
+        if (length <= 0.0001) return;
+
+        this._targetDir[0] = dirX / length;
+        this._targetDir[2] = dirZ / length;
+        this.rotation[1] = Math.atan2(this._targetDir[0], this._targetDir[2]);
+    }
+
+    _onNavigationBlocked() {}
 
     _updateIdle(deltaTime, distToPlayer) {
         if (distToPlayer < this.detectionRadius) {

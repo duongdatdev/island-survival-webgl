@@ -25,6 +25,7 @@ export class Shark extends Creature {
             fleeThreshold: balance.fleeThreshold,
             fleeDuration: 6.0,
             patrolRadius: 20.0,
+            navigationSurface: 'water',
             idleDuration: 2.0 + Math.random() * 3.0,
             lootTable: [
                 { resourceId: 'raw_fish', count: 2, chance: 1.0 }

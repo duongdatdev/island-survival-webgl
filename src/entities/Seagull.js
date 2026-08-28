@@ -19,6 +19,7 @@ export class Seagull extends Creature {
             fleeThreshold: null,
             fleeDuration: 5.0,
             patrolRadius: 15.0,
+            navigationSurface: 'air',
             idleDuration: 1.0 + Math.random() * 2.0,
             lootTable: [
                 { resourceId: 'raw_seagull_meat', count: 1, chance: 1.0 }
