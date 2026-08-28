@@ -24,7 +24,7 @@ export class VitalsSystem {
         this._isGameOver = false;
     }
 
-    update(deltaTime, isSprinting) {
+    update(deltaTime, isSprinting, staminaRegenMultiplier = 1) {
         if (this._isGameOver || deltaTime <= 0) return;
 
         const hungerTimeToZero = this.hungerDrainRate > 0
@@ -48,7 +48,11 @@ export class VitalsSystem {
             if (this.stamina <= 0) this._sprintLocked = true;
         } else {
             if (this.stamina < 100) {
-                this._setVital('stamina', this.stamina + this.staminaRegenRate * deltaTime);
+                const regenMultiplier = Math.max(0, staminaRegenMultiplier);
+                this._setVital(
+                    'stamina',
+                    this.stamina + this.staminaRegenRate * regenMultiplier * deltaTime
+                );
             }
             if (this._sprintLocked && this.stamina >= this.sprintRecoveryThreshold) {
                 this._sprintLocked = false;
@@ -59,12 +63,7 @@ export class VitalsSystem {
             this._setVital('health', this.health - this.healthDrainRate * depletedDuration);
         }
 
-        if (this.health <= 0 && !this._isGameOver) {
-            this._isGameOver = true;
-            if (this.onGameOver) {
-                this.onGameOver();
-            }
-        }
+        this._checkGameOver();
     }
 
     eat(amount = 40) {
@@ -77,6 +76,15 @@ export class VitalsSystem {
 
     heal(amount = 20) {
         this._setVital('health', this.health + amount);
+    }
+
+    applyDamage(amount, cause = 'unknown') {
+        if (this._isGameOver || !Number.isFinite(amount) || amount <= 0) return 0;
+        const previousHealth = this.health;
+        this.lastDamageCause = cause;
+        this._setVital('health', this.health - amount);
+        this._checkGameOver();
+        return previousHealth - this.health;
     }
 
     canSprint() {
@@ -107,5 +115,11 @@ export class VitalsSystem {
         if (this.onChange) {
             this.onChange(id, clamped, 100);
         }
+    }
+
+    _checkGameOver() {
+        if (this.health > 0 || this._isGameOver) return;
+        this._isGameOver = true;
+        if (this.onGameOver) this.onGameOver();
     }
 }

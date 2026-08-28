@@ -23,6 +23,7 @@ import { RaftAssembly } from '../entities/RaftAssembly.js';
 import { ParticleSystem } from '../systems/ParticleSystem.js';
 import { TutorialSystem } from '../systems/TutorialSystem.js';
 import { VitalsSystem } from '../systems/VitalsSystem.js';
+import { ExposureSystem } from '../systems/ExposureSystem.js';
 import { Campfire } from '../entities/Campfire.js';
 import { WaterCollector } from '../entities/WaterCollector.js';
 import { Waterfall } from '../entities/Waterfall.js';
@@ -205,6 +206,8 @@ export class GameScene extends Scene {
         this._notificationTimeoutId = null;
 
         this.vitals = new VitalsSystem();
+        this.exposure = new ExposureSystem();
+        this._exposureModifiers = this.exposure.getModifiers();
         this.vitals.onChange = (vitalId, value, max) => {
             this._updateVitalBar(vitalId, value, max);
         };
@@ -718,6 +721,23 @@ export class GameScene extends Scene {
 
         const input = this.engine.input;
         const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
+        const rotateLight = this._domCache.lightRot ? this._domCache.lightRot.checked : true;
+        if (rotateLight) this.dayNight.update(deltaTime);
+        this.weather.update(deltaTime);
+        const weatherEffects = this.weather.getGameplayEffects();
+        const isNight = this.dayNight.timeOfDay >= this.dayNight.duskTime
+            || this.dayNight.timeOfDay < this.dayNight.dawnTime;
+        const inWater = this._isPlayerInExposureWater();
+        this._exposureModifiers = this.exposure.update(deltaTime, {
+            rainFactor: weatherEffects.rainFactor,
+            inWater,
+            isNight,
+            nearCampfire: false,
+            fireIntensityMultiplier: weatherEffects.campfireIntensityMultiplier,
+        });
+        if (this._exposureModifiers.damage > 0) {
+            this.vitals.applyDamage(this._exposureModifiers.damage, 'cold');
+        }
         const hasMovementInput = !inventoryOpen && (input.isActionDown('moveForward')
             || input.isActionDown('moveBackward')
             || input.isActionDown('moveLeft')
@@ -725,10 +745,15 @@ export class GameScene extends Scene {
         const sprintHeld = input.isActionDown('sprint') || input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight');
         const isSprinting = !this.isFishing && hasMovementInput && sprintHeld
             && this.vitals.canSprint();
-        this.vitals.update(deltaTime, isSprinting);
+        this.vitals.update(
+            deltaTime,
+            isSprinting,
+            this._exposureModifiers.staminaRegenMultiplier
+        );
 
+        const exposureSpeed = this._exposureModifiers.speedMultiplier;
         this.player.speed = this.isFishing ? 0.0
-            : (isSprinting ? PLAYER_BALANCE.sprintSpeed : PLAYER_BALANCE.walkSpeed);
+            : (isSprinting ? PLAYER_BALANCE.sprintSpeed : PLAYER_BALANCE.walkSpeed) * exposureSpeed;
 
         const prevPlayerPos = [this.player.position[0], this.player.position[1], this.player.position[2]];
 
@@ -792,8 +817,6 @@ export class GameScene extends Scene {
             }
         }
 
-        this.weather.update(deltaTime);
-        const weatherEffects = this.weather.getGameplayEffects();
         const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         for (let i = this.creatures.length - 1; i >= 0; i--) {
             const creature = this.creatures[i];
@@ -961,11 +984,6 @@ export class GameScene extends Scene {
         }
 
         this.tutorial.update(deltaTime, this.engine.input, this.player);
-
-        const rotateLight = this._domCache.lightRot ? this._domCache.lightRot.checked : true;
-        if (rotateLight) {
-            this.dayNight.update(deltaTime);
-        }
 
         const sunDir = this.dayNight.getSunDirection();
         const sunColor = this.dayNight.getSunColor();
@@ -2130,6 +2148,14 @@ export class GameScene extends Scene {
         const length = Math.hypot(dx, dy, dz);
         if (length <= 0.0001) return [Math.sin(this.player.rotation[1]), 0, Math.cos(this.player.rotation[1])];
         return [dx / length, dy / length, dz / length];
+    }
+
+    _isPlayerInExposureWater() {
+        const x = this.player.position[0];
+        const z = this.player.position[2];
+        const height = this.terrain.getHeight(x, z);
+        const biome = this.world?.biomeGenerator?.getBiome(x, z, height);
+        return biome === BiomeType.OCEAN || !!this.waterfall?.isPlayerInPond(this.player.position);
     }
 
     _nearestThreatDistance() {

@@ -141,6 +141,18 @@ test('walking is free and exhausted sprint recovers without flicker', () => {
     assert.equal(vitals.canSprint(), true);
 });
 
+test('cold modifiers reduce stamina recovery and exposure damage records its cause', () => {
+    const vitals = new VitalsSystem();
+    vitals.stamina = 50;
+    vitals.update(1, false, 0.5);
+    assert.equal(vitals.stamina, 50 + PLAYER_BALANCE.staminaRegenPerSecond * 0.5);
+
+    const applied = vitals.applyDamage(0.25, 'cold');
+    assert.equal(applied, 0.25);
+    assert.equal(vitals.health, 99.75);
+    assert.equal(vitals.lastDamageCause, 'cold');
+});
+
 test('player movement accelerates, decelerates, and normalizes diagonals', () => {
     const player = new Player();
     const pressed = new Set(['moveForward']);

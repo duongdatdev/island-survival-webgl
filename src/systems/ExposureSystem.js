@@ -63,7 +63,7 @@ export class ExposureSystem {
         let rate = 0;
         if (inWater) rate += rates.waterGainPerSecond;
         rate += rates.rainGainPerSecond * rainFactor;
-        if (rainFactor <= 0.0001) {
+        if (!inWater && rainFactor <= 0.0001) {
             rate -= isNight ? rates.nightDryPerSecond : rates.dayDryPerSecond;
         }
         if (nearCampfire) rate -= rates.campfireDryPerSecond * fireIntensityMultiplier;

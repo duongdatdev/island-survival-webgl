@@ -52,3 +52,20 @@ test('exposure state loading clamps invalid values', () => {
     exposure.setState({ warmth: -5, wetness: 140 });
     assert.deepEqual(exposure.getSnapshot(), { warmth: 0, wetness: 100 });
 });
+
+test('rain and water increase wetness while clear weather dries it', () => {
+    const raining = new ExposureSystem({ warmth: 100, wetness: 0 });
+    raining.update(10, { rainFactor: 1 });
+    closeTo(raining.wetness, 8);
+
+    const swimming = new ExposureSystem({ warmth: 100, wetness: 0 });
+    swimming.update(5, { inWater: true });
+    closeTo(swimming.wetness, 50);
+
+    const drying = new ExposureSystem({ warmth: 100, wetness: 50 });
+    drying.update(10, { isNight: false });
+    closeTo(drying.wetness, 47.5);
+    const nightDrying = new ExposureSystem({ warmth: 100, wetness: 50 });
+    nightDrying.update(10, { isNight: true });
+    closeTo(nightDrying.wetness, 48.8);
+});
