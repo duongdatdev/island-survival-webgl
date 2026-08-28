@@ -740,7 +740,8 @@
     <!-- Hit Marker - Flashes when attack connects -->
     <div id="hit-marker" class="hit-marker hidden">✕</div>
 
-    <!-- Vitals HUD - Top Left -->
+    <!-- Survival HUD Stack - Top Left -->
+    <div id="survival-hud-stack" class="survival-hud-stack">
     <div id="vitals-hud" class="vitals-hud hidden">
         <div class="vital-row" id="vital-health">
             <span class="vital-icon">❤️</span>
@@ -774,9 +775,21 @@
             </div>
             <span class="vital-value" id="val-stamina">100</span>
         </div>
+        <div class="vital-row" id="vital-warmth">
+            <span class="vital-icon">🌡️</span>
+            <span class="vital-label">Nhiệt</span>
+            <div class="vital-bar-track">
+                <div class="vital-bar-fill warmth-fill" id="bar-warmth" style="width: 100%"></div>
+            </div>
+            <span class="vital-value" id="val-warmth">100</span>
+            <span id="wetness-icon" class="wetness-icon hidden" aria-label="Độ ướt"></span>
+        </div>
     </div>
 
     <aside id="objective-tracker" class="objective-tracker hidden" aria-live="polite"></aside>
+    </div>
+
+    <div id="cold-vignette" class="cold-vignette" aria-hidden="true"></div>
 
     <!-- UI Overlay: Premium Debug Panel -->
     <div id="debug-panel" class="debug-panel hidden">

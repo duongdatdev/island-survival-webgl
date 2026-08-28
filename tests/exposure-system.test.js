@@ -86,3 +86,12 @@ test('campfires warm and dry players even at storm intensity', () => {
     assert.ok(stormFire.wetness < 100);
     assert.ok(stormFire.warmth > 20);
 });
+
+test('exposure presentation maps wet icons and cold vignette thresholds', () => {
+    assert.equal(new ExposureSystem({ wetness: 9 }).getPresentation().wetnessIcon, '');
+    assert.equal(new ExposureSystem({ wetness: 10 }).getPresentation().wetnessIcon, '💧');
+    assert.equal(new ExposureSystem({ wetness: 50 }).getPresentation().wetnessIcon, '💦');
+    assert.equal(new ExposureSystem({ wetness: 80 }).getPresentation().wetnessIcon, '🌊');
+    assert.equal(new ExposureSystem({ warmth: 40 }).getPresentation().coldVignetteOpacity, 0);
+    assert.equal(new ExposureSystem({ warmth: 0 }).getPresentation().coldVignetteOpacity, 0.65);
+});

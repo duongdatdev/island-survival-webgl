@@ -208,6 +208,7 @@ export class GameScene extends Scene {
         this.vitals = new VitalsSystem();
         this.exposure = new ExposureSystem();
         this._exposureModifiers = this.exposure.getModifiers();
+        this._lastExposureState = 'normal';
         this.vitals.onChange = (vitalId, value, max) => {
             this._updateVitalBar(vitalId, value, max);
         };
@@ -490,6 +491,8 @@ export class GameScene extends Scene {
             compassMarkers: document.getElementById('compass-markers'),
             crosshair: document.getElementById('crosshair'),
             hitMarker: document.getElementById('hit-marker'),
+            wetnessIcon: document.getElementById('wetness-icon'),
+            coldVignette: document.getElementById('cold-vignette'),
         };
 
         this._survivalDay = 1;
@@ -739,6 +742,7 @@ export class GameScene extends Scene {
         if (this._exposureModifiers.damage > 0) {
             this.vitals.applyDamage(this._exposureModifiers.damage, 'cold');
         }
+        this._updateExposureStatus();
         const hasMovementInput = !inventoryOpen && (input.isActionDown('moveForward')
             || input.isActionDown('moveBackward')
             || input.isActionDown('moveLeft')
@@ -1119,6 +1123,31 @@ export class GameScene extends Scene {
                 : 0;
             dom.crosshair.classList.toggle('bow-charging', !!this._pendingBowCharge);
             dom.crosshair.style.setProperty('--bow-charge-angle', `${bowCharge * 360}deg`);
+        }
+    }
+
+    _updateExposureStatus() {
+        this._updateVitalBar('warmth', this.exposure.warmth, 100);
+        const presentation = this.exposure.getPresentation();
+        const wetnessIcon = this._domCache?.wetnessIcon;
+        if (wetnessIcon) {
+            wetnessIcon.textContent = presentation.wetnessIcon;
+            wetnessIcon.classList.toggle('hidden', !presentation.wetnessIcon);
+            wetnessIcon.setAttribute('aria-label', `Độ ướt ${Math.round(this.exposure.wetness)}`);
+        }
+        const coldVignette = this._domCache?.coldVignette;
+        if (coldVignette) {
+            coldVignette.style.opacity = String(presentation.coldVignetteOpacity);
+        }
+
+        if (presentation.state === this._lastExposureState) return;
+        this._lastExposureState = presentation.state;
+        if (presentation.state === 'cold') {
+            this._showNotification('🥶 Bạn đang lạnh: thể lực hồi chậm hơn.');
+        } else if (presentation.state === 'freezing') {
+            this._showNotification('❄️ Bạn đang đóng băng: tốc độ giảm và bắt đầu mất máu.');
+        } else {
+            this._showNotification('🔥 Cơ thể đã ấm lại.');
         }
     }
 
@@ -2320,6 +2349,7 @@ export class GameScene extends Scene {
 
         const vitalsHud = document.getElementById('vitals-hud');
         if (vitalsHud) vitalsHud.classList.add('hidden');
+        if (this._domCache?.coldVignette) this._domCache.coldVignette.style.opacity = '0';
 
         const hotbarHud = document.getElementById('hotbar-hud');
         if (hotbarHud) hotbarHud.classList.add('hidden');

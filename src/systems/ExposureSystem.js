@@ -123,6 +123,26 @@ export class ExposureSystem {
         return { warmth: this.warmth, wetness: this.wetness };
     }
 
+    getPresentation() {
+        const wetnessIcon = this.wetness < 10
+            ? ''
+            : this.wetness < 50
+                ? '💧'
+                : this.wetness < 80
+                    ? '💦'
+                    : '🌊';
+        const coldSeverity = clamp(
+            (EXPOSURE_BALANCE.coldThreshold - this.warmth) / EXPOSURE_BALANCE.coldThreshold,
+            0,
+            1
+        );
+        return {
+            ...this.getModifiers(),
+            wetnessIcon,
+            coldVignetteOpacity: coldSeverity * 0.65,
+        };
+    }
+
     setState(state = {}) {
         this.warmth = clamp(state.warmth ?? 100, 0, EXPOSURE_BALANCE.maximum);
         this.wetness = clamp(state.wetness ?? 0, 0, EXPOSURE_BALANCE.maximum);
