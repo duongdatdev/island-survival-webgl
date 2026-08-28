@@ -163,6 +163,10 @@ export class InputManager {
         return !!this.mouse.buttons[button] && !this._prevMouseButtons[button];
     }
 
+    isMouseReleased(button = 0) {
+        return !this.mouse.buttons[button] && !!this._prevMouseButtons[button];
+    }
+
 
     getBindings() {
         return JSON.parse(JSON.stringify(this.bindings));

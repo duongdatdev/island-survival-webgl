@@ -86,6 +86,50 @@ export class CombatSystem {
         };
     }
 
+    beginBowCharge({ equippedItem, inventory }) {
+        const weaponData = this._getWeaponData(equippedItem);
+        if (!weaponData || weaponData.type !== 'ranged' || this._globalCooldown > 0) {
+            return null;
+        }
+        if (!inventory?.hasItem('arrow', 1)) {
+            return { reason: 'no_ammo' };
+        }
+        return { weaponData, resolved: false };
+    }
+
+    releaseBow(chargeState, { origin, direction, charge, inventory }) {
+        if (!chargeState || chargeState.reason || chargeState.resolved) return null;
+        if (!inventory?.hasItem('arrow', 1)) return { reason: 'no_ammo' };
+
+        const weaponData = chargeState.weaponData;
+        chargeState.resolved = true;
+        inventory.removeItem('arrow', 1);
+        this._startCooldown(weaponData);
+
+        const normalizedCharge = Math.max(
+            weaponData.minimumCharge,
+            Math.min(1, Number.isFinite(charge) ? charge : 0)
+        );
+        const directionLength = Math.hypot(direction[0], direction[1], direction[2]);
+        const aimDirection = directionLength > 0.0001
+            ? direction.map(component => component / directionLength)
+            : [0, 0, 1];
+        const chargeRange = Math.max(0.0001, 1 - weaponData.minimumCharge);
+        const strength = (normalizedCharge - weaponData.minimumCharge) / chargeRange;
+        const blend = (min, max) => min + (max - min) * strength;
+
+        return {
+            origin: [origin[0], origin[1], origin[2]],
+            direction: aimDirection,
+            speed: blend(weaponData.minProjectileSpeed, weaponData.maxProjectileSpeed),
+            damage: blend(weaponData.minDamage, weaponData.maxDamage),
+            gravity: weaponData.projectileGravity,
+            lifetime: weaponData.projectileLifetime,
+            radius: weaponData.projectileRadius,
+            charge: normalizedCharge,
+        };
+    }
+
     _resolveMeleeAttack(playerPosition, playerYaw, weaponData, creatures) {
         const direction = this._normalizeDirection(null, playerYaw);
         const closestCreature = this._findMeleeTarget(
@@ -120,7 +164,7 @@ export class CombatSystem {
             const dx = creature.position[0] - playerPosition[0];
             const dy = creature.position[1] - playerPosition[1];
             const dz = creature.position[2] - playerPosition[2];
-            const dist = weaponData.shape === 'thrust'
+            const dist = weaponData.attackKind === 'thrust'
                 ? dx * direction[0] + dy * direction[1] + dz * direction[2]
                 : Math.sqrt(dx * dx + dz * dz);
             if (dist < closestDist) {
@@ -137,7 +181,7 @@ export class CombatSystem {
         const dz = creature.position[2] - playerPosition[2];
         const dy = creature.position[1] - playerPosition[1];
 
-        if (weaponData.shape === 'thrust') {
+        if (weaponData.attackKind === 'thrust') {
             const hitDirection = direction || this._normalizeDirection(null, playerYaw);
             const along = dx * hitDirection[0] + dy * hitDirection[1] + dz * hitDirection[2];
             const radius = (creature.collider?.radius ?? 0.3) + (weaponData.hitRadius ?? 0);

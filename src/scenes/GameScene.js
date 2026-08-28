@@ -35,6 +35,7 @@ import { DayNightCycle } from '../systems/DayNightCycle.js';
 import { WeatherSystem } from '../systems/WeatherSystem.js';
 import { RainSystem } from '../systems/RainSystem.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
+import { ProjectileSystem } from '../systems/ProjectileSystem.js';
 import { Crab } from '../entities/Crab.js';
 import { Seagull } from '../entities/Seagull.js';
 import { Boar } from '../entities/Boar.js';
@@ -395,8 +396,11 @@ export class GameScene extends Scene {
         }
 
         this.combatSystem = new CombatSystem();
+        this.projectileSystem = new ProjectileSystem(gl, this.collisionSystem, this.terrain);
+        this.projectileSystem.onImpact = impact => this._handleProjectileImpact(impact);
         this._attackHoldBlocked = false;
         this._pendingMeleeImpact = null;
+        this._pendingBowCharge = null;
         this.creatures = [];
 
         this._spawnCrabs();
@@ -849,9 +853,13 @@ export class GameScene extends Scene {
         this._updateFallingTrees(deltaTime);
 
         const attackHeld = !!this.engine.input.mouse.buttons[0];
+        const attackPressed = this.engine.input.isMousePressed(0);
+        const attackReleased = this.engine.input.isMouseReleased(0);
         const combatMenuOpen = !!(this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden'));
         const combatUnavailable = this.isFishing || this.isEscaping || combatMenuOpen
             || this.isPaused || this._isGameOver;
+        const equippedCombatItem = this.inventory.getEquippedItem();
+        const bowEquipped = equippedCombatItem?.id === 'bow';
 
         if (!attackHeld) {
             this._attackHoldBlocked = false;
@@ -859,15 +867,20 @@ export class GameScene extends Scene {
             this._attackHoldBlocked = true;
         }
 
-        if (this.engine.input.isMousePressed(0) && !this._attackHoldBlocked && !combatUnavailable
-            && this.combatSystem.canAttack()) {
+        if (combatUnavailable) {
+            this._cancelPendingCombat();
+        } else if (bowEquipped && !this._attackHoldBlocked) {
+            if (attackPressed) this._beginBowCharge(equippedCombatItem);
+            if (attackReleased) this._releaseBow();
+        } else if (attackPressed && !this._attackHoldBlocked && this.combatSystem.canAttack()) {
             this._handleCombatInput();
         }
+        this.projectileSystem.update(deltaTime);
 
         if (this.engine.input.isKeyPressed('inventory')) {
             this.inventoryController.toggleMenu();
             if (this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden')) {
-                this._cancelPendingMeleeImpact();
+                this._cancelPendingCombat();
             }
         }
 
@@ -881,7 +894,7 @@ export class GameScene extends Scene {
                 this.engine.input.isKeyPressed('Digit' + (i + 1)) ||
                 this.engine.input.isKeyPressed('Numpad' + (i + 1))) {
                 if (this.inventory.selectedHotbarIndex !== i) {
-                    this._cancelPendingMeleeImpact();
+                    this._cancelPendingCombat();
                     this.inventory.selectedHotbarIndex = i;
                     this.engine.audio.playClick();
                     this.inventoryController.renderInventory();
@@ -893,7 +906,7 @@ export class GameScene extends Scene {
         if (!isMenuOpen) {
             const scroll = this.engine.input.mouse.wheelDelta;
             if (scroll !== 0) {
-                this._cancelPendingMeleeImpact();
+                this._cancelPendingCombat();
                 let nextIndex = this.inventory.selectedHotbarIndex + scroll;
                 if (nextIndex < 0) nextIndex = 7;
                 else if (nextIndex > 7) nextIndex = 0;
@@ -1347,6 +1360,8 @@ export class GameScene extends Scene {
             this._drawCalls++;
         }
 
+        this.projectileSystem.draw(this.basicShader, drawMode);
+
         this.campfire.draw(this.basicShader, drawMode);
 
         this.waterCollector.draw(this.basicShader, drawMode);
@@ -1480,7 +1495,7 @@ export class GameScene extends Scene {
 
     _pauseGame() {
         if (this.isPaused || this.isEscaping) return;
-        this._cancelPendingMeleeImpact();
+        this._cancelPendingCombat();
         this.isPaused = true;
 
         const pauseMenu = document.getElementById('pause-menu');
@@ -1612,7 +1627,7 @@ export class GameScene extends Scene {
     }
 
     _showGameOver() {
-        this._cancelPendingMeleeImpact();
+        this._cancelPendingCombat();
         this._isGameOver = true;
 
         this.saveController.finish('dead');
@@ -1659,7 +1674,7 @@ export class GameScene extends Scene {
     }
 
     _startEscapeCutscene() {
-        this._cancelPendingMeleeImpact();
+        this._cancelPendingCombat();
         this.isEscaping = true;
         if (this.escapeHud) {
             this.escapeHud.classList.add('hidden');
@@ -1808,7 +1823,7 @@ export class GameScene extends Scene {
         this.player.updateModelMatrix();
 
         const equippedDef = equippedItem ? getResourceDef(equippedItem.id) : null;
-        if (!equippedDef || equippedDef.weaponType === 'melee') {
+        if (!equippedDef?.weaponType || equippedDef.weaponType === 'melee') {
             const pendingAttack = this.combatSystem.beginAttack({
                 origin: this.camera.position,
                 direction: this._getAimDirection(),
@@ -1843,6 +1858,46 @@ export class GameScene extends Scene {
         this._applyCombatImpactFeedback(result, null, equippedItem, true);
     }
 
+    _beginBowCharge(equippedItem) {
+        const chargeState = this.combatSystem.beginBowCharge({
+            equippedItem,
+            inventory: this.inventory,
+        });
+        if (chargeState?.reason === 'no_ammo') {
+            this._attackHoldBlocked = true;
+            this._showNotification('➵ Hết tên! Chế tạo thêm tên để bắn cung.');
+            return;
+        }
+        if (!chargeState) return;
+        this._pendingBowCharge = chargeState;
+        this.firstPersonViewModel.beginBowCharge();
+    }
+
+    _releaseBow() {
+        if (!this._pendingBowCharge) return;
+        const charge = this.firstPersonViewModel.releaseBow();
+        const spec = this.combatSystem.releaseBow(this._pendingBowCharge, {
+            origin: this.camera.position,
+            direction: this._getAimDirection(),
+            charge,
+            inventory: this.inventory,
+        });
+        this._pendingBowCharge = null;
+        if (!spec || spec.reason) return;
+        this.projectileSystem.spawnArrow(spec);
+        this.engine.audio.playBowRelease(null);
+    }
+
+    _handleProjectileImpact(impact) {
+        if (!impact.creature) return;
+        this._applyCombatImpactFeedback({
+            hit: true,
+            creature: impact.creature,
+            damage: impact.damage,
+            swung: true,
+        }, null, { id: 'bow' }, false);
+    }
+
     _resolvePendingMeleeImpact(weaponEvent) {
         const pending = this._pendingMeleeImpact;
         this._pendingMeleeImpact = null;
@@ -1862,8 +1917,9 @@ export class GameScene extends Scene {
         this._applyCombatImpactFeedback(result, treeResult, pending.equippedItem, false);
     }
 
-    _cancelPendingMeleeImpact() {
+    _cancelPendingCombat() {
         this._pendingMeleeImpact = null;
+        this._pendingBowCharge = null;
         this.firstPersonViewModel?.cancel();
     }
 
@@ -1876,7 +1932,7 @@ export class GameScene extends Scene {
         const swingPos = result.creature
             ? result.creature.position
             : (treeResult && treeResult.tree ? treeResult.tree.position : null);
-        if (weaponType === 'ranged') {
+        if (weaponType === 'ranged' && playSwingAudio) {
             this.engine.audio.playBowRelease(swingPos);
         } else if (treeResult && treeResult.hit) {
             this.engine.audio.playChop(swingPos);
@@ -2072,7 +2128,7 @@ export class GameScene extends Scene {
 
     destroy() {
         console.log('GameScene: Destroying meshes and shader programs...');
-        this._cancelPendingMeleeImpact();
+        this._cancelPendingCombat();
         if (this.engine.input.onPointerLockChange === this._onPointerLockChange) {
             this.engine.input.onPointerLockChange = null;
         }
@@ -2110,6 +2166,7 @@ export class GameScene extends Scene {
 
         if (this.characterRenderer) this.characterRenderer.delete();
         if (this.firstPersonViewModel) this.firstPersonViewModel.delete();
+        if (this.projectileSystem) this.projectileSystem.delete();
 
         if (this.raftAssembly) this.raftAssembly.delete();
         if (this.waterfall) this.waterfall.delete();

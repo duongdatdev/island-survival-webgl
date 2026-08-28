@@ -128,6 +128,21 @@ test('mouse movement accumulates all events until the frame resets', () => {
     }
 });
 
+test('mouse release is reported for one frame', () => {
+    const input = new InputManager(null);
+    input.mouse.buttons[0] = true;
+    assert.equal(input.isMousePressed(0), true);
+    assert.equal(input.isMouseReleased(0), false);
+
+    input.resetDeltas();
+    input.mouse.buttons[0] = false;
+    assert.equal(input.isMousePressed(0), false);
+    assert.equal(input.isMouseReleased(0), true);
+
+    input.resetDeltas();
+    assert.equal(input.isMouseReleased(0), false);
+});
+
 test('pointer lock capture click is consumed and unlock clears mouse state', () => {
     const originalWindow = globalThis.window;
     const originalDocument = globalThis.document;

@@ -160,6 +160,52 @@ export class CollisionSystem {
         return closest;
     }
 
+    sphereCast(origin, direction, radius, maxDist, layerMask) {
+        const directionLength = Math.hypot(direction[0], direction[1], direction[2]);
+        if (directionLength <= 0.0001 || maxDist <= 0) return null;
+        const castDirection = [
+            direction[0] / directionLength,
+            direction[1] / directionLength,
+            direction[2] / directionLength,
+        ];
+        let closest = null;
+        let closestDist = maxDist;
+
+        for (const { entity, collider } of this.colliders) {
+            if (collider.type === 'none' || collider.trigger) continue;
+            if (layerMask && !(collider.layer & layerMask)) continue;
+
+            const expandedRadius = Math.max(0, collider.radius || 0) + radius;
+            const offsetX = origin[0] - entity.position[0];
+            const offsetY = origin[1] - entity.position[1];
+            const offsetZ = origin[2] - entity.position[2];
+            const projection = offsetX * castDirection[0]
+                + offsetY * castDirection[1]
+                + offsetZ * castDirection[2];
+            const offsetLengthSq = offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ;
+            const discriminant = projection * projection - (offsetLengthSq - expandedRadius * expandedRadius);
+            if (discriminant < 0) continue;
+
+            const startsInside = offsetLengthSq <= expandedRadius * expandedRadius;
+            const distance = startsInside ? 0 : -projection - Math.sqrt(discriminant);
+            if (distance < 0) continue;
+            if (distance > closestDist) continue;
+
+            closestDist = distance;
+            closest = {
+                entity,
+                distance,
+                point: [
+                    origin[0] + castDirection[0] * distance,
+                    origin[1] + castDirection[1] * distance,
+                    origin[2] + castDirection[2] * distance,
+                ],
+            };
+        }
+
+        return closest;
+    }
+
     getDebugInfo() {
         return this.colliders.map(({ entity, collider }) => ({
             position: entity.position,

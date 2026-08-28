@@ -113,6 +113,55 @@ test('spear uses the locked 3d aim ray instead of a horizontal cone', () => {
     assert.equal(besideRay.health, 30);
 });
 
+test('bow release clamps tap charge and consumes exactly one arrow', () => {
+    const combat = new CombatSystem();
+    let arrows = 1;
+    const inventory = {
+        hasItem: () => arrows > 0,
+        removeItem: () => { arrows--; return true; },
+    };
+    const state = combat.beginBowCharge({ equippedItem: { id: 'bow' }, inventory });
+    const spec = combat.releaseBow(state, {
+        origin: [1, 2, 3],
+        direction: [0, 0, 2],
+        charge: 0,
+        inventory,
+    });
+
+    assert.equal(spec.charge, 0.25);
+    assert.equal(spec.damage, 8);
+    assert.equal(spec.speed, 14);
+    assert.deepEqual(spec.direction, [0, 0, 1]);
+    assert.equal(arrows, 0);
+    assert.equal(combat.canAttack(), false);
+});
+
+test('bow reaches max damage and cancelled charge costs no arrow', () => {
+    const combat = new CombatSystem();
+    let arrows = 2;
+    const inventory = {
+        hasItem: () => arrows > 0,
+        removeItem: () => { arrows--; return true; },
+    };
+    combat.beginBowCharge({ equippedItem: { id: 'bow' }, inventory });
+    assert.equal(arrows, 2);
+
+    const state = combat.beginBowCharge({ equippedItem: { id: 'bow' }, inventory });
+    const spec = combat.releaseBow(state, {
+        origin: [0, 0, 0],
+        direction: [0, 0, 1],
+        charge: 1.5,
+        inventory,
+    });
+    assert.equal(spec.damage, 18);
+    assert.equal(spec.speed, 28);
+    assert.equal(arrows, 1);
+    assert.equal(combat.releaseBow(state, {
+        origin: [0, 0, 0], direction: [0, 0, 1], charge: 1, inventory,
+    }), null);
+    assert.equal(arrows, 1);
+});
+
 test('first person view model exposes fist spear and bow states', () => {
     const viewModel = Object.create(FirstPersonViewModel.prototype);
     Object.assign(viewModel, {
