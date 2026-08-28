@@ -1,6 +1,6 @@
 import { getResourceDef } from './ResourceDatabase.js';
+import { getWeaponProfile } from './CombatConfig.js';
 
-const FIST = { type: 'melee', damage: 5, range: 1.5, cooldown: 0.4 };
 const COOLDOWN_EPSILON = 1e-6;
 
 export class CombatSystem {
@@ -177,17 +177,11 @@ export class CombatSystem {
     }
 
     _getWeaponData(equippedItem) {
-        if (!equippedItem) return FIST;
+        if (!equippedItem) return getWeaponProfile('fist');
 
         const def = getResourceDef(equippedItem.id);
-        if (!def || !def.weaponType) return FIST;
-
-        return {
-            type: def.weaponType,
-            damage: def.weaponDamage,
-            range: def.weaponRange,
-            cooldown: def.weaponCooldown,
-        };
+        if (!def || !def.weaponType) return getWeaponProfile('fist');
+        return getWeaponProfile(equippedItem.id) || getWeaponProfile('fist');
     }
 
     update(deltaTime) {

@@ -1,5 +1,9 @@
 
-import { AXE_SWING_DURATION } from './CombatConfig.js';
+import { getWeaponProfile } from './CombatConfig.js';
+
+const AXE_PROFILE = getWeaponProfile('stone_axe');
+const SPEAR_PROFILE = getWeaponProfile('spear');
+const BOW_PROFILE = getWeaponProfile('bow');
 
 export const WOOD_LOG_MODEL_ID = 'survival:wood_log';
 export const CHEST_MODEL_ID = 'environment:chest';
@@ -157,9 +161,9 @@ export const ResourceDatabase = {
         spawnWeight: 0,
         consumable: false,
         weaponType: 'melee',
-        weaponDamage: 10,
-        weaponRange: 2.0,
-        weaponCooldown: AXE_SWING_DURATION
+        weaponDamage: AXE_PROFILE.damage,
+        weaponRange: AXE_PROFILE.range,
+        weaponCooldown: AXE_PROFILE.cooldown
     },
 
     [ResourceType.CAMPFIRE]: {
@@ -386,9 +390,9 @@ export const ResourceDatabase = {
         spawnWeight: 0,
         consumable: false,
         weaponType: 'melee',
-        weaponDamage: 25,
-        weaponRange: 3.0,
-        weaponCooldown: 0.8
+        weaponDamage: SPEAR_PROFILE.damage,
+        weaponRange: SPEAR_PROFILE.range,
+        weaponCooldown: SPEAR_PROFILE.cooldown
     },
 
     [ResourceType.BOW]: {
@@ -403,9 +407,9 @@ export const ResourceDatabase = {
         spawnWeight: 0,
         consumable: false,
         weaponType: 'ranged',
-        weaponDamage: 15,
-        weaponRange: 20.0,
-        weaponCooldown: 1.2
+        weaponDamage: BOW_PROFILE.damage,
+        weaponRange: BOW_PROFILE.range,
+        weaponCooldown: BOW_PROFILE.cooldown
     },
 
     [ResourceType.ARROW]: {

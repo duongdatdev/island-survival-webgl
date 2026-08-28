@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { FirstPersonViewModel } from '../src/characters/FirstPersonViewModel.js';
 import { CombatSystem } from '../src/systems/CombatSystem.js';
+import { getWeaponProfile } from '../src/systems/CombatConfig.js';
 
 function createCreature(position = [0, 0, 1]) {
     return {
@@ -14,6 +15,18 @@ function createCreature(position = [0, 0, 1]) {
         },
     };
 }
+
+test('weapon combat profiles centralize timing and damage values', () => {
+    assert.deepEqual(
+        ['fist', 'stone_axe', 'spear', 'bow'].map(id => getWeaponProfile(id)?.id),
+        ['fist', 'stone_axe', 'spear', 'bow']
+    );
+    assert.equal(getWeaponProfile('fist').range, 1.4);
+    assert.equal(getWeaponProfile('stone_axe').impactTime, 0.24);
+    assert.equal(getWeaponProfile('spear').damage, 25);
+    assert.equal(getWeaponProfile('bow').maxDamage, 18);
+    assert.equal(getWeaponProfile('missing'), null);
+});
 
 test('axe damage waits for impact and resolves only once', () => {
     const combat = new CombatSystem();

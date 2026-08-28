@@ -41,6 +41,59 @@ export const WEATHER_GAMEPLAY_BALANCE = Object.freeze({
     minimumCampfireIntensity: 0.4,
 });
 
+export const COMBAT_BALANCE = Object.freeze({
+    fist: Object.freeze({
+        id: 'fist',
+        type: 'melee',
+        attackKind: 'arc',
+        damage: 5,
+        range: 1.4,
+        cooldown: 0.42,
+        duration: 0.42,
+        impactTime: 0.16,
+        halfArc: Math.PI * 0.35,
+    }),
+    stone_axe: Object.freeze({
+        id: 'stone_axe',
+        type: 'melee',
+        attackKind: 'arc',
+        damage: 10,
+        range: 2.0,
+        cooldown: 0.54,
+        duration: 0.54,
+        impactTime: 0.24,
+        halfArc: Math.PI * 0.35,
+    }),
+    spear: Object.freeze({
+        id: 'spear',
+        type: 'melee',
+        attackKind: 'thrust',
+        damage: 25,
+        range: 3.0,
+        cooldown: 0.8,
+        duration: 0.68,
+        impactTime: 0.28,
+        hitRadius: 0.25,
+    }),
+    bow: Object.freeze({
+        id: 'bow',
+        type: 'ranged',
+        attackKind: 'projectile',
+        damage: 15,
+        minDamage: 8,
+        maxDamage: 18,
+        range: 70,
+        cooldown: 0.35,
+        minimumCharge: 0.25,
+        fullChargeSeconds: 1.0,
+        minProjectileSpeed: 14,
+        maxProjectileSpeed: 28,
+        projectileGravity: 9.8,
+        projectileLifetime: 2.5,
+        projectileRadius: 0.08,
+    }),
+});
+
 export const CREATURE_BALANCE = Object.freeze({
     crab: Object.freeze({
         maxHealth: 10,
