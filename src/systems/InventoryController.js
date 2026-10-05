@@ -203,7 +203,7 @@ export class InventoryController {
                 const item = this.scene.inventory.slots[index];
                 if (!item || this.consumeItemAt(index)) return;
                 const definition = getResourceDef(item.id);
-                if (definition && (item.id === 'campfire' || item.id === 'water_collector')) {
+                if (definition && (item.id === 'campfire' || item.id === 'water_collector' || item.id === 'shelter')) {
                     const hotbarOffset = index - 20;
                     if (hotbarOffset >= 0 && hotbarOffset < 8) {
                         this.scene.inventory.selectedHotbarIndex = hotbarOffset;
@@ -294,7 +294,8 @@ export class InventoryController {
 
         if (definition.consumable) {
             if (this.consumeItemAt(activeIndex)) return;
-            if (activeItem.id === 'campfire') this.placeStructure('campfire');
+            if (activeItem.id === 'shelter') this.placeStructure('shelter');
+            else if (activeItem.id === 'campfire') this.placeStructure('campfire');
             else if (activeItem.id === 'water_collector') this.placeStructure('water_collector');
         } else if (activeItem.id === 'stone_axe') {
             scene._showNotification('🪓 Đang trang bị Rìu Đá! Nhấn chuột trái để chặt cây hoặc tấn công.');
@@ -316,6 +317,10 @@ export class InventoryController {
             return false;
         }
 
+        if (type === 'shelter' && scene.shelter?.isBuilt) {
+            scene._showNotification('⛺ Đã có Mái Trú Ẩn trong thế giới này.');
+            return false;
+        }
         const yaw = scene.player.rotation[1];
         let placeX = scene.player.position[0] + Math.sin(yaw) * 2;
         let placeZ = scene.player.position[2] + Math.cos(yaw) * 2;
@@ -330,10 +335,25 @@ export class InventoryController {
             placeZ *= scale;
         }
         const placeY = scene.terrain.getHeight(placeX, placeZ);
+        if (type === 'shelter') {
+            const heights = [-1.9, 0, 1.9].flatMap(x => [-1.9, 0, 1.9].map(z =>
+                scene.terrain.getHeight(placeX + x, placeZ + z)));
+            if (Math.min(...heights) < 0.5 || Math.max(...heights) - Math.min(...heights) > 0.65) {
+                scene._showNotification('⛺ Cần nền đất khô, bằng phẳng để dựng mái.');
+                return false;
+            }
+        }
         const activeIndex = 20 + scene.inventory.selectedHotbarIndex;
+        if (scene.inventory.slots[activeIndex]?.id !== type) return false;
         const buildPosition = [placeX, placeY + 0.5, placeZ];
 
-        if (type === 'campfire') {
+        if (type === 'shelter') {
+            scene.shelter.position.set([placeX, placeY, placeZ]);
+            scene.shelter.isBuilt = true;
+            scene.shelter.updateModelMatrix();
+            scene.inventory.removeItemAt(activeIndex, 1);
+            scene._showNotification('⛺ Đã dựng mái! Vào bên dưới để tránh mưa; nhấn E ban đêm để ngủ.');
+        } else if (type === 'campfire') {
             scene.campfire.position.set([placeX, placeY, placeZ]);
             scene.campfire.isBuilt = true;
             scene.campfire.updateModelMatrix();
@@ -385,6 +405,7 @@ export class InventoryController {
         if (!recipesListEl || !detailsEl) return;
         const scene = this.scene;
         const filteredRecipes = getAllRecipes().filter(recipe => {
+            if (recipe.id === 'shelter' && scene.shelter?.isBuilt) return false;
             if (recipe.id === 'campfire' && scene.campfire?.isBuilt) return false;
             if (recipe.id === 'water_collector' && scene.waterCollector?.isBuilt) return false;
             if (recipe.requiresBlueprint && !scene.unlockedBlueprints.has(recipe.requiresBlueprint)) return false;
@@ -423,7 +444,8 @@ export class InventoryController {
             detailsEl.innerHTML = '<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>';
             return;
         }
-        if ((recipe.id === 'campfire' && scene.campfire?.isBuilt)
+        if ((recipe.id === 'shelter' && scene.shelter?.isBuilt)
+            || (recipe.id === 'campfire' && scene.campfire?.isBuilt)
             || (recipe.id === 'water_collector' && scene.waterCollector?.isBuilt)) {
             this.selectedRecipeId = null;
             detailsEl.innerHTML = '<div class="details-placeholder">Chọn một công thức để xem chi tiết & chế tạo</div>';

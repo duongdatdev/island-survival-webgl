@@ -4,6 +4,7 @@ export const RecipeType = {
     RAFT_FRAME:       'raft_frame',
     PADDLE:           'paddle',
     BARREL_FLOATS:    'barrel_floats',
+    SHELTER:          'shelter',
     CAMPFIRE:         'campfire',
     WATER_COLLECTOR:  'water_collector',
     FISHING_ROD:      'fishing_rod',
@@ -17,6 +18,17 @@ export const RecipeType = {
 };
 
 export const RecipeDatabase = {
+    [RecipeType.SHELTER]: {
+        id: RecipeType.SHELTER,
+        name: 'Mái Trú Ẩn',
+        nameEn: 'Shelter',
+        icon: '⛺',
+        description: 'Mái che mưa, giảm lạnh và bảo vệ lửa trại bên dưới. Vào mái ban đêm để ngủ tới sáng, tiêu hao đói và khát.',
+        descriptionEn: 'Rain cover and a place to sleep until dawn at a hunger and thirst cost.',
+        category: 'structure',
+        ingredients: { wood: 6, rope: 2 },
+    },
+
     [RecipeType.STONE_AXE]: {
         id: RecipeType.STONE_AXE,
         name: 'Rìu Đá',
@@ -40,7 +52,7 @@ export const RecipeDatabase = {
         descriptionEn: 'A fire pit to cook raw food into nourishing meals.',
         category: 'structure',
         ingredients: {
-            stone: 5,
+            stone: 4,
             wood: 3
         }
     },
@@ -55,7 +67,7 @@ export const RecipeDatabase = {
         category: 'structure',
         ingredients: {
             wood: 4,
-            barrel: 2
+            barrel: 1
         }
     },
 
@@ -200,7 +212,7 @@ export const RecipeDatabase = {
         descriptionEn: 'Herbal bandage to stop bleeding and heal wounds.',
         category: 'structure',
         ingredients: {
-            herb: 3
+            herb: 2
         }
     }
 };

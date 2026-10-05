@@ -12,7 +12,8 @@ export class ExposureSystem {
 
     update(deltaTime, context = {}) {
         const duration = Math.max(0, Number.isFinite(deltaTime) ? deltaTime : 0);
-        const rainFactor = clamp(context.rainFactor ?? 0, 0, 1);
+        const sheltered = !!context.sheltered && !context.inWater;
+        const rainFactor = sheltered ? 0 : clamp(context.rainFactor ?? 0, 0, 1);
         const fireIntensityMultiplier = clamp(context.fireIntensityMultiplier ?? 0, 0, 1);
         const inWater = !!context.inWater;
         const isNight = !!context.isNight;
@@ -43,6 +44,7 @@ export class ExposureSystem {
                 inWater,
                 isNight,
                 nearCampfire,
+                sheltered,
                 wetness: averageWetness,
             });
             this.warmth = clamp(
@@ -77,10 +79,11 @@ export class ExposureSystem {
         isNight,
         nearCampfire,
         wetness,
+        sheltered,
     }) {
         const rates = EXPOSURE_BALANCE.warmth;
         let rate = 0;
-        if (isNight) rate -= rates.nightLossPerSecond;
+        if (isNight) rate -= rates.nightLossPerSecond * (sheltered ? 0.25 : 1);
         rate -= rates.rainLossPerSecond * rainFactor;
         rate -= rates.wetnessLossPerSecond * (wetness / EXPOSURE_BALANCE.maximum);
         if (inWater) rate -= rates.waterLossPerSecond;

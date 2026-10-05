@@ -1,5 +1,14 @@
 import { ENVIRONMENT_BALANCE } from '../gameplay/BalanceConfig.js';
 
+function smoothstep(low, high, value) {
+    const t = Math.max(0, Math.min(1, (value - low) / (high - low)));
+    return t * t * (3 - 2 * t);
+}
+
+function mixColor(a, b, t) {
+    return a.map((value, i) => value + (b[i] - value) * t);
+}
+
 export class DayNightCycle {
     constructor() {
         this.timeOfDay = 0.2;
@@ -23,11 +32,14 @@ export class DayNightCycle {
     }
 
     getSunDirection() {
-        const angle = (this.timeOfDay - 0.25) * Math.PI * 2;
-        const lx = Math.cos(angle) * 0.6;
-        const ly = Math.sin(angle);
-        const lz = Math.sin(angle) * 0.6;
-        return [lx, ly, lz];
+        // Match the orbit to the gameplay dawn/dusk times, including midnight wrap.
+        const t = ((this.timeOfDay % 1) + 1) % 1;
+        const dayLength = this.duskTime - this.dawnTime;
+        const phase = t >= this.dawnTime && t < this.duskTime
+            ? (t - this.dawnTime) / dayLength
+            : 1 + ((t - this.duskTime + 1) % 1) / (1 - dayLength);
+        const angle = phase * Math.PI;
+        return [Math.cos(angle) * 0.8, Math.sin(angle), Math.cos(angle) * 0.6];
     }
 
     getMoonDirection() {
@@ -36,141 +48,33 @@ export class DayNightCycle {
     }
 
     getSunColor() {
-        const t = this.timeOfDay;
-
-        if (t < 0.15) {
-            const p = t / 0.15;
-            return [
-                1.0 * p + 0.3 * (1 - p),
-                0.7 * p + 0.2 * (1 - p),
-                0.4 * p + 0.15 * (1 - p)
-            ];
-        }
-        if (t < 0.25) {
-            const p = (t - 0.15) / 0.1;
-            return [
-                1.0,
-                0.7 + 0.25 * p,
-                0.4 + 0.45 * p
-            ];
-        }
-        if (t < 0.65) {
-            return [1.0, 0.95, 0.85];
-        }
-        if (t < 0.80) {
-            const p = (t - 0.65) / 0.15;
-            return [
-                1.0,
-                0.95 - 0.55 * p,
-                0.85 - 0.50 * p
-            ];
-        }
-        if (t < 0.92) {
-            const p = (t - 0.80) / 0.12;
-            return [
-                0.40 - 0.10 * p,
-                0.20 - 0.05 * p,
-                0.10
-            ];
-        }
-        const p = (t - 0.92) / 0.08;
-        return [
-            0.30 + 0.70 * p,
-            0.15 + 0.55 * p,
-            0.10 + 0.05 * p
-        ];
+        return mixColor([1.0, 0.65, 0.40], [1.0, 0.96, 0.88],
+            smoothstep(0.0, 0.45, this.getSunDirection()[1]));
     }
 
     getSunIntensity() {
-        const t = this.timeOfDay;
-        if (t < 0.10 || t > 0.92) return 0.22;
-        if (t < 0.20) return 0.22 + ((t - 0.10) / 0.10) * 0.78;
-        if (t < 0.75) return 1.0;
-        if (t < 0.85) return 1.0 - ((t - 0.75) / 0.10) * 0.78;
-        return 0.22;
+        return 0.85 * smoothstep(0.0, 0.45, this.getSunDirection()[1]);
     }
 
     getAmbientColor() {
-        const t = this.timeOfDay;
-        const night = [0.16, 0.20, 0.30];
-        if (t < 0.12) {
-            const p = t / 0.12;
-            return [night[0] + 0.06 * p, night[1] + 0.08 * p, night[2] + 0.08 * p];
-        }
-        if (t < 0.22) {
-            const p = (t - 0.12) / 0.10;
-            return [0.22 + 0.00 * p, 0.28 + 0.00 * p, 0.38 - 0.10 * p];
-        }
-        if (t < 0.70) {
-            return [0.22, 0.28, 0.38];
-        }
-        if (t < 0.82) {
-            const p = (t - 0.70) / 0.12;
-            return [0.22 - 0.06 * p, 0.28 - 0.08 * p, 0.38 - 0.08 * p];
-        }
-        if (t < 0.92) {
-            const p = (t - 0.82) / 0.1;
-            return [0.16 + 0.00 * p, 0.20 + 0.00 * p, 0.30 + 0.00 * p];
-        }
-        return night;
+        return mixColor([0.24, 0.31, 0.46], [0.62, 0.70, 0.80],
+            smoothstep(-0.20, 0.35, this.getSunDirection()[1]));
     }
 
     getAmbientIntensity() {
-        const t = this.timeOfDay;
-        if (t < 0.10 || t > 0.92) return 0.28;
-        if (t < 0.20) return 0.28 + ((t - 0.10) / 0.10) * 0.12;
-        if (t < 0.75) return 0.40;
-        if (t < 0.85) return 0.40 - ((t - 0.75) / 0.10) * 0.12;
-        return 0.28;
+        return 0.38 + 0.17 * smoothstep(-0.20, 0.35, this.getSunDirection()[1]);
     }
 
     getSkyColors() {
-        const t = this.timeOfDay;
-
-        if (t < 0.10) {
-            const p = t / 0.10;
-            return {
-                top: [0.02 + 0.51 * p, 0.02 + 0.72 * p, 0.06 + 0.84 * p],
-                bottom: [0.01 + 0.79 * p, 0.01 + 0.84 * p, 0.03 + 0.92 * p],
-                horizon: [0.05 + 0.65 * p, 0.03 + 0.72 * p, 0.08 + 0.77 * p]
-            };
-        }
-        if (t < 0.22) {
-            const p = (t - 0.10) / 0.12;
-            return {
-                top: [0.53, 0.74, 0.90],
-                bottom: [0.80, 0.85, 0.95],
-                horizon: [0.70, 0.75, 0.85]
-            };
-        }
-        if (t < 0.65) {
-            return {
-                top: [0.53, 0.74, 0.90],
-                bottom: [0.80, 0.85, 0.95],
-                horizon: [0.70, 0.75, 0.85]
-            };
-        }
-        if (t < 0.80) {
-            const p = (t - 0.65) / 0.15;
-            return {
-                top: [0.53 - 0.40 * p, 0.74 - 0.60 * p, 0.90 - 0.72 * p],
-                bottom: [0.80 - 0.65 * p, 0.85 - 0.70 * p, 0.95 - 0.78 * p],
-                horizon: [0.70 - 0.50 * p, 0.75 - 0.55 * p, 0.85 - 0.60 * p]
-            };
-        }
-        if (t < 0.92) {
-            const p = (t - 0.80) / 0.12;
-            return {
-                top: [0.13 - 0.11 * p, 0.14 - 0.12 * p, 0.18 - 0.12 * p],
-                bottom: [0.15 - 0.14 * p, 0.15 - 0.14 * p, 0.17 - 0.14 * p],
-                horizon: [0.20 - 0.15 * p, 0.20 - 0.17 * p, 0.25 - 0.18 * p]
-            };
-        }
-        const p = (t - 0.92) / 0.08;
+        const altitude = this.getSunDirection()[1];
+        const daylight = smoothstep(-0.22, 0.30, altitude);
+        const twilight = this.getSunsetAmount();
         return {
-            top: [0.02 + 0.01 * p, 0.02 + 0.01 * p, 0.06 + 0.06 * p],
-            bottom: [0.01 + 0.01 * p, 0.01 + 0.01 * p, 0.03 + 0.03 * p],
-            horizon: [0.05 + 0.05 * p, 0.03 + 0.03 * p, 0.07 + 0.07 * p]
+            top: mixColor([0.025, 0.04, 0.085], [0.36, 0.63, 0.84], daylight),
+            bottom: mixColor([0.055, 0.075, 0.13], [0.78, 0.84, 0.88], daylight),
+            horizon: mixColor(
+                mixColor([0.055, 0.075, 0.13], [0.70, 0.80, 0.88], daylight),
+                [0.88, 0.49, 0.30], twilight * 0.65),
         };
     }
 
@@ -188,34 +92,14 @@ export class DayNightCycle {
     }
 
     getSunsetAmount() {
-        const t = this.timeOfDay;
-
-        if (t >= 0.10 && t < 0.16) {
-            return (t - 0.10) / 0.06;
-        }
-        if (t >= 0.16 && t < 0.22) {
-            return 1.0 - (t - 0.16) / 0.06;
-        }
-
-        if (t >= 0.68 && t < 0.76) {
-            return (t - 0.68) / 0.08;
-        }
-        if (t >= 0.76 && t < 0.85) {
-            return 1.0 - (t - 0.76) / 0.09;
-        }
-
-        return 0.0;
+        const altitude = this.getSunDirection()[1];
+        return smoothstep(-0.22, 0.0, altitude)
+            * (1 - smoothstep(0.0, 0.35, altitude));
     }
 
     getMoonColor() {
-        const t = this.timeOfDay;
-        const sunIntensity = this.getSunIntensity();
-        const nightness = 1.0 - Math.min(1.0, Math.max(0.0, (sunIntensity - 0.22) / 0.78));
-        return [
-            0.85 * nightness,
-            0.88 * nightness,
-            0.95 * nightness,
-        ];
+        const visibility = 1 - smoothstep(-0.12, 0.18, this.getSunDirection()[1]);
+        return [0.68 * visibility, 0.79 * visibility, 0.98 * visibility];
     }
 
     getTimeLabel() {

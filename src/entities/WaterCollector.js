@@ -1,3 +1,4 @@
+import { createCubeData } from '../renderer/CubeGeometry.js';
 import { Entity } from './Entity.js';
 import { Vec3 } from '../math/Vec3.js';
 import { Mat4 } from '../math/Mat4.js';
@@ -27,10 +28,10 @@ export class WaterCollector extends Entity {
     }
 
     _buildMeshes(gl) {
-        this._woodData = this._createCubeData(0.5, 0.32, 0.15);
-        this._barrelData = this._createCubeData(0.4, 0.25, 0.12);
-        this._waterData = this._createCubeData(0.2, 0.5, 0.8);
-        this._leafData = this._createCubeData(0.25, 0.55, 0.2);
+        this._woodData = createCubeData(0.5, 0.32, 0.15);
+        this._barrelData = createCubeData(0.4, 0.25, 0.12);
+        this._waterData = createCubeData(0.2, 0.5, 0.8);
+        this._leafData = createCubeData(0.25, 0.55, 0.2);
 
         this.woodMesh = this._createMesh(gl, this._woodData);
         this.barrelMesh = this._createMesh(gl, this._barrelData);
@@ -143,37 +144,6 @@ export class WaterCollector extends Entity {
         return new Mesh(gl, data);
     }
 
-    _createCubeData(r, g, b) {
-        const positions = new Float32Array([
-            -0.5,-0.5, 0.5,  0.5,-0.5, 0.5,  0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
-            -0.5,-0.5,-0.5, -0.5, 0.5,-0.5,  0.5, 0.5,-0.5,  0.5,-0.5,-0.5,
-            -0.5, 0.5,-0.5, -0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5,-0.5,
-            -0.5,-0.5,-0.5,  0.5,-0.5,-0.5,  0.5,-0.5, 0.5, -0.5,-0.5, 0.5,
-             0.5,-0.5,-0.5,  0.5, 0.5,-0.5,  0.5, 0.5, 0.5,  0.5,-0.5, 0.5,
-            -0.5,-0.5,-0.5, -0.5,-0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5,-0.5,
-        ]);
-        const normals = new Float32Array([
-             0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
-             0, 0,-1, 0, 0,-1, 0, 0,-1, 0, 0,-1,
-             0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
-             0,-1, 0, 0,-1, 0, 0,-1, 0, 0,-1, 0,
-             1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-            -1, 0, 0,-1, 0, 0,-1, 0, 0,-1, 0, 0,
-        ]);
-        const colors = new Float32Array(24 * 4);
-        for (let i = 0; i < 24; i++) {
-            colors[i*4]=r; colors[i*4+1]=g; colors[i*4+2]=b; colors[i*4+3]=1.0;
-        }
-        const texCoords = new Float32Array([
-            0,0,1,0,1,1,0,1, 1,0,1,1,0,1,0,0, 0,1,0,0,1,0,1,1,
-            1,1,0,1,0,0,1,0, 1,0,1,1,0,1,0,0, 0,0,1,0,1,1,0,1,
-        ]);
-        const indices = new Uint16Array([
-            0,1,2,0,2,3, 4,5,6,4,6,7, 8,9,10,8,10,11,
-            12,13,14,12,14,15, 16,17,18,16,18,19, 20,21,22,20,22,23
-        ]);
-        return { positions, normals, colors, texCoords, indices };
-    }
 
     delete() {
         if (this.woodMesh) this.woodMesh.delete();

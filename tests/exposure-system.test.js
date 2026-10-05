@@ -25,7 +25,7 @@ test('exposure thresholds apply moderate cold penalties', () => {
         state: 'freezing', staminaRegenMultiplier: 0.5, speedMultiplier: 0.85,
     });
     const result = freezing.update(1, { isNight: true });
-    assert.ok(result.damage > 0.24 && result.damage < 0.26);
+    assert.ok(result.damage > 0.17 && result.damage < 0.18);
 });
 
 test('exposure update is stable across different frame sizes', () => {
@@ -56,7 +56,7 @@ test('exposure state loading clamps invalid values', () => {
 test('rain and water increase wetness while clear weather dries it', () => {
     const raining = new ExposureSystem({ warmth: 100, wetness: 0 });
     raining.update(10, { rainFactor: 1 });
-    closeTo(raining.wetness, 8);
+    closeTo(raining.wetness, 6);
 
     const swimming = new ExposureSystem({ warmth: 100, wetness: 0 });
     swimming.update(5, { inWater: true });
@@ -67,7 +67,7 @@ test('rain and water increase wetness while clear weather dries it', () => {
     closeTo(drying.wetness, 47.5);
     const nightDrying = new ExposureSystem({ warmth: 100, wetness: 50 });
     nightDrying.update(10, { isNight: true });
-    closeTo(nightDrying.wetness, 48.8);
+    closeTo(nightDrying.wetness, 48.2);
 });
 
 test('campfires warm and dry players even at storm intensity', () => {

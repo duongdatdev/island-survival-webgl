@@ -75,7 +75,7 @@ export class RainSystem {
         }
     }
 
-    draw(camera) {
+    draw(camera, shelter = null) {
         const count = this._activeDrops;
         if (count === 0) return;
         const gl = this.gl;
@@ -99,6 +99,8 @@ export class RainSystem {
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, verts.subarray(0, count * 6));
 
         this.shader.use();
+        this.shader.setUniform1f('uShelterBuilt', shelter?.isBuilt ? 1 : 0);
+        this.shader.setUniform3fv('uShelterPosition', shelter?.position || [0, 0, 0]);
         this.shader.setUniformMatrix4fv('uViewMatrix', camera.viewMatrix);
         this.shader.setUniformMatrix4fv('uProjectionMatrix', camera.projectionMatrix);
         this.shader.setUniform1f('uAlpha', 0.35 + this.intensity * 0.35);
@@ -126,9 +128,11 @@ export class RainSystem {
 RainSystem.VS = `#version 300 es
     precision highp float;
     in vec3 aPosition;
+    out vec3 vWorldPosition;
     uniform mat4 uViewMatrix;
     uniform mat4 uProjectionMatrix;
     void main() {
+        vWorldPosition = aPosition;
         gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
     }
 `;
@@ -136,8 +140,14 @@ RainSystem.VS = `#version 300 es
 RainSystem.FS = `#version 300 es
     precision highp float;
     uniform float uAlpha;
+    uniform float uShelterBuilt;
+    uniform vec3 uShelterPosition;
+    in vec3 vWorldPosition;
     out vec4 fragColor;
     void main() {
+        vec3 local = vWorldPosition - uShelterPosition;
+        if (uShelterBuilt > 0.5 && abs(local.x) < 1.9 && abs(local.z) < 1.95
+            && local.y < 2.65) discard;
         fragColor = vec4(0.62, 0.72, 0.86, uAlpha);
     }
 `;

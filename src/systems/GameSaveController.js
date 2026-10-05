@@ -144,6 +144,12 @@ export class GameSaveController {
             motorPlaced: !!save.raft.motorPlaced,
         });
 
+        if (scene.shelter) {
+            const shelter = save.structures.shelter;
+            scene.shelter.isBuilt = !!shelter?.isBuilt;
+            scene.shelter.position.set(shelter?.position || [0, 0, 0]);
+            scene.shelter.updateModelMatrix();
+        }
         const campfire = save.structures.campfire;
         scene.campfire.isBuilt = !!campfire.isBuilt;
         scene.campfire.position.set(campfire.position);

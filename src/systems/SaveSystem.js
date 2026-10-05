@@ -195,6 +195,10 @@ export class SaveSystem {
                 motorPlaced: raft.motorPlaced,
             },
             structures: {
+                shelter: {
+                    isBuilt: scene.shelter?.isBuilt || false,
+                    position: Array.from(scene.shelter?.position || [0, 0, 0]),
+                },
                 campfire: {
                     isBuilt: scene.campfire.isBuilt,
                     position: [scene.campfire.position[0], scene.campfire.position[1], scene.campfire.position[2]],

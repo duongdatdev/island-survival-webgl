@@ -47,6 +47,12 @@ export class Boar extends Creature {
         this.updateModelMatrix();
     }
 
+    canDamagePlayer() {
+        // The telegraph is a real dodge window, not an invisible contact hit.
+        if (this._chargePhase === 'windup') return false;
+        return super.canDamagePlayer();
+    }
+
     _updateChase(deltaTime, distToPlayer, playerPosition) {
         if (this.health <= this.fleeThreshold) {
             this.state = CreatureState.FLEE;

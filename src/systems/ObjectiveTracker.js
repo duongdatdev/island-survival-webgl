@@ -8,6 +8,7 @@ const REQUIRED_RAFT_STEPS = Object.freeze([
 ]);
 
 const COMPLETION_CHECKS = Object.freeze({
+    shelter: scene => scene.shelter?.isBuilt,
     raft_frame: scene => scene.raftAssembly?.framePlaced,
     barrel_floats: scene => scene.raftAssembly?.floatsPlaced,
     paddle: scene => scene.raftAssembly?.paddlePlaced,

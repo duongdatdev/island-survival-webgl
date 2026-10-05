@@ -18,6 +18,7 @@ export const ResourceType = {
     COOKED_MEAL:  'cooked_meal',
     FRESH_WATER:  'fresh_water',
     STONE_AXE:        'stone_axe',
+    SHELTER:          'shelter',
     CAMPFIRE:         'campfire',
     WATER_COLLECTOR:  'water_collector',
     RAFT_FRAME:       'raft_frame',
@@ -41,6 +42,19 @@ export const ResourceType = {
 };
 
 export const ResourceDatabase = {
+    [ResourceType.SHELTER]: {
+        id: ResourceType.SHELTER,
+        name: 'Mái Trú Ẩn',
+        nameEn: 'Shelter',
+        icon: '⛺',
+        color: [0.35, 0.43, 0.19],
+        meshScale: [0.5, 0.3, 0.5],
+        pickupRadius: 0,
+        stackSize: 1,
+        spawnWeight: 0,
+        consumable: true,
+    },
+
     [ResourceType.WOOD]: {
         id: ResourceType.WOOD,
         name: 'Gỗ',
@@ -105,7 +119,8 @@ export const ResourceDatabase = {
         pickupRadius: 2.5,
         stackSize: 20,
         spawnWeight: 2,
-        consumable: false
+        consumable: true,
+        vitalEffect: { type: 'thirst', amount: 15 }
     },
 
     [ResourceType.RAW_FISH]: {

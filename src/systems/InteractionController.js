@@ -1,3 +1,4 @@
+import { getSleepPlan, sleepUntilDawn } from './SleepSystem.js';
 import { ParticleSystem } from './ParticleSystem.js';
 
 const RAW_FOODS = ['raw_fish', 'raw_crab_meat', 'raw_seagull_meat', 'raw_boar_meat', 'coconut'];
@@ -12,6 +13,24 @@ export class InteractionController {
         const input = scene.engine.input;
         const interactKey = input ? input.getBindingDisplayName('interact') : 'E';
 
+        // Under the roof, the displayed sleep action owns the interact key.
+        if (scene.shelter?.covers(scene.player.position)) {
+            const plan = getSleepPlan(scene);
+            const hint = scene._domCache.pickupHint;
+            if (hint) {
+                hint.textContent = plan.allowed
+                    ? `[${interactKey}] Ngủ tới sáng · Đói −${Math.ceil(plan.hungerCost)} · Khát −${Math.ceil(plan.thirstCost)}`
+                    : `⛺ Đang trú mưa · ${plan.reason}`;
+                hint.classList.remove('hidden');
+            }
+            if (plan.allowed && input.isKeyPressed('interact')) {
+                input.consumeAction('interact');
+                sleepUntilDawn(scene);
+                return;
+            }
+            // Keep cooking/collection available whenever sleeping is unavailable.
+            if (plan.allowed) return;
+        }
         const campfirePrompt = this._updateCampfire(interactKey);
         const waterPrompt = this._updateWaterCollector(interactKey);
         const raft = this._updateRaft(interactKey);

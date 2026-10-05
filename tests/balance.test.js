@@ -7,6 +7,7 @@ import {
     SURVIVAL_BALANCE,
     ENVIRONMENT_BALANCE,
     CREATURE_BALANCE,
+    COMBAT_BALANCE,
 } from '../src/gameplay/BalanceConfig.js';
 import { VitalsSystem } from '../src/systems/VitalsSystem.js';
 import { DayNightCycle } from '../src/systems/DayNightCycle.js';
@@ -19,6 +20,56 @@ import { Shark } from '../src/entities/Shark.js';
 import { Player } from '../src/entities/Player.js';
 import { AssetManager } from '../src/core/AssetManager.js';
 import { ModelAsset } from '../src/renderer/ModelAsset.js';
+import { getResourceDef } from '../src/systems/ResourceDatabase.js';
+
+test('weapon progression gives hunting tools distinct kill budgets', () => {
+    const hp = CREATURE_BALANCE.boar.maxHealth;
+    assert.equal(Math.ceil(hp / COMBAT_BALANCE.fist.damage), 11);
+    assert.equal(Math.ceil(hp / COMBAT_BALANCE.stone_axe.damage), 4);
+    assert.equal(Math.ceil(hp / COMBAT_BALANCE.spear.damage), 3);
+    assert.equal(Math.ceil(hp / COMBAT_BALANCE.bow.maxDamage), 2);
+    assert.equal(Math.ceil(CREATURE_BALANCE.shark.maxHealth / COMBAT_BALANCE.spear.damage), 4);
+});
+
+test('sprinting provides an eight second escape and recovers within seven seconds', () => {
+    const vitals = new VitalsSystem();
+    vitals.update(8, true);
+    assert.ok(vitals.stamina > 0);
+    vitals.update(0.5, true);
+    assert.equal(vitals.canSprint(), false);
+    vitals.update(6.25, false);
+    assert.equal(vitals.stamina, 100);
+    assert.equal(vitals.canSprint(), true);
+});
+
+test('depletion leaves a rescue window and drinking stops the damage', () => {
+    const vitals = new VitalsSystem();
+    vitals.thirst = 0;
+    vitals.update(60, false);
+    assert.equal(vitals.health, 64);
+    vitals.drink(getResourceDef('coconut').vitalEffect.amount);
+    vitals.update(60, false);
+    assert.equal(vitals.health, 64);
+});
+
+test('boar windup cannot deal contact damage or consume the attack cooldown', () => {
+    const boar = new Boar(null, [0, 0, 0]);
+    boar._chargePhase = 'windup';
+    assert.equal(boar.canDamagePlayer(), false);
+    boar._chargePhase = 'charging';
+    assert.equal(boar.canDamagePlayer(), true);
+    assert.equal(boar.canDamagePlayer(), false);
+});
+
+test('lethal creature damage triggers game over immediately and only once', () => {
+    const vitals = new VitalsSystem();
+    let deaths = 0;
+    vitals.onGameOver = () => deaths++;
+    vitals.applyDamage(100, 'boar');
+    vitals.applyDamage(12, 'boar');
+    assert.equal(deaths, 1);
+    assert.equal(vitals.lastDamageCause, 'boar');
+});
 
 test('movement match-ups preserve an escape option', () => {
     assert.ok(PLAYER_BALANCE.walkSpeed > CREATURE_BALANCE.boar.baseSpeed);
@@ -177,13 +228,13 @@ test('player movement accelerates, decelerates, and normalizes diagonals', () =>
     assert.equal(player.currentSpeed, 0);
 });
 
-test('survival vitals reach the intended five minute pressure point', () => {
+test('survival vitals reach the intended five minute preparation window', () => {
     const vitals = new VitalsSystem();
 
     vitals.update(300, false);
 
-    assert.ok(Math.abs(vitals.hunger - 70) < 1e-9);
-    assert.ok(Math.abs(vitals.thirst - 58) < 1e-9);
+    assert.ok(Math.abs(vitals.hunger - 76) < 1e-9);
+    assert.ok(Math.abs(vitals.thirst - 64) < 1e-9);
     assert.equal(vitals.health, 100);
     assert.equal(vitals.hungerDrainRate, SURVIVAL_BALANCE.hungerDrainPerSecond);
     assert.equal(vitals.thirstDrainRate, SURVIVAL_BALANCE.thirstDrainPerSecond);
@@ -193,8 +244,8 @@ test('depletion damage is stable across different update sizes', () => {
     const singleStep = new VitalsSystem();
     const smallSteps = new VitalsSystem();
 
-    singleStep.update(720, false);
-    for (let elapsed = 0; elapsed < 720; elapsed += 0.1) {
+    singleStep.update(1000, false);
+    for (let elapsed = 0; elapsed < 1000; elapsed += 0.1) {
         smallSteps.update(0.1, false);
     }
 

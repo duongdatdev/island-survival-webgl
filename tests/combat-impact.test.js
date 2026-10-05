@@ -23,8 +23,8 @@ test('weapon combat profiles centralize timing and damage values', () => {
     );
     assert.equal(getWeaponProfile('fist').range, 1.4);
     assert.equal(getWeaponProfile('stone_axe').impactTime, 0.24);
-    assert.equal(getWeaponProfile('spear').damage, 25);
-    assert.equal(getWeaponProfile('bow').maxDamage, 18);
+    assert.equal(getWeaponProfile('spear').damage, 22);
+    assert.equal(getWeaponProfile('bow').maxDamage, 28);
     assert.equal(getWeaponProfile('missing'), null);
 });
 
@@ -39,11 +39,11 @@ test('axe damage waits for impact and resolves only once', () => {
 
     const impact = combat.resolveMeleeImpact(pending);
     assert.equal(impact.hit, true);
-    assert.equal(creature.health, 20);
+    assert.equal(creature.health, 16);
 
     const duplicate = combat.resolveMeleeImpact(pending);
     assert.equal(duplicate.swung, false);
-    assert.equal(creature.health, 20);
+    assert.equal(creature.health, 16);
 });
 
 test('axe impact misses when the locked target leaves its range', () => {
@@ -95,14 +95,14 @@ test('fist and spear attacks resolve once at their configured impact', () => {
 
 test('spear uses the locked 3d aim ray instead of a horizontal cone', () => {
     const combat = new CombatSystem();
-    const onRay = createCreature([0, 1.5, 2.5]);
+    const onRay = createCreature([0, 1.2, 2.0]);
     onRay.collider = { radius: 0.15 };
     const besideRay = createCreature([0.8, 0, 2.5]);
     besideRay.collider = { radius: 0.15 };
-    const directionLength = Math.hypot(0, 1.5, 2.5);
+    const directionLength = Math.hypot(0, 1.2, 2.0);
     const pending = combat.beginAttack({
         origin: [0, 0, 0],
-        direction: [0, 1.5 / directionLength, 2.5 / directionLength],
+        direction: [0, 1.2 / directionLength, 2.0 / directionLength],
         yaw: 0,
         equippedItem: { id: 'spear' },
         creatures: [besideRay, onRay],
@@ -129,7 +129,7 @@ test('bow release clamps tap charge and consumes exactly one arrow', () => {
     });
 
     assert.equal(spec.charge, 0.25);
-    assert.equal(spec.damage, 8);
+    assert.equal(spec.damage, 10);
     assert.equal(spec.speed, 14);
     assert.deepEqual(spec.direction, [0, 0, 1]);
     assert.equal(arrows, 0);
@@ -153,7 +153,7 @@ test('bow reaches max damage and cancelled charge costs no arrow', () => {
         charge: 1.5,
         inventory,
     });
-    assert.equal(spec.damage, 18);
+    assert.equal(spec.damage, 28);
     assert.equal(spec.speed, 28);
     assert.equal(arrows, 1);
     assert.equal(combat.releaseBow(state, {

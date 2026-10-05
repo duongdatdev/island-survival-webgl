@@ -62,7 +62,10 @@ export const BasicShader = {
             vec3 N = normalize(vNormal);
             vec3 L = normalize(uLightDirection);
             
-            vec3 ambient = uAmbientColor * uAmbientIntensity;
+            // Broad sky fill and softer ground bounce keep shaded faces readable.
+            float skyWeight = N.y * 0.5 + 0.5;
+            vec3 groundBounce = uAmbientColor * vec3(0.72, 0.65, 0.55);
+            vec3 ambient = mix(groundBounce, uAmbientColor, skyWeight) * uAmbientIntensity;
             
             float diff = max(dot(N, L), 0.0);
             vec3 diffuse = diff * uLightColor * uLightIntensity;
@@ -70,7 +73,7 @@ export const BasicShader = {
             vec3 V = normalize(uViewPosition - vWorldPosition);
             vec3 H = normalize(L + V);
             float spec = pow(max(dot(N, H), 0.0), 32.0);
-            vec3 specular = spec * uLightColor * uLightIntensity * 0.25;
+            vec3 specular = spec * uLightColor * uLightIntensity * 0.08 * diff;
 
             vec3 toPointLight = uPointLightPosition - vWorldPosition;
             float pointDistance = length(toPointLight);

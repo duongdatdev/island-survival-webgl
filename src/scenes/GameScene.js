@@ -1,3 +1,4 @@
+import { Shelter } from '../entities/Shelter.js';
 import { Scene } from '../core/Scene.js';
 import { Camera } from '../renderer/Camera.js';
 import { DirectionalLight, AmbientLight } from '../renderer/Light.js';
@@ -229,6 +230,8 @@ export class GameScene extends Scene {
         const campfireY = this.terrain.getHeight(5.0, 5.0);
         this.campfire.position[1] = campfireY;
         this.campfire.updateModelMatrix();
+
+        this.shelter = new Shelter(gl);
 
         this.waterCollector = new WaterCollector(gl, [-5.0, 0.0, 15.0]);
         const wcY = this.terrain.getHeight(-5.0, 15.0);
@@ -733,11 +736,13 @@ export class GameScene extends Scene {
         const inWater = this._isPlayerInExposureWater();
         const nearCampfire = this.campfire.isPlayerInWarmthRange(this.player.position);
         this._exposureModifiers = this.exposure.update(deltaTime, {
+            sheltered: this.shelter.covers(this.player.position),
             rainFactor: weatherEffects.rainFactor,
             inWater,
             isNight,
             nearCampfire,
-            fireIntensityMultiplier: weatherEffects.campfireIntensityMultiplier,
+            fireIntensityMultiplier: this.shelter.covers(this.campfire.position)
+                ? 1 : weatherEffects.campfireIntensityMultiplier,
         });
         if (this._exposureModifiers.damage > 0) {
             this.vitals.applyDamage(this._exposureModifiers.damage, 'cold');
@@ -847,7 +852,7 @@ export class GameScene extends Scene {
                 const dy = Math.abs(creature.position[1] - this.player.position[1]);
                 if (dist <= creature.attackRange && dy <= 2.0) {
                     if (creature.canDamagePlayer()) {
-                        this.vitals.heal(-creature.attackDamage);
+                        this.vitals.applyDamage(creature.attackDamage, creature instanceof Shark ? 'shark' : 'boar');
                         this._showNotification(`💥 Trúng đòn! Mất ${creature.attackDamage} máu!`);
                         this.engine.audio.playPlayerHurt();
                         this.engine.audio.setHealthFraction(this.vitals.health / 100);
@@ -980,7 +985,8 @@ export class GameScene extends Scene {
             this.raftAssembly.update(deltaTime);
         }
 
-        this.campfire.update(deltaTime, weatherEffects);
+        this.campfire.update(deltaTime, this.shelter.covers(this.campfire.position)
+            ? { ...weatherEffects, campfireIntensityMultiplier: 1 } : weatherEffects);
         this.waterCollector.update(deltaTime, weatherEffects.rainFactor);
 
         this.particleSystem.update(deltaTime);
@@ -1029,19 +1035,21 @@ export class GameScene extends Scene {
         );
 
         const lightningMod = this.weather.getLightningModulation();
-        const lightningBoost = 1.0 + lightningMod * 3.0;
-
-        this.dirLight.setDirection(sunDir[0], sunDir[1], sunDir[2]);
-        this.dirLight.color[0] = sunColor[0];
-        this.dirLight.color[1] = sunColor[1] * (0.8 + lightningMod * 0.2);
-        this.dirLight.color[2] = sunColor[2] * (0.7 + lightningMod * 0.3);
-        this.dirLight.intensity = sunIntensity * lightningBoost;
+        const cloudCover = this.weather.cloudCover;
+        const moonlit = sunDir[1] < 0;
+        const lightDirection = moonlit ? this.dayNight.getMoonDirection() : sunDir;
+        const lightColor = moonlit ? [0.60, 0.73, 1.0] : sunColor;
+        const lightIntensity = moonlit
+            ? 0.18 * Math.min(1, Math.max(0, -sunDir[1] / 0.35))
+            : sunIntensity;
+        this.dirLight.setDirection(...lightDirection);
+        this.dirLight.color.set(lightColor);
+        this.dirLight.intensity = lightIntensity * (1 - cloudCover * 0.65);
 
         const ambColor = this.dayNight.getAmbientColor();
-        this.ambientLight.color[0] = ambColor[0] * (1.0 + lightningMod * 0.5);
-        this.ambientLight.color[1] = ambColor[1] * (1.0 + lightningMod * 0.5);
-        this.ambientLight.color[2] = ambColor[2] * (1.0 + lightningMod * 0.5);
-        this.ambientLight.intensity = this.dayNight.getAmbientIntensity() * (1.0 + lightningMod * 0.3);
+        this.ambientLight.color.set(ambColor);
+        this.ambientLight.intensity = this.dayNight.getAmbientIntensity()
+            * (1 - cloudCover * 0.20) + lightningMod * 0.45;
 
         this.rainSystem.intensity = this.weather.rainIntensity;
         if (this.weather.rainIntensity > 0.01) {
@@ -1209,6 +1217,7 @@ export class GameScene extends Scene {
         if (!dom.compassMarkers) return;
 
         const markers = [];
+        if (this.shelter?.isBuilt) markers.push({ id: 'shelter', pos: this.shelter.position, icon: '⛺' });
         if (this.campfire && this.campfire.isBuilt) {
             markers.push({ id: 'campfire', pos: this.campfire.position, icon: '🔥' });
         }
@@ -1416,6 +1425,7 @@ export class GameScene extends Scene {
 
         this.projectileSystem.draw(this.basicShader, drawMode);
 
+        this.shelter.draw(this.basicShader, drawMode);
         this.campfire.draw(this.basicShader, drawMode);
 
         this.waterCollector.draw(this.basicShader, drawMode);
@@ -1487,7 +1497,7 @@ export class GameScene extends Scene {
 
         this.particleSystem.draw(this.camera);
 
-        this.rainSystem.draw(this.camera);
+        this.rainSystem.draw(this.camera, this.shelter);
 
         if (!this.skyShader) {
             this.unlitShader.use();
@@ -1519,7 +1529,7 @@ export class GameScene extends Scene {
         const sunColor = this.dayNight.getSunColor();
         const sunIntensity = this.dayNight.getSunIntensity();
 
-        const tintStrength = 0.12;
+        const tintStrength = 0.04 * sunIntensity;
         const tint = [
             1.0 + (sunColor[0] - 1.0) * tintStrength,
             1.0 + (sunColor[1] - 1.0) * tintStrength,
@@ -1534,8 +1544,8 @@ export class GameScene extends Scene {
         this.postFx.composite({
             bloom: settings.get('bloom'),
             bloomIntensity: settings.get('bloomIntensity') * bloomBoost,
-            bloomThreshold: 0.8,
-            vignette: settings.get('vignette') ? 0.35 : 0.0,
+            bloomThreshold: 0.9,
+            vignette: settings.get('vignette') ? 0.20 : 0.0,
             exposure,
             tint,
             iterations: 2,
@@ -2295,6 +2305,7 @@ export class GameScene extends Scene {
 
         if (this.tutorial) this.tutorial.destroy();
 
+        if (this.shelter) this.shelter.delete();
         if (this.campfire) this.campfire.delete();
         if (this.waterCollector) this.waterCollector.delete();
 
@@ -2425,6 +2436,10 @@ export class GameScene extends Scene {
             }
         }
 
+        if (this.shelter?.isBuilt) {
+            this.shelter.position[1] = this.terrain.getHeight(this.shelter.position[0], this.shelter.position[2]);
+            this.shelter.updateModelMatrix();
+        }
         if (this.campfire) {
             const cy = this.terrain.getHeight(this.campfire.position[0], this.campfire.position[2]);
             this.campfire.position[1] = cy;
