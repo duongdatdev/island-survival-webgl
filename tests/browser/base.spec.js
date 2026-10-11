@@ -43,6 +43,41 @@ async function build(page, type, rotations = 0) {
     await page.keyboard.up('e');
 }
 
+for (const order of ['unlock-first', 'key-first']) {
+    test(`Escape cancels building without pausing when pointer lock releases ${order}`, async ({ page }) => {
+        test.setTimeout(120000);
+        await start(page, `Cancel building ${order}`);
+        await page.keyboard.press('b');
+        await expect(page.locator('#campaign-panel')).toBeVisible();
+        await page.locator('[data-action="build"][data-arg="foundation"]').click();
+        await page.evaluate(() => window.__GAME_ENGINE__.input.setPointerLockEnabled(true));
+        await page.mouse.click(450, 350);
+        await page.waitForFunction(() => window.__GAME_ENGINE__.input.mouse.isLocked);
+        expect(await page.evaluate(() => !!window.__GAME_ENGINE__.scenes.activeScene.campaign.placement)).toBe(true);
+
+        if (order === 'key-first') {
+            await page.evaluate(() => {
+                const s = window.__GAME_ENGINE__.scenes.activeScene;
+                window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }));
+                s.campaign.handleInput();
+                document.exitPointerLock();
+            });
+        } else {
+            await page.evaluate(() => document.exitPointerLock());
+            await page.waitForFunction(() => !window.__GAME_ENGINE__.input.mouse.isLocked);
+            await page.keyboard.down('Escape');
+        }
+        await page.waitForFunction(() => !window.__GAME_ENGINE__.scenes.activeScene.campaign.placement);
+        await page.keyboard.up('Escape');
+        await page.waitForFunction(() => window.__GAME_ENGINE__.scenes.activeScene._pointerUnlockPauseGuard === 0);
+        await expect(page.locator('#pause-menu')).toBeHidden();
+        expect(await page.evaluate(() => window.__GAME_ENGINE__.scenes.activeScene.isPaused)).toBe(false);
+
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#pause-menu')).toBeVisible();
+    });
+}
+
 test('the actual workbench tabletop blocks a standing player while its side remains walkable', async ({ page }) => {
     test.setTimeout(150000); const errors = []; page.on('pageerror', e => errors.push(e.message));
     await start(page, 'Workbench clearance'); await build(page, 'workbench');

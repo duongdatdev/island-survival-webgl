@@ -200,12 +200,18 @@ export class CampaignController {
             if (input.isKeyPressed(key)) { this.ui.open(panel); this.playSeconds += seconds; return true; }
         }
         if (this.placement && input.isKeyPressed('Escape')) {
-            this.placement = null;
-            this.ui.hint('');
+            this.cancelPlacement();
             input.consumeKey('Escape');
             return true;
         }
         return false;
+    }
+
+    cancelPlacement() {
+        this.placement = null;
+        this.ui.hint('');
+        // Escape can release pointer lock after this frame has handled the key.
+        if (this.scene.engine.input.mouse.isLocked) this.scene._pointerUnlockPauseGuard = 0.25;
     }
 
     beforeUpdate(seconds, weather) {

@@ -97,8 +97,14 @@ export class GameScene extends Scene {
             if (!locked && wasLocked && this._hasPointerLocked && !this.isPaused
                 && !inventoryOpen && !auxiliaryMenuOpen && !escapePromptOpen && !this.campaign?.ui.isOpen
                 && !this._isGameOver && !this.isEscaping && !this.campaign?.ending?.state) {
-                this._pointerUnlockPauseGuard = 0.25;
-                this._pauseGame();
+                if (this.campaign?.placement) {
+                    this.campaign.cancelPlacement();
+                    this.engine.input.consumeKey('Escape');
+                    this._pointerUnlockPauseGuard = 0.25;
+                } else if (this._pointerUnlockPauseGuard <= 0) {
+                    this._pointerUnlockPauseGuard = 0.25;
+                    this._pauseGame();
+                }
             }
             this._syncPointerLockHint();
         };
