@@ -37,6 +37,35 @@ test('campaign seed regenerates identical POIs, resources and terrain samples', 
     for (const [x, z] of [[0, 0], [100, -200], [-250, 40]]) assert.equal(a.getHeight(x, z), b.getHeight(x, z));
 });
 
+test('mountain relief, curved coast and graded trails remain usable across campaign seeds', () => {
+    for (let seed = 0; seed < 10; seed++) {
+        const generator = new CampaignWorldGenerator();
+        const world = generator.generate(seed, {}, false, { mesh: false, props: false });
+        const local = (x, z) => [x * Math.cos(generator.rotation) - z * Math.sin(generator.rotation),
+            x * Math.sin(generator.rotation) + z * Math.cos(generator.rotation)];
+        let summit = 0;
+        for (let z = -120; z <= 20; z += 10) for (let x = -100; x <= 100; x += 10) {
+            summit = Math.max(summit, generator.getHeight(...local(x, z)));
+        }
+        assert.ok(summit > 50, 'central mountain has a visible summit beside the trails');
+        assert.ok(generator.getHeight(...local(-62, 159)) > 18, 'arrival beach is framed by foothills');
+        assert.ok(generator.island.isOcean(...local(generator.island.radius - 2, 0)), 'coast contains a cove');
+        assert.ok(world.spawnPosition[1] >= 0.15, 'arrival stays dry');
+        for (const [a, b] of [...world.paths, world.shortcutPath]) {
+            const length = Math.hypot(b[0] - a[0], b[2] - a[2]);
+            const steps = Math.ceil(length);
+            let previous = generator.getHeight(a[0], a[2]);
+            for (let index = 1; index <= steps; index++) {
+                const t = index / steps;
+                const height = generator.getHeight(a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
+                assert.ok(height >= 0.15, 'trail stays on dry ground');
+                assert.ok(Math.abs(height - previous) / (length / steps) < 0.55, 'trail has no abrupt climb at POI pads');
+                previous = height;
+            }
+        }
+    }
+});
+
 test('campaign terrain is chunked with three LODs and identical boundary heights', () => {
     const generator = new CampaignWorldGenerator();
     const world = generator.generate('chunked-world', {}, false, { props: false });

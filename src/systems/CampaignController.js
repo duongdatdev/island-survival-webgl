@@ -242,7 +242,8 @@ export class CampaignController {
                 this.events.emit('poiVisited', { id: poi.id });
             }
         }
-        this.scene.terrain.setView(this.scene.camera.position, this.scene.engine.settings.get('viewDistance') || 180);
+        // Distant terrain is a cheap LOD backdrop; keep mountain silhouettes beyond the prop draw distance.
+        this.scene.terrain.setView(this.scene.camera.position, Math.max(400, this.scene.engine.settings.get('viewDistance') || 180));
         const fire = this.registry.nearby(player, 30).filter(record => this.production.isBurning(record))
             .sort((a, b) => distance(a.position, player) - distance(b.position, player))[0];
         this.scene.campfire.isBuilt = !!fire;

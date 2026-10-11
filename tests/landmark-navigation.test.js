@@ -60,6 +60,31 @@ test('the submerged manifest rests in the open hold and permits a visible full-c
     }
 });
 
+test('cave floor stays above terrain without losing its collision support', async () => {
+    const triangles = await geometry('campaign:cave_room-small');
+    const floorVertices = [];
+    for (let i = 0; i < triangles.length; i += 9) {
+        if ([triangles[i + 1], triangles[i + 4], triangles[i + 7]].every(y => Math.abs(y) < 0.01)) {
+            for (let vertex = 0; vertex < 3; vertex++) floorVertices.push(Array.from(triangles.slice(i + vertex * 3, i + vertex * 3 + 3)));
+        }
+    }
+    assert.ok(floorVertices.length > 0, 'test uses the actual cave floor');
+    for (const seed of ['terrain-review', 'physical-landmarks', '0', '1', '2']) {
+        const generator = new CampaignWorldGenerator();
+        const world = generator.generate(seed, {}, false, { mesh: false, props: false });
+        const mine = world.pois.find(p => p.id === 'mine').position;
+        for (const [x, y, z] of floorVertices) {
+            assert.ok(mine[1] + y - generator.getHeight(mine[0] + x, mine[2] + z) >= 0.19,
+                `cave floor intersects terrain at seed ${seed}`);
+        }
+        const collision = new TriangleCollision();
+        collision.add('mine-room', triangles, mine, 0, [1, 1, 1]);
+        const ground = generator.getHeight(mine[0], mine[2]);
+        const supported = collision.groundHeight([mine[0], mine[1] + 0.9, mine[2]], ground, 0.55, 0.9, 0.28);
+        assert.ok(Math.abs(supported - mine[1]) < 0.01, 'feet rest on the model floor above the buried terrain');
+    }
+});
+
 test('actual cave and station model entrances stay traversable across 100 generated seeds', async () => {
     for (let seed = 0; seed < 100; seed++) {
         const world = new CampaignWorldGenerator().generate(String(seed), {}, false, { mesh: false, props: false });

@@ -3,6 +3,11 @@ import { PRNG } from './PRNG.js';
 const WIDTH = 640;
 const CHUNK = 40;
 const STEP = 1.25;
+const smooth = (low, high, value) => {
+    const t = Math.max(0, Math.min(1, (value - low) / (high - low)));
+    return t * t * (3 - 2 * t);
+};
+const mixColor = (a, b, t) => a.map((value, index) => value + (b[index] - value) * t);
 const COLORS = {
     Beach: [0.83, 0.73, 0.5], Grassland: [0.29, 0.46, 0.19], Forest: [0.15, 0.33, 0.13],
     RockArea: [0.43, 0.42, 0.37], Highland: [0.38, 0.43, 0.33], Ocean: [0.12, 0.25, 0.29],
@@ -40,8 +45,8 @@ export class CampaignWorldGenerator {
         this.rotation = this.prng.nextRange(-Math.PI, Math.PI);
         const radius = this.prng.nextRange(260, 280);
         this.island = { radius, innerRadius: radius - 26, outerBeachRadius: radius + 32,
-            underwaterBeachExtent: 32, center: [0, 0], isBeach: (x, z) => Math.hypot(x, z) > radius - 26,
-            isLand: (x, z) => Math.hypot(x, z) <= radius, isOcean: (x, z) => Math.hypot(x, z) > radius };
+            underwaterBeachExtent: 32, center: [0, 0], isBeach: (x, z) => this.getBiome(x, z) === 'Beach',
+            isLand: (x, z) => this._shoreDistance(x, z) >= 0, isOcean: (x, z) => this._shoreDistance(x, z) < 0 };
         this.waves = Array.from({ length: 4 }, () => ({ x: this.prng.nextRange(0.012, 0.037),
             z: this.prng.nextRange(0.012, 0.037), amplitude: this.prng.nextRange(0.3, 1) }));
         const cos = Math.cos(this.rotation), sin = Math.sin(this.rotation);
@@ -67,19 +72,30 @@ export class CampaignWorldGenerator {
             objectCount: placedObjects.length + resourceNodes.length };
     }
 
+    _shoreDistance(x, z) {
+        const angle = Math.atan2(z, x) - this.rotation;
+        // Small coves and headlands, sheltered around the arrival beach (local +Z).
+        const shelter = 1 - smooth(0.65, 0.95, Math.sin(angle));
+        const coves = shelter * (8 + 6 * Math.sin(angle * 3 + 0.4) + 3 * Math.sin(angle * 7));
+        return this.island.radius - Math.max(0, coves) - Math.hypot(x, z);
+    }
+
     _baseHeight(x, z) {
-        const distance = Math.hypot(x, z);
-        const radius = this.island.radius;
-        if (distance > radius) return -Math.min(12, ((distance - radius) / 32) ** 1.25 * 10);
-        if (distance >= this.island.innerRadius) return 0.22;
-        const inland = Math.min(1, (radius - distance - 26) / 35);
-        const gradient = inland * inland * (3 - 2 * inland);
+        const shore = this._shoreDistance(x, z);
+        if (shore < 0) return -Math.min(12, (-shore / 32) ** 1.25 * 10);
         const localX = x * Math.cos(this.rotation) + z * Math.sin(this.rotation);
         const localZ = -x * Math.sin(this.rotation) + z * Math.cos(this.rotation);
-        const hills = 14 * Math.exp(-((localX + 120) ** 2 + (localZ + 65) ** 2) / 10000)
-            + 18 * Math.exp(-((localX - 30) ** 2 + (localZ + 160) ** 2) / 12000);
+        const hill = (cx, cz, sx, sz, height) => height * Math.exp(-(((localX - cx) / sx) ** 2) - ((localZ - cz) / sz) ** 2);
+        const mountains = hill(-42, -25, 65, 93, 66) + hill(60, -100, 48, 70, 53)
+            + hill(-130, -60, 42, 65, 34);
+        // The two foreground bluffs frame the climb from the beach to the waterfall.
+        const foothills = hill(-62, 159, 36, 47, 25) + hill(92, 133, 42, 55, 34)
+            + hill(-120, 74, 51, 42, 19);
+        const ridges = 3.5 * Math.sin(localX * 0.055 + Math.sin(localZ * 0.023))
+            + 2.2 * Math.cos(localZ * 0.067 + localX * 0.018);
         const noise = this.waves.reduce((sum, wave) => sum + Math.sin(x * wave.x) * Math.cos(z * wave.z) * wave.amplitude, 0);
-        return 0.22 + gradient * Math.max(0.3, 2 + hills + noise);
+        const beach = 0.08 + 0.52 * smooth(0, 20, shore);
+        return beach + smooth(12, 54, shore) * Math.max(0.4, 3 + mountains + foothills + ridges + noise);
     }
 
     getHeight(x, z) {
@@ -89,24 +105,29 @@ export class CampaignWorldGenerator {
             if (poi.role === 'wreck') continue;
             const distance = Math.hypot(x - poi.position[0], z - poi.position[2]);
             if (distance < poi.radius + 5) {
-                const blend = Math.max(0, Math.min(1, (poi.radius + 5 - distance) / 5));
-                height = height * (1 - blend) + poi.position[1] * blend;
+                const blend = 1 - smooth(poi.radius, poi.radius + 5, distance);
+                const padHeight = poi.position[1] - (poi.role === 'mine' ? 0.2 : 0);
+                height = height * (1 - blend) + padHeight * blend;
             }
         }
         for (const [a, b] of [...(this.paths || []), ...(this.shortcutPath ? [this.shortcutPath] : [])]) {
             const point = segmentPoint(x, z, a, b);
-            if (point.distance < 7) {
-                const blend = Math.min(1, (7 - point.distance) / 3);
-                height = height * (1 - blend) + (a[1] + (b[1] - a[1]) * point.t) * blend;
+            if (point.distance < 15) {
+                const blend = 1 - smooth(4, 15, point.distance);
+                const length = Math.hypot(b[0] - a[0], b[2] - a[2]);
+                const ramp = smooth(18 / length, 1 - 18 / length, point.t);
+                height = height * (1 - blend) + (a[1] + (b[1] - a[1]) * ramp) * blend;
             }
         }
-        // Keep architectural floors flat after all approach-path blends.
+        // Keep architectural floors flat after all approach-path blends. The cave's
+        // floor starts at local Y=0; bury the terrain beneath it to prevent z-fighting.
         for (const poi of this.pois) {
             if (poi.role === 'wreck') continue;
             const d = Math.hypot(x - poi.position[0], z - poi.position[2]);
             if (d < poi.radius + 5) {
-                const amount = Math.min(1, (poi.radius + 5 - d) / 5);
-                height = height * (1 - amount) + poi.position[1] * amount;
+                const amount = 1 - smooth(poi.radius, poi.radius + 5, d);
+                const padHeight = poi.position[1] - (poi.role === 'mine' ? 0.2 : 0);
+                height = height * (1 - amount) + padHeight * amount;
             }
         }
         return height;
@@ -120,16 +141,31 @@ export class CampaignWorldGenerator {
     }
 
     getBiome(x, z, height = this.getHeight(x, z)) {
-        const distance = Math.hypot(x, z);
-        if (distance > this.island.radius) return 'Ocean';
-        if (distance > this.island.innerRadius) return 'Beach';
-        if (height > 11) return 'Highland';
+        const shore = this._shoreDistance(x, z);
+        if (shore < 0) return 'Ocean';
+        if (shore < 22 && height < 2.5) return 'Beach';
+        if (height > 32) return 'Highland';
         const angle = (Math.atan2(z, x) - this.rotation + Math.PI * 4) % (Math.PI * 2);
         if (angle > 2.7 && angle < 4.5) return 'RockArea';
         return angle > 1.3 && angle < 3.4 ? 'Forest' : 'Grassland';
     }
 
     getBiomeColor(biome) { return COLORS[biome] || COLORS.Grassland; }
+
+    _groundColor(x, z, height, normal) {
+        const shore = this._shoreDistance(x, z);
+        const variation = Math.sin(x * 0.17 + Math.cos(z * 0.11)) * Math.cos(z * 0.13) * 0.025;
+        const grass = mixColor([0.30, 0.44, 0.18], [0.19, 0.32, 0.14], smooth(6, 35, height));
+        let color = mixColor([0.83, 0.75, 0.55], grass, smooth(18, 38, shore));
+        const rock = Math.max(smooth(0.13, 0.48, 1 - normal[1]), smooth(39, 66, height) * 0.85);
+        color = mixColor(color, [0.49, 0.48, 0.42], rock);
+        if (shore < 4) color = mixColor([0.43, 0.43, 0.33], color, smooth(-5, 4, shore));
+        for (const [a, b] of this.paths) {
+            const point = segmentPoint(x, z, a, b);
+            color = mixColor(color, [0.53, 0.44, 0.29], (1 - smooth(1.4, 3.3, point.distance)) * smooth(22, 36, shore) * 0.65);
+        }
+        return color.map(value => Math.max(0, Math.min(1, value + variation)));
+    }
 
     _reserved(x, z) {
         return this.pois.some(poi => Math.hypot(x - poi.position[0], z - poi.position[2]) < poi.radius + 5)
@@ -150,8 +186,11 @@ export class CampaignWorldGenerator {
             if (occupied.has(key)) continue;
             const height = this.getHeight(x, z);
             const biome = this.getBiome(x, z, height);
+            if (biome === 'Ocean') continue;
+            const slope = this.getNormal(x, z)[1];
             const candidates = available.filter(asset => asset.biome === biome
-                || biome === 'Highland' && ['RockArea', 'Forest'].includes(asset.biome));
+                || biome === 'Highland' && asset.biome === 'RockArea')
+                .filter(asset => slope > 0.88 || asset.biome === 'RockArea');
             if (!candidates.length) continue;
             const asset = prng.choose(candidates);
             const scale = prng.nextRange(asset.minScale || 0.8, asset.maxScale || 1.2);
@@ -171,6 +210,7 @@ export class CampaignWorldGenerator {
             const radius = Math.sqrt(prng.next()) * (this.island.radius - 15);
             const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
             const biome = this.getBiome(x, z);
+            if (biome === 'Ocean' || this.getNormal(x, z)[1] < 0.7) continue;
             const id = biome === 'RockArea' || biome === 'Highland' ? prng.choose(['stone', 'iron_ore', 'copper_ore'])
                 : prng.choose(['wood', 'fiber', 'coconut', 'herb']);
             nodes.push({ worldNodeId: `resource-${index}`, id, position: [x, this.getHeight(x, z), z] });
@@ -214,8 +254,9 @@ export class CampaignWorldGenerator {
             const wx = originX + x * step, wz = originZ + z * step;
             const height = this.getHeight(wx, wz);
             positions.push(wx, height, wz);
-            normals.push(...this.getNormal(wx, wz, step / 2));
-            colors.push(...this.getBiomeColor(this.getBiome(wx, wz, height)), 1);
+            const normal = this.getNormal(wx, wz);
+            normals.push(...normal);
+            colors.push(...this._groundColor(wx, wz, height, normal), 1);
         }
         for (let z = 0; z < size; z++) for (let x = 0; x < size; x++) {
             const a = z * (size + 1) + x, b = a + size + 1;
@@ -246,7 +287,7 @@ export class CampaignWorldGenerator {
         const cells = new Uint8Array(size * size);
         for (let z = 0; z < size; z++) for (let x = 0; x < size; x++) {
             const wx = x * 4 - WIDTH / 2, wz = z * 4 - WIDTH / 2;
-            cells[z * size + x] = this.getHeight(wx, wz) < 0.15 ? 1 : 0;
+            cells[z * size + x] = this.getHeight(wx, wz) < 0.15 || this.getNormal(wx, wz)[1] < 0.78 ? 1 : 0;
         }
         for (const object of objects.filter(object => object.navigationBlocker)) {
             const x = Math.floor((object.position[0] + WIDTH / 2) / 4);
