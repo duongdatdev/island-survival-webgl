@@ -47,6 +47,7 @@ const DEFAULTS = {
 
     mouseSensitivity: 1.0,
     invertY: false,
+    reducedMotion: false,
     keyBindings: DEFAULT_KEY_BINDINGS,
 
     quality: 'high',

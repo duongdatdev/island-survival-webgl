@@ -49,21 +49,23 @@ export class LoadingScene extends Scene {
             'assets/environment/chest.glb',
             { targetSize: [0.75, 0.55, 0.55], preserveAspect: true }
         );
+        const survivalModelsPromise = this._loadSurvivalPack(this.gl);
 
         this.loadingDelay = new Promise(resolve => setTimeout(resolve, 2000));
 
         this._progress = 0;
         this._targetProgress = 0;
+        this._assetsReady = false;
         this._stages = [
             { at: 0.3, delay: 400, label: 'Đang tạo thế giới...' },
             { at: 0.6, delay: 800, label: 'Đang tải tài nguyên...' },
             { at: 0.85, delay: 1200, label: 'Đang chuẩn bị âm thanh...' },
-            { at: 1.0, delay: 1800, label: 'Sắp hoàn tất...' },
+            { at: 0.95, delay: 1800, label: 'Đang chuẩn bị model...' },
         ];
         this._stageIndex = 0;
         this._stageTimer = 0;
 
-        Promise.all([this.loadingDelay, metadataPromise, creatureModelsPromise, chestModelPromise])
+        Promise.all([this.loadingDelay, metadataPromise, creatureModelsPromise, chestModelPromise, survivalModelsPromise, this.engine.worldRepository.initialize()])
             .then(async () => {
                 const uniquePaths = [];
                 const characterDef = CharacterRegistry.get('casual_male');
@@ -81,8 +83,7 @@ export class LoadingScene extends Scene {
                 console.log(`LoadingScene: Compiling ${uniquePaths.length} shared models...`);
                 await this.engine.assets.compileUniqueModels(uniquePaths);
 
-                await this._loadSurvivalPack(this.gl);
-
+                this._assetsReady = true;
                 this._targetProgress = 1.0;
                 setTimeout(() => this._onLoadComplete(), 500);
             })
@@ -98,7 +99,7 @@ export class LoadingScene extends Scene {
         if (this._stageIndex < this._stages.length) {
             const stage = this._stages[this._stageIndex];
             if (this._stageTimer >= stage.delay) {
-                this._targetProgress = stage.at;
+                this._targetProgress = this._assetsReady ? 1.0 : stage.at;
                 this._stageIndex++;
             }
         }
@@ -165,15 +166,16 @@ export class LoadingScene extends Scene {
             const data = await res.json();
             const items = data.items || [];
 
-            for (const item of items) {
-                const objText = await this.engine.assets.loadText(item.objPath, item.objPath);
+            // Fetch independent OBJ/MTL files together; parse/register in manifest order.
+            const sources = await Promise.all(items.map(async item => {
+                const [objText, mtlText] = await Promise.all([
+                    this.engine.assets.loadText(item.objPath, item.objPath),
+                    this.engine.assets.loadText(item.mtlPath, item.mtlPath).catch(() => ''),
+                ]);
+                return { item, objText, mtlText };
+            }));
 
-                let mtlText = '';
-                try {
-                    mtlText = await this.engine.assets.loadText(item.mtlPath, item.mtlPath);
-                } catch (e) {
-                    mtlText = '';
-                }
+            for (const { item, objText, mtlText } of sources) {
 
                 if (mtlText) {
                     const colors = parseMtl(mtlText, 'survival_' + item.id);

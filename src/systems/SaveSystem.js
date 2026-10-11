@@ -105,6 +105,10 @@ export class SaveSystem {
         }
     }
 
+    static readRawWorld(id) {
+        try { return localStorage.getItem(SaveSystem._saveKey(id)); } catch { return null; }
+    }
+
     static saveWorld(id, data) {
         const index = SaveSystem._readIndex();
         const world = index.worlds.find(item => item.id === id);
@@ -221,7 +225,8 @@ export class SaveSystem {
             },
             resources: scene.resourceManager.worldResources
                 .filter(r => !r.isCollected)
-                .map(r => ({
+                  .map(r => ({
+                      ...(r.worldNodeId ? { worldNodeId: r.worldNodeId, amount: r.amount || 1 } : {}),
                     id: r.resourceId,
                     position: [r.position[0], r.position[1], r.position[2]],
                     rewardType: r.rewardType || null,

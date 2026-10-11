@@ -1,13 +1,13 @@
 import { getResourceDef } from './ResourceDatabase.js';
 import { SaveSystem } from './SaveSystem.js';
 
-export const AUTOSAVE_INTERVAL = 60.0;
+export const AUTOSAVE_INTERVAL = 30.0;
 const SAVE_STATUS_DURATION = 3.0;
 
 export class GameSaveController {
     constructor(scene, options = {}) {
         this.scene = scene;
-        this.storage = options.storage || SaveSystem;
+        this.storage = options.storage || scene.engine?.worldRepository || SaveSystem;
         this.window = options.window || globalThis.window;
         this.document = options.document || globalThis.document;
         this.autosaveInterval = options.autosaveInterval || AUTOSAVE_INTERVAL;
@@ -44,19 +44,29 @@ export class GameSaveController {
         }
 
         scene.stats.survivalSeconds = scene.survivalSeconds;
-        const ok = !!scene.activeWorldId && this.storage.saveWorld(
-            scene.activeWorldId,
-            this.storage.captureScene(scene)
-        );
-
         this.autosaveTimer = 0;
-        if (!silent) {
-            this.setStatus(
-                ok ? '💾 Đã lưu tiến trình!' : '❌ Lưu thất bại — bộ nhớ trình duyệt đã đầy.',
-                !ok
-            );
-        }
-        return ok;
+        const completedRoute = scene.campaign?.ending?.pendingRoute;
+        const report = ok => {
+            if (ok) this.lastSavedAt = Date.now();
+            if (ok && completedRoute) scene.campaign?.ending?.onCommitted(completedRoute);
+            if (!silent || !ok) this.setStatus(ok ? '💾 Đã lưu tiến trình!' : '❌ Lưu thất bại — hãy xuất bản sao hoặc thử lưu lại.', !ok);
+            return !!ok;
+        };
+        try {
+            const snapshot = this.capture();
+            const result = !!scene.activeWorldId && this.storage.saveWorld(scene.activeWorldId, snapshot, { completedRoute });
+            return result?.then ? result.then(report).catch(() => report(false)) : report(result);
+        } catch { return report(false); }
+    }
+
+    capture() {
+        const scene = this.scene;
+        const snapshot = (this.storage.captureScene || SaveSystem.captureScene)(scene);
+        if (this.storage === SaveSystem || this.storage.captureScene) return snapshot;
+        const mode = scene.engine.activeWorld?.mode || 'classic';
+        return { ...snapshot, version: 2, mode, generatorVersion: mode === 'campaign' ? 2 : 1,
+            playSeconds: scene.campaign?.playSeconds ?? scene.survivalSeconds,
+            campaign: scene.campaign?.snapshot() || null };
     }
 
     updateAutosave(deltaTime) {
@@ -82,10 +92,10 @@ export class GameSaveController {
         this.statusTimer = SAVE_STATUS_DURATION;
     }
 
-    finish(status) {
+    finish(status, route = 'raft') {
         const scene = this.scene;
         if (!scene.activeWorldId) return false;
-        return this.storage.finishWorld(scene.activeWorldId, status, scene.survivalSeconds);
+        return this.storage.finishWorld(scene.activeWorldId, status, scene.survivalSeconds, route);
     }
 
     reset() {
@@ -121,6 +131,7 @@ export class GameSaveController {
         scene.player.position[1] = save.player.position[1];
         scene.player.position[2] = save.player.position[2];
         scene.player.rotation[1] = save.player.yaw;
+        scene.camera?.setLookAngles?.(save.player.yaw);
         scene.player.updateModelMatrix();
 
         scene.survivalSeconds = save.survivalSeconds || 0;
@@ -183,6 +194,7 @@ export class GameSaveController {
                 [entry.position[0], entry.position[1], entry.position[2]]
             );
             if (entry.rewardType) resource.rewardType = entry.rewardType;
+            if (entry.worldNodeId) { resource.worldNodeId = entry.worldNodeId; resource.amount = entry.amount || 1; }
             scene.resourceManager.worldResources.push(resource);
         }
 

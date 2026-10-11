@@ -28,6 +28,23 @@ test('weapon combat profiles centralize timing and damage values', () => {
     assert.equal(getWeaponProfile('missing'), null);
 });
 
+test('Campaign tools preserve their equipped identity, use timed impact and draw shared models', () => {
+    for (const id of ['iron_axe', 'stone_pickaxe', 'iron_pickaxe']) {
+        const profile = getWeaponProfile(id), combat = new CombatSystem(), creature = createCreature();
+        const pending = combat.beginMeleeAttack([0, 0, 0], 0, { id }, [creature]);
+        assert.equal(pending.weaponData.id, id); assert.equal(creature.health, 30);
+        const view = Object.create(FirstPersonViewModel.prototype);
+        Object.assign(view, { _time: 0, _moveAmount: 0, _swingElapsed: Infinity, _nextSwingDirection: 1, _impactEmitted: false });
+        assert.equal(view.beginAttack(id), true); assert.equal(view.update(profile.impactTime - 0.01, false), null);
+        assert.deepEqual(view.update(0.02, false), { type: 'impact', weaponId: id });
+        assert.equal(combat.resolveImpact(pending).damage, profile.damage); assert.equal(view.update(0.1, false), null);
+        let drawn = 0, deleted = 0; const model = { draw(shader, matrix, mode) { assert.equal(mode, 4); assert.ok(matrix); drawn++; }, delete() { deleted++; } };
+        view.load({ models: { 'campaign:survival_tool-axe-upgraded': model, 'campaign:survival_tool-pickaxe': model, 'campaign:survival_tool-pickaxe-upgraded': model } });
+        view._axeMatrix = new Float32Array(16); view._drawEquippedWeapon({}, 4, 0, 0, view._getWeaponPose());
+        assert.equal(drawn, 1); view.delete(); assert.equal(deleted, 0);
+    }
+});
+
 test('axe damage waits for impact and resolves only once', () => {
     const combat = new CombatSystem();
     const creature = createCreature();

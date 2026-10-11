@@ -97,6 +97,7 @@ export class MenuUI {
         const toggles = [
             ['set-muted', 'muted'],
             ['set-invert-y', 'invertY'],
+            ['set-reduced-motion', 'reducedMotion'],
             ['set-post', 'postProcessing'],
             ['set-bloom', 'bloom'],
             ['set-vignette', 'vignette'],
@@ -109,6 +110,7 @@ export class MenuUI {
             if (!el) continue;
             this._on(el, 'change', () => {
                 this.settings.set(key, el.checked);
+                if (key === 'reducedMotion') document.documentElement.classList.toggle('reduced-motion', el.checked);
                 if (key === 'muted') {
                     this.engine.audio._ensureContext();
                     this.engine.audio.setMuted(el.checked);
@@ -237,6 +239,7 @@ export class MenuUI {
 
     syncSettingsUI() {
         const s = this.settings;
+        document.documentElement.classList.toggle('reduced-motion', !!s.get('reducedMotion'));
 
         this._setSlider('set-master-volume', s.get('masterVolume') * 100, 'val-master-volume', `${Math.round(s.get('masterVolume') * 100)}%`);
         this._setSlider('set-sfx-volume', s.get('sfxVolume') * 100, 'val-sfx-volume', `${Math.round(s.get('sfxVolume') * 100)}%`);
@@ -251,6 +254,7 @@ export class MenuUI {
 
         this._setToggle('set-muted', this.engine.audio.isMuted);
         this._setToggle('set-invert-y', s.get('invertY'));
+        this._setToggle('set-reduced-motion', s.get('reducedMotion'));
         this._setToggle('set-post', s.get('postProcessing'));
         this._setToggle('set-bloom', s.get('bloom'));
         this._setToggle('set-vignette', s.get('vignette'));

@@ -92,6 +92,44 @@ test('consumeAction consumes all keys bound to action', () => {
     assert.equal(input.isActionDown('interact'), false);
 });
 
+test('physical taps between frames survive release once, obey rebinding and can be consumed', () => {
+    const originalWindow = globalThis.window, originalDocument = globalThis.document, listeners = new Map();
+    globalThis.window = { addEventListener(type, callback) { listeners.set(type, callback); } };
+    globalThis.document = { addEventListener() {}, getElementById() { return null; } };
+    try {
+        const input = new InputManager(null); input.setBinding('interact', 'KeyF', 0);
+        const event = code => ({ code, preventDefault() {} });
+        listeners.get('keydown')(event('KeyF')); listeners.get('keyup')(event('KeyF'));
+        assert.equal(input.isActionDown('interact'), false);
+        assert.equal(input.isActionPressed('interact'), true); assert.equal(input.isKeyPressed('KeyF'), true);
+        input.consumeAction('interact', { keepHeld: true }); assert.equal(input.isActionPressed('interact'), false);
+        listeners.get('keydown')(event('KeyF')); listeners.get('keyup')(event('KeyF'));
+        assert.equal(input.isActionPressed('interact'), true); input.resetDeltas(); assert.equal(input.isActionPressed('interact'), false);
+        listeners.get('keydown')(event('KeyE')); listeners.get('keyup')(event('KeyE'));
+        assert.equal(input.isActionPressed('interact'), false); assert.equal(input.isKeyPressed('KeyE'), true);
+        input.consumeKey('KeyE'); assert.equal(input.isKeyPressed('KeyE'), false);
+        listeners.get('keydown')(event('KeyF')); input.consumeAction('interact');
+        input.resetDeltas();
+        listeners.get('keydown')({ ...event('KeyF'), repeat: true });
+        assert.equal(input.isActionPressed('interact'), false);
+        assert.equal(input.isActionDown('interact'), false);
+    } finally { globalThis.window = originalWindow; globalThis.document = originalDocument; }
+});
+
+test('debug toggles only on a new matching key press, without repeats or unrelated buffered taps', () => {
+    const originalWindow = globalThis.window, originalDocument = globalThis.document, listeners = new Map(); let toggles = 0;
+    globalThis.window = { addEventListener(type, callback) { listeners.set(type, callback); } };
+    globalThis.document = { addEventListener() {}, getElementById(id) { return id === 'debug-panel' ? { classList: { toggle() { toggles++; } } } : null; } };
+    try {
+        const input = new InputManager(null), event = code => ({ code, preventDefault() {} });
+        listeners.get('keydown')(event('F3')); listeners.get('keydown')({ ...event('F3'), repeat: true });
+        listeners.get('keydown')(event('KeyW')); assert.equal(toggles, 1);
+        listeners.get('keyup')(event('F3')); listeners.get('keydown')(event('F3')); assert.equal(toggles, 2);
+        input.resetDeltas(); input.setBinding('toggleDebug', 'KeyG', 0);
+        listeners.get('keydown')(event('KeyG')); assert.equal(toggles, 3);
+    } finally { globalThis.window = originalWindow; globalThis.document = originalDocument; }
+});
+
 test('mouse movement accumulates all events until the frame resets', () => {
     const originalWindow = globalThis.window;
     const originalDocument = globalThis.document;
@@ -126,6 +164,14 @@ test('mouse movement accumulates all events until the frame resets', () => {
         globalThis.window = originalWindow;
         globalThis.document = originalDocument;
     }
+});
+
+test('held interactions consume the press once while preserving a rebound physical key until release', () => {
+    const input = new InputManager(null); input.setBinding('interact', 'KeyF', 0); input.keys.KeyF = true;
+    assert.equal(input.isActionPressed('interact'), true); input.consumeAction('interact', { keepHeld: true });
+    assert.equal(input.isActionPressed('interact'), false); assert.equal(input.isActionDown('interact'), true);
+    input.resetDeltas(); assert.equal(input.isActionPressed('interact'), false); assert.equal(input.isActionDown('interact'), true);
+    input.keys.KeyF = false; input.resetDeltas(); input.keys.KeyF = true; assert.equal(input.isActionPressed('interact'), true);
 });
 
 test('mouse release is reported for one frame', () => {
@@ -248,10 +294,43 @@ test('gameplay captures browser keyboard shortcuts but menus and text fields do 
         const typing = makeEvent('KeyA', { target: { tagName: 'INPUT', type: 'text' } });
         keydown(typing);
         assert.equal(typing.wasPrevented(), false);
+        assert.equal(input.isKeyDown('KeyA'), false);
+        assert.equal(input.isKeyPressed('KeyA'), false);
     } finally {
         globalThis.window = originalWindow;
         globalThis.document = originalDocument;
     }
+});
+
+test('lost window focus or hidden tab clears held controls and buffered presses without a release attack', () => {
+    const originalWindow = globalThis.window, originalDocument = globalThis.document;
+    const windowListeners = new Map(), documentListeners = new Map();
+    globalThis.window = { addEventListener(type, callback) { windowListeners.set(type, callback); } };
+    globalThis.document = { hidden: false, addEventListener(type, callback) { documentListeners.set(type, callback); }, getElementById() { return null; } };
+    try {
+        const input = new InputManager(null);
+        input.setBinding('interact', 'KeyF');
+        for (const loseFocus of [() => windowListeners.get('blur')(), () => {
+            document.hidden = true; documentListeners.get('visibilitychange')();
+        }]) {
+            for (const code of ['KeyW', 'KeyF']) windowListeners.get('keydown')({ code, preventDefault() {} });
+            input.mouse.buttons[0] = true; input.mouse.deltaX = 12; input.mouse.wheelDelta = 1;
+            input.resetDeltas(); input.mouse.deltaY = -4;
+            windowListeners.get('keydown')({ code: 'KeyJ', preventDefault() {} });
+            loseFocus();
+            assert.equal(input.isActionDown('moveForward'), false);
+            assert.equal(input.isActionDown('interact'), false);
+            assert.equal(input.isKeyPressed('KeyJ'), false);
+            assert.equal(input.mouse.buttons[0], false);
+            assert.equal(input.isMouseReleased(0), false);
+            assert.equal(input.mouse.deltaY, 0);
+            document.hidden = false; documentListeners.get('visibilitychange')();
+            windowListeners.get('keydown')({ code: 'KeyF', repeat: true, preventDefault() {} });
+            assert.equal(input.isActionDown('interact'), false);
+            windowListeners.get('keydown')({ code: 'KeyF', preventDefault() {} });
+            assert.equal(input.isActionPressed('interact'), true);
+        }
+    } finally { globalThis.window = originalWindow; globalThis.document = originalDocument; }
 });
 
 test('gameplay wheel input cannot scroll or zoom the browser', () => {

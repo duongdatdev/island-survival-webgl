@@ -54,3 +54,12 @@ test('camera applies first person motion offsets without changing aim direction'
     assert.ok(Math.abs(camera.target[0] - camera.position[0]) < 1e-6);
     assert.ok(Math.abs(camera.target[2] - camera.position[2] - 1) < 1e-6);
 });
+
+test('restored look angles drive the actual view and reject non-finite updates', () => {
+    const camera = new Camera(); camera._debug.enabled = false;
+    assert.equal(camera.setLookAngles(0.7, 0.2), true); camera.update(null, [10, 2, 3], 0.75);
+    assert.ok(Math.abs(camera.target[0] - camera.position[0] - Math.sin(0.7) * Math.cos(0.2)) < 1e-6);
+    assert.ok(Math.abs(camera.target[1] - camera.position[1] - Math.sin(0.2)) < 1e-6);
+    const before = [camera._yaw, camera._pitch]; assert.equal(camera.setLookAngles(Infinity, 0), false);
+    assert.deepEqual([camera._yaw, camera._pitch], before);
+});

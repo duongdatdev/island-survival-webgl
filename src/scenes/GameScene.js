@@ -29,6 +29,9 @@ import { Campfire } from '../entities/Campfire.js';
 import { WaterCollector } from '../entities/WaterCollector.js';
 import { Waterfall } from '../entities/Waterfall.js';
 import { WorldGenerator } from '../gameplay/world/WorldGenerator.js';
+import { CampaignWorldGenerator } from '../gameplay/world/CampaignWorldGenerator.js';
+import { CampaignController } from '../systems/CampaignController.js';
+import { CampaignWildlife } from '../systems/CampaignWildlife.js';
 import { EnvironmentObject } from '../entities/EnvironmentObject.js';
 import { CollisionSystem } from '../systems/CollisionSystem.js';
 import { CollisionDebug } from '../systems/CollisionDebug.js';
@@ -92,8 +95,8 @@ export class GameScene extends Scene {
             const auxiliaryMenuOpen = this.menuUI && this.menuUI.isAnyOpen();
             const escapePromptOpen = this.escapeHud && !this.escapeHud.classList.contains('hidden');
             if (!locked && wasLocked && this._hasPointerLocked && !this.isPaused
-                && !inventoryOpen && !auxiliaryMenuOpen && !escapePromptOpen
-                && !this._isGameOver && !this.isEscaping) {
+                && !inventoryOpen && !auxiliaryMenuOpen && !escapePromptOpen && !this.campaign?.ui.isOpen
+                && !this._isGameOver && !this.isEscaping && !this.campaign?.ending?.state) {
                 this._pointerUnlockPauseGuard = 0.25;
                 this._pauseGame();
             }
@@ -138,7 +141,7 @@ export class GameScene extends Scene {
 
         this.worldSeed = this.engine.worldSeed || Math.floor(Math.random() * 1000000).toString();
         this.debugBiomeColors = false;
-        this.worldGenerator = new WorldGenerator(120, 100.0);
+        this.worldGenerator = this.engine.activeWorld?.mode === 'campaign' ? new CampaignWorldGenerator() : new WorldGenerator(120, 100.0);
 
         if (this._pendingSave) {
             this.worldSeed = this._pendingSave.worldSeed;
@@ -153,7 +156,7 @@ export class GameScene extends Scene {
         }
 
         this.terrain = new Terrain(gl, 120, 100.0, this.world.terrain, this.world.terrainGenerator);
-        this.water = new Water(gl, 100, 200.0, this.terrain);
+        this.water = new Water(gl, 100, this.world.width ? this.world.width * 2 : 200.0, this.terrain);
 
         this.environmentEntities = [];
         this.removedEnvironmentObjectIds = new Set();
@@ -187,19 +190,25 @@ export class GameScene extends Scene {
 
         this.resourceManager.worldResources = [];
         for (const node of this.world.resourceNodes) {
-            this.resourceManager.spawnResource(
+            const resource = this.resourceManager.spawnResource(
                 gl,
                 node.id,
                 node.position[0],
                 node.position[2],
                 this.terrain
             );
+            if (resource && this.world.mode === 'campaign') {
+                resource.worldNodeId = node.worldNodeId;
+                resource.amount = node.amount || 1;
+                resource.position[1] = node.position[1] + 0.1;
+                resource.updateModelMatrix();
+            }
         }
 
         this.particleSystem = new ParticleSystem(gl);
         this.rainSystem = new RainSystem(gl);
 
-        this.tutorial = new TutorialSystem();
+        this.tutorial = new TutorialSystem({ mode: this.world.mode, input: this.engine.input });
         this.tutorial.init();
         this.tutorial.start();
 
@@ -244,11 +253,11 @@ export class GameScene extends Scene {
         if (this.toggleBiomeColorsEl) {
             this.toggleBiomeColorsEl.checked = this.debugBiomeColors;
             
-            const newListener = (e) => {
+            this._onToggleBiomeColors = (e) => {
                 this.debugBiomeColors = e.target.checked;
                 this._regenerateWorld();
             };
-            this.toggleBiomeColorsEl.addEventListener('change', newListener);
+            this.toggleBiomeColorsEl.addEventListener('change', this._onToggleBiomeColors);
         }
         
         this._updateWorldDebugInfo();
@@ -286,7 +295,8 @@ export class GameScene extends Scene {
         this._onRestart = () => this._restartWorld();
 
         if (this.escapeBtn) {
-            this.escapeBtn.addEventListener('click', () => this._startEscapeCutscene());
+            this._onEscape = () => this._startEscapeCutscene();
+            this.escapeBtn.addEventListener('click', this._onEscape);
         }
         if (this.restartBtn) {
             this.restartBtn.addEventListener('click', this._onRestart);
@@ -320,9 +330,9 @@ export class GameScene extends Scene {
             this._updatePauseSoundButton(muted);
             if (!muted) this.engine.audio.playClick();
         };
-        this._onPauseMenu = () => {
+        this._onPauseMenu = async () => {
             this.engine.audio.playClick();
-            this.saveController.save(true);
+            if (!await this.saveController.save(false)) return;
             this._resumeGame();
             setTimeout(() => {
                 this.engine.scenes.switchScene('MainMenu');
@@ -360,10 +370,10 @@ export class GameScene extends Scene {
             reducedMotion: !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
         });
 
-        this.collisionSystem = new CollisionSystem();
+        this.collisionSystem = new CollisionSystem({ indexed: this.world.mode === 'campaign' });
         this.collisionDebug = new CollisionDebug(gl);
 
-        this.collisionSystem.register(this.player);
+        this.collisionSystem.register(this.player, true);
         for (const entity of this.environmentEntities) {
             this.collisionSystem.register(entity);
         }
@@ -394,12 +404,13 @@ export class GameScene extends Scene {
             getHeight: (x, z) => this.terrain.getHeight(x, z),
         });
 
-        const debugCollisionEl = document.getElementById('toggle-collision-debug');
-        if (debugCollisionEl) {
-            debugCollisionEl.addEventListener('change', (e) => {
+        this.debugCollisionEl = document.getElementById('toggle-collision-debug');
+        if (this.debugCollisionEl) {
+            this._onToggleCollisionDebug = (e) => {
                 this.collisionSystem.setDebugMode(e.target.checked);
                 this.collisionDebug.setEnabled(e.target.checked);
-            });
+            };
+            this.debugCollisionEl.addEventListener('change', this._onToggleCollisionDebug);
         }
 
         this.combatSystem = new CombatSystem();
@@ -410,13 +421,16 @@ export class GameScene extends Scene {
         this._pendingBowCharge = null;
         this.creatures = [];
 
-        this._spawnCrabs();
-        this._spawnSeagulls();
-        this._spawnBoars();
-        this._spawnSharks();
+        if (this.world.mode === 'campaign') this.wildlife = new CampaignWildlife(this);
+        else {
+            this._spawnCrabs();
+            this._spawnSeagulls();
+            this._spawnBoars();
+            this._spawnSharks();
+        }
 
         for (const creature of this.creatures) {
-            this.collisionSystem.register(creature);
+            this.collisionSystem.register(creature, true);
         }
 
         gl.clearColor(0.53, 0.74, 0.90, 1.0);
@@ -439,9 +453,15 @@ export class GameScene extends Scene {
             this.engine.audio.addEmitter('campfire', 'campfire', this.campfire.position, true);
         }
 
+        if (this.engine.activeWorld?.mode === 'campaign') this.campaign = new CampaignController(this);
         if (this._pendingSave) {
             this.saveController.apply(this._pendingSave);
+            this.campaign?.restore(this._pendingSave.campaign);
             this._pendingSave = null;
+        }
+        if (this.engine.pendingRecoveryWarning) {
+            this._showNotification(this.engine.pendingRecoveryWarning);
+            this.engine.pendingRecoveryWarning = null;
         }
 
         this._syncPointerLockHint();
@@ -503,6 +523,9 @@ export class GameScene extends Scene {
 
         this._applySettings();
         this._unsubscribeSettings = settings.onChange(() => this._applySettings());
+        this._motionPreference = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
+        this._onMotionPreference = () => this._applySettings();
+        this._motionPreference?.addEventListener('change', this._onMotionPreference);
         this.saveController = new GameSaveController(this);
         this.saveController.attach();
         this.interactionController = new InteractionController(this);
@@ -510,6 +533,10 @@ export class GameScene extends Scene {
 
     _applySettings() {
         const s = this.engine.settings;
+        const reducedMotion = !!s.get('reducedMotion') || !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        if (this.movementFeedback) this.movementFeedback.reducedMotion = reducedMotion;
+        if (this.firstPersonViewModel) this.firstPersonViewModel.reducedMotion = reducedMotion;
+        document.documentElement.classList.toggle('reduced-motion', !!s.get('reducedMotion'));
 
         this.camera.setFov(s.get('fov') * Math.PI / 180);
         this.camera.setLookSettings(s.get('mouseSensitivity'), s.get('invertY'));
@@ -553,6 +580,8 @@ export class GameScene extends Scene {
         this.achievements.update(deltaTime);
         this._updateFpsCounter();
         this.saveController.updateStatus(deltaTime);
+        this.campaign?.updatePendingSave(deltaTime);
+        if (this.campaign?.handleInput(deltaTime)) return;
 
         if (this._pointerUnlockPauseGuard > 0) {
             this._pointerUnlockPauseGuard = Math.max(0, this._pointerUnlockPauseGuard - deltaTime);
@@ -577,6 +606,8 @@ export class GameScene extends Scene {
         }
 
         if (this.isPaused || this._isGameOver) return;
+
+        if (this.campaign?.ending.update(deltaTime)) return;
 
         this.time += deltaTime;
 
@@ -690,7 +721,7 @@ export class GameScene extends Scene {
 
         this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height);
 
-        if (this.isFishing) {
+        if (this.isFishing && !this.campaign) {
             this.fishingTimer -= deltaTime;
             
             const hintEl = this._domCache.pickupHint;
@@ -731,6 +762,7 @@ export class GameScene extends Scene {
         if (rotateLight) this.dayNight.update(deltaTime);
         this.weather.update(deltaTime);
         const weatherEffects = this.weather.getGameplayEffects();
+        this.campaign?.beforeUpdate(deltaTime, weatherEffects);
         const isNight = this.dayNight.timeOfDay >= this.dayNight.duskTime
             || this.dayNight.timeOfDay < this.dayNight.dawnTime;
         const inWater = this._isPlayerInExposureWater();
@@ -766,6 +798,7 @@ export class GameScene extends Scene {
             : (isSprinting ? PLAYER_BALANCE.sprintSpeed : PLAYER_BALANCE.walkSpeed) * exposureSpeed;
 
         const prevPlayerPos = [this.player.position[0], this.player.position[1], this.player.position[2]];
+        this.collisionSystem.refreshDynamic();
 
         let eyeOffset = this.player.collider.height * 0.42;
         let faceOffset = 0.08;
@@ -784,6 +817,7 @@ export class GameScene extends Scene {
             faceOffset = modelHeight * 0.09;
             this._firstPersonHeadCutFromBase = modelMin + modelHeight * 0.72;
         }
+        if (this.campaign) { eyeOffset = 0.75; faceOffset = 0.08; }
         this.camera.update(this.engine.input, this.player.position, eyeOffset, deltaTime, faceOffset);
 
         const movementInput = (this.isFishing || inventoryOpen)
@@ -794,8 +828,9 @@ export class GameScene extends Scene {
         if (this.collisionSystem) {
             this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain, CollisionLayers.Creature);
         }
+        const movementRespawned = this.campaign?.afterMovement(deltaTime, prevPlayerPos);
 
-        const distanceMoved = Math.hypot(
+        const distanceMoved = movementRespawned ? 0 : Math.hypot(
             this.player.position[0] - prevPlayerPos[0],
             this.player.position[2] - prevPlayerPos[2]
         );
@@ -830,6 +865,8 @@ export class GameScene extends Scene {
         const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         for (let i = this.creatures.length - 1; i >= 0; i--) {
             const creature = this.creatures[i];
+            if (this.wildlife && !this.wildlife.active(creature)) continue;
+            const previous = this.wildlife ? Array.from(creature.position) : null;
 
             creature.update(
                 deltaTime,
@@ -843,6 +880,7 @@ export class GameScene extends Scene {
                 this.collisionSystem.resolvePlayerCollisions(creature, this.terrain);
                 creature.constrainToNavigationSurface(this.terrain);
             }
+            this.wildlife?.resolve(creature, previous, deltaTime);
 
             if (creature.attackDamage > 0 &&
                 (creature.state === CreatureState.CHASE || creature.state === CreatureState.ATTACK)) {
@@ -850,7 +888,7 @@ export class GameScene extends Scene {
                 const dz = creature.position[2] - this.player.position[2];
                 const dist = Math.sqrt(dx * dx + dz * dz);
                 const dy = Math.abs(creature.position[1] - this.player.position[1]);
-                if (dist <= creature.attackRange && dy <= 2.0) {
+                if (dist <= creature.attackRange && dy <= 2.0 && (!this.wildlife || this.wildlife.canReachPlayer(creature))) {
                     if (creature.canDamagePlayer()) {
                         this.vitals.applyDamage(creature.attackDamage, creature instanceof Shark ? 'shark' : 'boar');
                         this._showNotification(`💥 Trúng đòn! Mất ${creature.attackDamage} máu!`);
@@ -890,7 +928,7 @@ export class GameScene extends Scene {
         const attackPressed = this.engine.input.isMousePressed(0);
         const attackReleased = this.engine.input.isMouseReleased(0);
         const combatMenuOpen = !!(this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden'));
-        const combatUnavailable = this.isFishing || this.isEscaping || combatMenuOpen
+        const combatUnavailable = !!this.campaign?.placement || !!this.campaign?.hook.state || this.isFishing || this.isEscaping || combatMenuOpen
             || this.isPaused || this._isGameOver;
         const equippedCombatItem = this.inventory.getEquippedItem();
         const bowEquipped = equippedCombatItem?.id === 'bow';
@@ -980,7 +1018,10 @@ export class GameScene extends Scene {
         this._updateInvViewProj();
 
         const gameplayMenuOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
-        if (!gameplayMenuOpen) this.interactionController.update(deltaTime);
+        if (!gameplayMenuOpen) {
+            if (this.campaign) this.campaign.interact();
+            else this.interactionController.update(deltaTime);
+        }
         if (this.raftAssembly) {
             this.raftAssembly.update(deltaTime);
         }
@@ -997,81 +1038,7 @@ export class GameScene extends Scene {
 
         this.tutorial.update(deltaTime, this.engine.input, this.player);
 
-        const sunDir = this.dayNight.getSunDirection();
-        const sunColor = this.dayNight.getSunColor();
-        const sunIntensity = this.dayNight.getSunIntensity();
-
-        const celestialDist = 80.0;
-        const sunLen = Math.hypot(sunDir[0], sunDir[1], sunDir[2]);
-        const sunDirNorm = sunLen > 0.001
-            ? [sunDir[0] / sunLen, sunDir[1] / sunLen, sunDir[2] / sunLen]
-            : [0, 1, 0];
-        const moonDir = this.dayNight.getMoonDirection();
-        const moonLen = Math.hypot(moonDir[0], moonDir[1], moonDir[2]);
-        const moonDirNorm = moonLen > 0.001
-            ? [moonDir[0] / moonLen, moonDir[1] / moonLen, moonDir[2] / moonLen]
-            : [0, -1, 0];
-
-        this.sunSprite.position[0] = this.camera.position[0] + sunDirNorm[0] * celestialDist;
-        this.sunSprite.position[1] = this.camera.position[1] + sunDirNorm[1] * celestialDist;
-        this.sunSprite.position[2] = this.camera.position[2] + sunDirNorm[2] * celestialDist;
-        this.sunSprite.visible = sunDirNorm[1] > -0.1 && sunIntensity > 0.15;
-
-        this.moonSprite.position[0] = this.camera.position[0] + moonDirNorm[0] * celestialDist;
-        this.moonSprite.position[1] = this.camera.position[1] + moonDirNorm[1] * celestialDist;
-        this.moonSprite.position[2] = this.camera.position[2] + moonDirNorm[2] * celestialDist;
-        const moonColor = this.dayNight.getMoonColor();
-        const moonBrightness = Math.max(moonColor[0], moonColor[1], moonColor[2]);
-        this.moonSprite.visible = moonDirNorm[1] > -0.1 && moonBrightness > 0.02;
-
-        const sunCol = this.dayNight.getSunColor();
-        this.sunSprite.setColor(
-            sunCol[0] * 0.9 + 0.1,
-            sunCol[1] * 0.8 + 0.2,
-            sunCol[2] * 0.6 + 0.1,
-            sunCol[0] * 0.6,
-            sunCol[1] * 0.4,
-            sunCol[2] * 0.15
-        );
-
-        const lightningMod = this.weather.getLightningModulation();
-        const cloudCover = this.weather.cloudCover;
-        const moonlit = sunDir[1] < 0;
-        const lightDirection = moonlit ? this.dayNight.getMoonDirection() : sunDir;
-        const lightColor = moonlit ? [0.60, 0.73, 1.0] : sunColor;
-        const lightIntensity = moonlit
-            ? 0.18 * Math.min(1, Math.max(0, -sunDir[1] / 0.35))
-            : sunIntensity;
-        this.dirLight.setDirection(...lightDirection);
-        this.dirLight.color.set(lightColor);
-        this.dirLight.intensity = lightIntensity * (1 - cloudCover * 0.65);
-
-        const ambColor = this.dayNight.getAmbientColor();
-        this.ambientLight.color.set(ambColor);
-        this.ambientLight.intensity = this.dayNight.getAmbientIntensity()
-            * (1 - cloudCover * 0.20) + lightningMod * 0.45;
-
-        this.rainSystem.intensity = this.weather.rainIntensity;
-        if (this.weather.rainIntensity > 0.01) {
-            const windX = this.weather.windDirection[0] * this.weather.windSpeed;
-            const windZ = this.weather.windDirection[2] * this.weather.windSpeed;
-            this.rainSystem.update(deltaTime, this.player.position, [windX, 0, windZ]);
-        }
-
-        if (this.weather.thunderPending) {
-            const flashPos = [
-                this.player.position[0] + (Math.random() - 0.5) * 20,
-                10 + Math.random() * 10,
-                this.player.position[2] + (Math.random() - 0.5) * 20
-            ];
-            this.particleSystem.emit(flashPos, ParticleSystem.PRESET.LIGHTNING);
-            this.engine.audio.playThunder();
-        }
-
-        this.engine.audio.setWindIntensity(this.weather.windSpeed / 5.0);
-        this.engine.audio.setRainIntensity(this.weather.rainIntensity);
-        this.engine.audio.setTimeOfDay(this.dayNight.timeOfDay);
-        this.engine.audio.setListener(this.camera.position, this.camera.target);
+        this._updateEnvironmentPresentation(deltaTime);
 
         const closestThreat = this._nearestThreatDistance();
         if (closestThreat < 12) {
@@ -1133,6 +1100,91 @@ export class GameScene extends Scene {
             dom.crosshair.classList.toggle('bow-charging', !!this._pendingBowCharge);
             dom.crosshair.style.setProperty('--bow-charge-angle', `${bowCharge * 360}deg`);
         }
+    }
+
+    _updateEnvironmentPresentation(deltaTime) {
+        const sunDir = this.dayNight.getSunDirection();
+        const sunColor = this.dayNight.getSunColor();
+        const sunIntensity = this.dayNight.getSunIntensity();
+
+        const celestialDist = 80.0;
+        const sunLen = Math.hypot(sunDir[0], sunDir[1], sunDir[2]);
+        const sunDirNorm = sunLen > 0.001
+            ? [sunDir[0] / sunLen, sunDir[1] / sunLen, sunDir[2] / sunLen]
+            : [0, 1, 0];
+        const moonDir = this.dayNight.getMoonDirection();
+        const moonLen = Math.hypot(moonDir[0], moonDir[1], moonDir[2]);
+        const moonDirNorm = moonLen > 0.001
+            ? [moonDir[0] / moonLen, moonDir[1] / moonLen, moonDir[2] / moonLen]
+            : [0, -1, 0];
+
+        this.sunSprite.position[0] = this.camera.position[0] + sunDirNorm[0] * celestialDist;
+        this.sunSprite.position[1] = this.camera.position[1] + sunDirNorm[1] * celestialDist;
+        this.sunSprite.position[2] = this.camera.position[2] + sunDirNorm[2] * celestialDist;
+        this.sunSprite.visible = sunDirNorm[1] > -0.1 && sunIntensity > 0.15;
+
+        this.moonSprite.position[0] = this.camera.position[0] + moonDirNorm[0] * celestialDist;
+        this.moonSprite.position[1] = this.camera.position[1] + moonDirNorm[1] * celestialDist;
+        this.moonSprite.position[2] = this.camera.position[2] + moonDirNorm[2] * celestialDist;
+        const moonColor = this.dayNight.getMoonColor();
+        const moonBrightness = Math.max(moonColor[0], moonColor[1], moonColor[2]);
+        this.moonSprite.visible = moonDirNorm[1] > -0.1 && moonBrightness > 0.02;
+
+        const sunCol = this.dayNight.getSunColor();
+        this.sunSprite.setColor(
+            sunCol[0] * 0.9 + 0.1,
+            sunCol[1] * 0.8 + 0.2,
+            sunCol[2] * 0.6 + 0.1,
+            sunCol[0] * 0.6,
+            sunCol[1] * 0.4,
+            sunCol[2] * 0.15
+        );
+
+        const lightningMod = this.weather.getLightningModulation();
+        const cloudCover = this.weather.cloudCover;
+        const moonlit = sunDir[1] < 0;
+        const lightDirection = moonlit ? this.dayNight.getMoonDirection() : sunDir;
+        const lightColor = moonlit ? [0.60, 0.73, 1.0] : sunColor;
+        const lightIntensity = moonlit
+            ? 0.18 * Math.min(1, Math.max(0, -sunDir[1] / 0.35))
+            : sunIntensity;
+        this.dirLight.setDirection(...lightDirection);
+        this.dirLight.color.set(lightColor);
+        this.dirLight.intensity = lightIntensity * (1 - cloudCover * 0.65);
+
+        const ambColor = this.dayNight.getAmbientColor();
+        this.ambientLight.color.set(ambColor);
+        this.ambientLight.intensity = this.dayNight.getAmbientIntensity()
+            * (1 - cloudCover * 0.20) + lightningMod * 0.45;
+        if (this.campaign?.ending.state?.route === 'raft') {
+            // Open-water sky fill keeps the steering subject readable when backlit or moonlit.
+            const fill = Math.max(0, 1 - this.dirLight.intensity / 0.5) * 0.8;
+            const skyFill = [0.62, 0.68, 0.8];
+            for (let axis = 0; axis < 3; axis++) this.ambientLight.color[axis] += (skyFill[axis] - this.ambientLight.color[axis]) * fill;
+            this.ambientLight.intensity += (Math.max(0.78, this.ambientLight.intensity) - this.ambientLight.intensity) * fill;
+        }
+
+        this.rainSystem.intensity = this.weather.rainIntensity;
+        if (this.weather.rainIntensity > 0.01) {
+            const windX = this.weather.windDirection[0] * this.weather.windSpeed;
+            const windZ = this.weather.windDirection[2] * this.weather.windSpeed;
+            this.rainSystem.update(deltaTime, this.player.position, [windX, 0, windZ]);
+        }
+
+        if (this.weather.thunderPending) {
+            const flashPos = [
+                this.player.position[0] + (Math.random() - 0.5) * 20,
+                10 + Math.random() * 10,
+                this.player.position[2] + (Math.random() - 0.5) * 20
+            ];
+            this.particleSystem.emit(flashPos, ParticleSystem.PRESET.LIGHTNING);
+            this.engine.audio.playThunder();
+        }
+
+        this.engine.audio.setWindIntensity(this.weather.windSpeed / 5.0);
+        this.engine.audio.setRainIntensity(this.weather.rainIntensity);
+        this.engine.audio.setTimeOfDay(this.dayNight.timeOfDay);
+        this.engine.audio.setListener(this.camera.position, this.camera.target);
     }
 
     _updateExposureStatus() {
@@ -1372,16 +1424,18 @@ export class GameScene extends Scene {
         this.basicShader.setUniform1f('uLightIntensity', this.dirLight.intensity);
         this.basicShader.setUniform3fv('uAmbientColor', this.ambientLight.color);
         this.basicShader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity);
-        this.basicShader.setUniform3fv('uPointLightPosition', this.campfire.getLightPosition());
-        this.basicShader.setUniform3fv('uPointLightColor', this.campfire.lightColor);
+        const campaignLight = this.campaign?.lighting();
+        this.basicShader.setUniform3fv('uPointLightPosition', campaignLight?.position || this.campfire.getLightPosition());
+        this.basicShader.setUniform3fv('uPointLightColor', campaignLight?.color || this.campfire.lightColor);
         this.basicShader.setUniform1f(
             'uPointLightIntensity',
-            this.campfire.isBuilt ? this.campfire.lightIntensity : 0.0
+            campaignLight?.intensity ?? (this.campfire.isBuilt ? this.campfire.lightIntensity : 0.0)
         );
-        this.basicShader.setUniform1f('uPointLightRange', this.campfire.lightRange);
+        this.basicShader.setUniform1f('uPointLightRange', campaignLight?.range || this.campfire.lightRange);
         this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
         this.terrain.draw(this.basicShader);
+        this.campaign?.draw(this.basicShader, drawMode);
 
         const playerRenderPos = [this.player.position[0], this.player.position[1] - this.player.collider.height * 0.5, this.player.position[2]];
         const headCutoff = this.isEscaping || !Number.isFinite(this._firstPersonHeadCutFromBase)
@@ -1515,7 +1569,7 @@ export class GameScene extends Scene {
             );
         }
 
-        if (!this.isEscaping && !this.isFishing) {
+        if (!this.isEscaping && !this.isFishing && !this.campaign?.ending.state) {
             this.firstPersonViewModel.draw(this.basicShader, this.camera.projectionMatrix, drawMode);
         }
 
@@ -1592,7 +1646,7 @@ export class GameScene extends Scene {
         const auxiliaryMenuOpen = this.menuUI && this.menuUI.isAnyOpen();
         const escapePromptOpen = this.escapeHud && !this.escapeHud.classList.contains('hidden');
         const show = !this.engine.input.mouse.isLocked && !this.isPaused && !inventoryOpen
-            && !auxiliaryMenuOpen && !escapePromptOpen && !this._isGameOver && !this.isEscaping;
+            && !auxiliaryMenuOpen && !escapePromptOpen && !this._isGameOver && !this.isEscaping && !this.campaign?.ending.state;
         this._pointerLockHint.classList.toggle('hidden', !show);
     }
 
@@ -1681,9 +1735,9 @@ export class GameScene extends Scene {
         return 'materials';
     }
 
-    _restartWorld() {
+    async _restartWorld() {
         if (!this.activeWorldId) return;
-        this.saveController.reset();
+        await this.saveController.reset();
         this.engine.pendingLoad = null;
         this.victoryScreen?.classList.add('hidden');
         this.gameoverScreen?.classList.add('hidden');
@@ -1691,6 +1745,7 @@ export class GameScene extends Scene {
     }
 
     _showGameOver() {
+        if (this.campaign) { this._cancelPendingCombat(); this.campaign.onDeath(); return; }
         this._cancelPendingCombat();
         this._isGameOver = true;
 
@@ -2000,8 +2055,10 @@ export class GameScene extends Scene {
         const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
         if (inventoryOpen) return;
 
+        if (this.campaign && pending.pendingAttack.target && this.campaign.collision.segmentBlocked(
+            pending.pendingAttack.origin, Array.from(pending.pendingAttack.target.position))) pending.pendingAttack.target = null;
         const result = this.combatSystem.resolveImpact(pending.pendingAttack);
-        const treeResult = result.hit || pending.pendingAttack.weaponData.id !== 'stone_axe'
+        const treeResult = result.hit || !['stone_axe', 'iron_axe'].includes(pending.pendingAttack.weaponData.id)
             ? null
             : this._tryChopTree(
                 pending.pendingAttack.origin,
@@ -2081,6 +2138,7 @@ export class GameScene extends Scene {
     }
 
     _tryChopTree(playerPosition, playerYaw, equippedItem) {
+        if (!equippedItem || !['stone_axe', 'iron_axe'].includes(equippedItem.id)) return { hit: false, tree: null };
         const weaponDef = getResourceDef(equippedItem.id);
         const range = weaponDef && weaponDef.weaponRange ? weaponDef.weaponRange : 2.0;
         const facingX = Math.sin(playerYaw);
@@ -2096,6 +2154,7 @@ export class GameScene extends Scene {
             const distance = Math.sqrt(dx * dx + dz * dz);
             const hitRange = range + (tree.collisionRadius || 0);
             if (distance > hitRange || distance >= closestDistance) continue;
+            if (this.campaign?.collision.segmentBlocked(playerPosition, tree.getTreePoint(0.14))) continue;
 
             if (distance > 0.0001) {
                 const dot = (dx / distance) * facingX + (dz / distance) * facingZ;
@@ -2109,7 +2168,7 @@ export class GameScene extends Scene {
 
         if (!closestTree) return { hit: false, tree: null };
 
-        const chopResult = closestTree.chop(playerPosition);
+        const chopResult = closestTree.chop(playerPosition, equippedItem.id === 'iron_axe' ? 2 : 1);
         if (chopResult.felled && this.collisionSystem) {
             this.collisionSystem.unregister(closestTree);
         }
@@ -2231,6 +2290,8 @@ export class GameScene extends Scene {
 
 
     destroy() {
+        this.campaign?.dispose();
+        this.campaign = null;
         console.log('GameScene: Destroying meshes and shader programs...');
         this._cancelPendingCombat();
         if (this.engine.input.onPointerLockChange === this._onPointerLockChange) {
@@ -2287,6 +2348,7 @@ export class GameScene extends Scene {
             }
             this.creatures = [];
         }
+        this.wildlife = null;
 
         if (this.particleSystem) this.particleSystem.delete();
         if (this.rainSystem) this.rainSystem.delete();
@@ -2334,11 +2396,17 @@ export class GameScene extends Scene {
         if (this._pauseGuideBtn) this._pauseGuideBtn.removeEventListener('click', this._onPauseGuide);
         if (this.restartBtn) this.restartBtn.removeEventListener('click', this._onRestart);
         if (this.gameoverRestartBtn) this.gameoverRestartBtn.removeEventListener('click', this._onRestart);
+        this.escapeBtn?.removeEventListener('click', this._onEscape);
+        this.toggleBiomeColorsEl?.removeEventListener('change', this._onToggleBiomeColors);
+        this.debugCollisionEl?.removeEventListener('change', this._onToggleCollisionDebug);
 
         if (this._unsubscribeSettings) {
             this._unsubscribeSettings();
             this._unsubscribeSettings = null;
         }
+        this._motionPreference?.removeEventListener('change', this._onMotionPreference);
+        this._motionPreference = null;
+        this._onMotionPreference = null;
         if (this.menuUI) {
             this.menuUI.dispose();
             this.menuUI = null;

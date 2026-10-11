@@ -26,6 +26,7 @@ function lerp(a, b, t) {
 export class FirstPersonViewModel {
     constructor(gl) {
         this.gl = gl;
+        this.reducedMotion = false;
         this.axe = null;
 
         this.sleeve = new Mesh(gl, this._createTaperedCylinderData(SLEEVE_COLOR, 8, 1.08, 0.88));
@@ -62,6 +63,11 @@ export class FirstPersonViewModel {
 
     load(assetManager) {
         this.axe = assetManager.models['survival:axe'] || null;
+        this.tools = {
+            iron_axe: assetManager.models['campaign:survival_tool-axe-upgraded'],
+            stone_pickaxe: assetManager.models['campaign:survival_tool-pickaxe'],
+            iron_pickaxe: assetManager.models['campaign:survival_tool-pickaxe-upgraded'],
+        };
     }
 
     update(deltaTime, isMoving) {
@@ -135,9 +141,9 @@ export class FirstPersonViewModel {
         const gl = this.gl;
         const walkPhase = this._time * 8;
         const idlePhase = this._time * 1.7;
-        const bobX = Math.sin(walkPhase) * 0.010 * this._moveAmount
+        const bobX = this.reducedMotion ? 0 : Math.sin(walkPhase) * 0.010 * this._moveAmount
             + Math.sin(idlePhase) * 0.002;
-        const bobY = Math.abs(Math.cos(walkPhase)) * -0.013 * this._moveAmount
+        const bobY = this.reducedMotion ? 0 : Math.abs(Math.cos(walkPhase)) * -0.013 * this._moveAmount
             + Math.cos(idlePhase * 0.8) * 0.002;
         const pose = this._getWeaponPose();
 
@@ -204,7 +210,7 @@ export class FirstPersonViewModel {
 
         const profile = getWeaponProfile(this.weaponId) || getWeaponProfile('fist');
         const progress = Math.min(1, this._swingElapsed / (profile.duration || 1));
-        if (this.weaponId === 'stone_axe') return this._getSwingPose();
+        if (this.weaponId === 'stone_axe' || profile.toolKind) return this._getSwingPose();
         if (progress >= 1) return { roll: 0, pitch: 0, z: 0, charge: 0 };
         const strike = Math.sin(progress * Math.PI);
         if (this.weaponId === 'spear') {
@@ -306,6 +312,12 @@ export class FirstPersonViewModel {
     }
 
     _drawEquippedWeapon(shader, drawMode, bobX, bobY, pose) {
+        const tool = this.tools?.[this.weaponId];
+        if (tool) {
+            this._buildAxeMatrix(this._axeMatrix, bobX, bobY, pose);
+            tool.draw(shader, this._axeMatrix, drawMode);
+            return;
+        }
         if (this.weaponId === 'stone_axe') {
             if (!this.axe) return;
             this._buildAxeMatrix(this._axeMatrix, bobX, bobY, pose);
@@ -475,5 +487,6 @@ export class FirstPersonViewModel {
         this.bowString = null;
         this.arrow = null;
         this.axe = null;
+        this.tools = null;
     }
 }

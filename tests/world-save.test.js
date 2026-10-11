@@ -4,6 +4,26 @@ import { GameSaveController } from '../src/systems/GameSaveController.js';
 import { SaveSystem, SAVE_VERSION } from '../src/systems/SaveSystem.js';
 import { ExposureSystem } from '../src/systems/ExposureSystem.js';
 
+test('async saves report success only after commit and report rejected silent saves', async () => {
+    const scene = { activeWorldId: 'async', survivalSeconds: 2, stats: {}, _domCache: {} };
+    let commit;
+    const storage = { captureScene: () => ({ captured: true }), saveWorld: () => new Promise(resolve => { commit = resolve; }) };
+    const controller = new GameSaveController(scene, { storage });
+    const messages = [];
+    controller.setStatus = (message, error) => messages.push({ message, error });
+    const pending = controller.save(false);
+    assert.equal(messages.length, 0);
+    assert.equal(controller.lastSavedAt, undefined);
+    commit(true);
+    assert.equal(await pending, true);
+    assert.equal(messages.at(-1).error, false);
+    storage.saveWorld = () => Promise.reject(new Error('quota'));
+    assert.equal(await controller.save(true), false);
+    assert.equal(messages.at(-1).error, true);
+    storage.captureScene = () => { throw new Error('capture'); };
+    assert.equal(controller.save(true), false);
+});
+
 function installStorage() {
     const storage = {};
     globalThis.localStorage = {
@@ -94,6 +114,11 @@ test('captured saves retain removed environment objects', () => {
     assert.deepEqual(save.exposure, { warmth: 62.5, wetness: 37.25 });
     assert.equal('projectiles' in save, false);
     assert.equal('bowCharge' in save, false);
+    scene.engine = { activeWorld: { mode: 'campaign' } };
+    scene.campaign = { playSeconds: 0, snapshot: () => ({ playSeconds: 0 }) };
+    const campaignSave = new GameSaveController(scene, { storage: {} }).capture();
+    assert.equal(campaignSave.playSeconds, 0, 'zero real play time must not fall back to accelerated survival time');
+    assert.equal(campaignSave.survivalSeconds, 42);
 });
 
 test('exposure save fields restore per world and old saves use warm dry defaults', () => {

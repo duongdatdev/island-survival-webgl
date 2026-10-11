@@ -89,6 +89,7 @@ export class InputManager {
         this.canvas = canvas;
         this.keys = {};
         this._prevKeys = {};
+        this._pressedKeys = new Set();
         this._prevMouseButtons = {};
         this.mouse = {
             x: 0,
@@ -127,7 +128,7 @@ export class InputManager {
         if (this.bindings[keyOrAction]) {
             return this.isActionPressed(keyOrAction);
         }
-        return !!this.keys[keyOrAction] && !this._prevKeys[keyOrAction];
+        return this._pressedKeys.has(keyOrAction) || !!this.keys[keyOrAction] && !this._prevKeys[keyOrAction];
     }
 
     isActionDown(action) {
@@ -141,22 +142,24 @@ export class InputManager {
         const bound = this.bindings[action];
         if (!bound) return false;
         const keys = Array.isArray(bound) ? bound : [bound];
-        return keys.some(k => !!this.keys[k] && !this._prevKeys[k]);
+        return keys.some(k => this._pressedKeys.has(k) || !!this.keys[k] && !this._prevKeys[k]);
     }
 
-    consumeAction(action) {
+    consumeAction(action, { keepHeld = false } = {}) {
         const bound = this.bindings[action];
         if (!bound) return;
         const keys = Array.isArray(bound) ? bound : [bound];
         for (const k of keys) {
-            this.keys[k] = false;
+            if (!keepHeld) this.keys[k] = false;
             this._prevKeys[k] = true;
+            this._pressedKeys.delete(k);
         }
     }
 
     consumeKey(key) {
         this.keys[key] = false;
         this._prevKeys[key] = true;
+        this._pressedKeys.delete(key);
     }
 
     isMousePressed(button = 0) {
@@ -230,8 +233,21 @@ export class InputManager {
         this.mouse.wheelDelta = 0;
 
         this._prevKeys = { ...this.keys };
+        this._pressedKeys.clear();
 
         this._prevMouseButtons = { ...this.mouse.buttons };
+    }
+
+    clearHeldInput() {
+        this.keys = {};
+        this._prevKeys = {};
+        this._pressedKeys.clear();
+        for (const button of Object.keys(this.mouse.buttons)) this.mouse.buttons[button] = false;
+        this._prevMouseButtons = { ...this.mouse.buttons };
+        this.mouse.deltaX = 0;
+        this.mouse.deltaY = 0;
+        this.mouse.wheelDelta = 0;
+        this._updateDebugKeyUI();
     }
 
     setPointerLockEnabled(enabled) {
@@ -274,6 +290,9 @@ export class InputManager {
     _setupListeners() {
         if (typeof window === 'undefined') return;
 
+        // A release outside this window may never produce a keyup/mouseup here.
+        window.addEventListener('blur', () => this.clearHeldInput());
+
         window.addEventListener('keydown', (e) => {
             if (this._rebindCallback) {
                 e.preventDefault();
@@ -289,15 +308,19 @@ export class InputManager {
             }
 
             const isTextInput = this._isEditableTarget(e.target);
+            if (isTextInput) return;
 
             if (this.pointerLockEnabled && !isTextInput) {
                 e.preventDefault();
             }
 
-            this.keys[e.code] = true;
+            const newPress = !e.repeat && !this.keys[e.code];
+            if (newPress && !isTextInput) this._pressedKeys.add(e.code);
+            // Auto-repeat must not resurrect a press consumed by gameplay/UI.
+            if (!e.repeat) this.keys[e.code] = true;
             this._updateDebugKeyUI();
 
-            if (!isTextInput && (this.isActionPressed('toggleDebug') || e.code === 'F3')) {
+            if (!isTextInput && newPress && (this.bindings.toggleDebug?.includes(e.code) || e.code === 'F3')) {
                 e.preventDefault();
                 if (typeof document !== 'undefined') {
                     const debugPanel = document.getElementById('debug-panel');
@@ -355,6 +378,9 @@ export class InputManager {
         }
 
         if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) this.clearHeldInput();
+            });
             document.addEventListener('pointerlockchange', () => {
                 const wasLocked = this.mouse.isLocked;
                 const isLocked = document.pointerLockElement === this.canvas;

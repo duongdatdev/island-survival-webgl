@@ -11,6 +11,7 @@ export class ProjectileSystem {
         this.terrain = terrain;
         this.projectiles = [];
         this.onImpact = null;
+        this.modelCollision = null;
         this._modelMatrix = Mat4.create();
         this._arrowMesh = gl ? new Mesh(gl, this._createArrowData()) : null;
     }
@@ -57,9 +58,8 @@ export class ProjectileSystem {
                 PROJECTILE_MASK
             ) || null;
             const terrainHit = this._findTerrainHit(start, end, distance);
-            const hit = !colliderHit || (terrainHit && terrainHit.distance < colliderHit.distance)
-                ? terrainHit
-                : colliderHit;
+            const modelHit = this.modelCollision?.segmentHit(start, end);
+            const hit = [colliderHit, terrainHit, modelHit].filter(Boolean).sort((a, b) => a.distance - b.distance)[0];
 
             if (hit) {
                 const creature = hit.entity && (hit.entity.collider?.layer & CollisionLayers.Creature)
@@ -125,6 +125,7 @@ export class ProjectileSystem {
         this.clear();
         this._arrowMesh?.delete();
         this._arrowMesh = null;
+        this.modelCollision = null;
     }
 
     _createArrowData() {

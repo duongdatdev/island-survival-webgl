@@ -85,6 +85,13 @@ export class Camera {
         this.config.mouseSensitivity = this._cfg.Orbit.mouseSensitivity * multiplier;
         this.config.invertY = invertY;
     }
+    setLookAngles(yaw, pitch = this.config.defaultPitch) {
+        if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return false;
+        this._yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
+        this._pitch = Math.max(this.config.pitchMin, Math.min(this.config.pitchMax, pitch));
+        this._smoothYaw = this._yaw; this._smoothPitch = this._pitch; this._firstUpdate = true;
+        return true;
+    }
 
     setMode(name) {
         const next = this._states.get(name);

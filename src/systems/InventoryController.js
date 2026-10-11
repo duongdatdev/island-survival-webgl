@@ -271,6 +271,8 @@ export class InventoryController {
 
         scene.inventory.removeItemAt(index, 1);
         scene.vitals[action.method](effect.amount);
+        if (effect.type === 'thirst') scene.campaign?.events.emit('drank', { id: 'fresh_water' });
+        scene.campaign?.saveMilestone();
         scene._showNotification(`${definition.icon} ${action.verb} ${definition.name}! ${action.label} +${effect.amount}`);
         if (effect.type === 'hunger') scene.engine.audio.playEat();
         else if (effect.type === 'thirst') scene.engine.audio.playDrink();
@@ -282,6 +284,7 @@ export class InventoryController {
 
     useActiveItem() {
         const scene = this.scene;
+        if (scene.campaign?.useActiveItem()) return;
         const activeIndex = 20 + scene.inventory.selectedHotbarIndex;
         const activeItem = scene.inventory.slots[activeIndex];
         if (!activeItem) {
@@ -378,6 +381,10 @@ export class InventoryController {
     toggleMenu() {
         if (!this.menu) return;
         if (this.menu.classList.contains('hidden')) {
+            if (this.scene.campaign?.wreckSalvage?.active) {
+                this.scene.campaign.wreckSalvage.pause();
+                this.scene.campaign.saveMilestone();
+            }
             this.menu.classList.remove('hidden');
             this.scene.engine.input.releasePointerLock();
             this.renderCraftingPanel();
@@ -400,6 +407,7 @@ export class InventoryController {
     }
 
     renderCraftingPanel() {
+        if (this.scene.campaign) { this.scene.campaign.ui.renderCraftingPanel(); return; }
         const recipesListEl = this.document?.getElementById('crafting-recipes-list');
         const detailsEl = this.document?.getElementById('recipe-details-panel');
         if (!recipesListEl || !detailsEl) return;
@@ -491,6 +499,7 @@ export class InventoryController {
 
     craftItem(recipeId) {
         const scene = this.scene;
+        if (scene.campaign) return scene.campaign.craft(recipeId).ok;
         const recipe = getRecipeDef(recipeId);
         if (!recipe) return false;
         if (!CraftingSystem.craft(recipeId, scene.inventory)) {

@@ -2,6 +2,9 @@
 const STORAGE_KEY = 'island_survival_achievements_v1';
 
 export const Achievements = [
+    { id: 'ocean_escape', icon: '⛵', name: 'Vượt Qua Rạn Đá', description: 'Hoàn thành hành trình vượt biển trong chiến dịch.', check: () => false },
+    { id: 'radio_rescue', icon: '📻', name: 'Tín Hiệu Được Đáp Lại', description: 'Giữ liên lạc và được cứu hộ khỏi đảo.', check: () => false },
+    { id: 'both_routes', icon: '🧭', name: 'Hai Con Đường Về Nhà', description: 'Hoàn thành cả hai tuyến kết thúc trong cùng thế giới.', check: () => false },
     {
         id: 'first_pickup',
         icon: '🪵',

@@ -56,11 +56,14 @@
 body, html {
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow: clip;
     background-color: #0a0804;
     font-family: var(--font-body);
     color: var(--text-parchment);
 }
+
+/* Keep the game viewport anchored when focusing controls in a hidden overlay. */
+body { position: fixed; inset: 0; }
 
 /* ============================================
    UI ICON SYSTEM
@@ -1242,6 +1245,11 @@ body, html {
 input:checked + .slider {
     background-color: rgba(95, 160, 110, 0.25);
     border-color: var(--green-forest);
+}
+
+.switch input:focus-visible + .slider {
+    outline: 3px solid #e5c16d;
+    outline-offset: 4px;
 }
 
 input:checked + .slider:before {
@@ -3699,11 +3707,18 @@ input:checked + .slider:before {
 /* ============================================
    v1.1 — Reduced Motion
    ============================================ */
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
     .vital-bar-fill::after { animation: none !important; }
     .tutorial-card { animation: none !important; }

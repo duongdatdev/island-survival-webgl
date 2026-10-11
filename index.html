@@ -8,6 +8,7 @@
     <!-- Game-Themed Fonts (self-hosted, no CDN dependency) -->
     <link rel="stylesheet" href="assets/fonts/fonts.css">
     <link rel="stylesheet" href="/index.css">
+    <link rel="stylesheet" href="/campaign.css">
 </head>
 <body>
     <!--
@@ -217,6 +218,8 @@
             <div id="world-list" class="world-list" role="listbox" aria-label="Danh sách map"></div>
             <div id="world-menu-error" class="world-menu-error" role="alert"></div>
             <footer class="world-menu-footer">
+                <button id="world-import-btn" class="menu-btn secondary small" type="button"><span class="btn-text">NHẬP THẾ GIỚI</span></button>
+                <input id="world-import-file" type="file" accept=".json,application/json" hidden>
                 <button id="world-play-btn" class="menu-btn primary hero world-play-btn" type="button" disabled>
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-play"/></svg>
                     <span class="btn-text">VÀO MAP</span>
@@ -242,6 +245,14 @@
                 <input id="world-seed-input" type="text" maxlength="64" autocomplete="off" placeholder="để trống để tạo ngẫu nhiên">
             </label>
             <div id="world-form-error" class="world-menu-error" role="alert"></div>
+            <label class="world-field world-new-config" for="world-mode-input">
+                <span>Chế độ chơi</span>
+                <select id="world-mode-input"><option value="campaign">Chiến dịch 2.0 — sinh tồn dài hạn</option><option value="classic">Classic — đóng bè thoát đảo</option></select>
+            </label>
+            <label class="world-field world-new-config" for="world-difficulty-input">
+                <span>Độ khó chiến dịch</span>
+                <select id="world-difficulty-input"><option value="relaxed">Thư giãn</option><option value="standard" selected>Tiêu chuẩn</option><option value="harsh">Khắc nghiệt</option></select>
+            </label>
             <div class="world-dialog-actions">
                 <button id="world-form-cancel-btn" class="menu-btn secondary small" type="button"><span class="btn-text">HỦY</span></button>
                 <button class="menu-btn primary small" type="submit"><span id="world-form-submit-label" class="btn-text">TẠO MAP</span></button>
@@ -333,6 +344,12 @@
                         <input type="range" id="set-fov" min="40" max="90" step="1">
                         <span id="val-fov" class="setting-value">70°</span>
                     </div>
+                    <div class="setting-row">
+                        <label for="set-reduced-motion">Giảm chuyển động</label>
+                        <label class="switch"><input type="checkbox" id="set-reduced-motion" aria-describedby="reduced-motion-help"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <p id="reduced-motion-help" class="keybind-tip">Tắt lắc góc nhìn, nhịp tay và thay đổi góc nhìn khi chạy. Thiết lập giảm chuyển động của hệ điều hành cũng được áp dụng.</p>
 
                     <div class="settings-section-title" style="margin-top: 18px;"><svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg> TÙY CHỈNH PHÍM BÀN PHÍM</div>
                     <p class="keybind-tip">Nhấp vào nút phím để đổi phím mới (nhấn <kbd class="kbd">Esc</kbd> để hủy).</p>

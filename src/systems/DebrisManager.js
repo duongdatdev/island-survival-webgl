@@ -93,7 +93,7 @@ export class DebrisManager {
                 continue;
             }
 
-            d.update(deltaTime, terrain, environmentEffects);
+            if (!d.isHooked) d.update(deltaTime, terrain, environmentEffects);
 
             if (d.canPickup(playerPosition)) {
                 const dist = d.distanceTo(playerPosition);

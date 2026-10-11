@@ -5,6 +5,7 @@ import { AssetManager } from './AssetManager.js';
 import { AudioManager } from './AudioManager.js';
 import { SettingsManager } from '../systems/SettingsManager.js';
 import { AchievementSystem } from '../systems/AchievementSystem.js';
+import { WorldRepository } from '../systems/WorldRepository.js';
 
 export class Engine {
     constructor(canvasId) {
@@ -42,6 +43,8 @@ export class Engine {
 
         this.settings = new SettingsManager();
         this.achievements = new AchievementSystem();
+        this.worldRepository = new WorldRepository();
+        this.activeWorld = null;
 
         this.input.setBindings(this.settings.get('keyBindings'));
 
@@ -103,6 +106,7 @@ export class Engine {
     }
 
     _update(deltaTime) {
+        if (document.hidden) return;
         if (this.isPaused) {
             this.input.resetDeltas();
             return;

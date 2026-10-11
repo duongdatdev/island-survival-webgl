@@ -41,12 +41,12 @@ export class EnvironmentObject extends Entity {
         this.mesh.draw(drawMode);
     }
 
-    chop(attackerPosition) {
+    chop(attackerPosition, power = 1) {
         if (!this.isHarvestableTree || this.treeState !== 'standing') {
             return { hit: false, felled: false, hitsRemaining: this.treeHitsRemaining };
         }
 
-        this.treeHitsRemaining = Math.max(0, this.treeHitsRemaining - 1);
+        this.treeHitsRemaining = Math.max(0, this.treeHitsRemaining - Math.max(1, Math.min(3, Math.floor(power) || 1)));
         const felled = this.treeHitsRemaining === 0;
 
         if (felled) {

@@ -90,3 +90,14 @@ test('wood pickups spawn once, and only on the frame the tree touches terrain', 
     scene._updateFallingTrees(10);
     assert.equal(drops.length, 3);
 });
+
+test('iron axe fells in two impacts; pickaxes cannot fell trees or chop through Campaign walls', () => {
+    const scene = Object.create(GameScene.prototype), tree = createTree();
+    Object.assign(scene, { environmentEntities: [tree], removedEnvironmentObjectIds: new Set(), collisionSystem: { unregister() {} } });
+    assert.equal(scene._tryChopTree([0, 0, 0], 0, { id: 'iron_pickaxe' }).hit, false);
+    scene.campaign = { collision: { segmentBlocked: () => true } };
+    assert.equal(scene._tryChopTree([0, 0, 0], 0, { id: 'iron_axe' }).hit, false);
+    scene.campaign.collision.segmentBlocked = () => false;
+    assert.equal(scene._tryChopTree([0, 0, 0], 0, { id: 'iron_axe' }).hitsRemaining, 1);
+    assert.equal(scene._tryChopTree([0, 0, 0], 0, { id: 'iron_axe' }).felled, true);
+});

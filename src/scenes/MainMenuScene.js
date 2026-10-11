@@ -8,7 +8,7 @@ import { Camera } from '../renderer/Camera.js';
 import { Mat4 } from '../math/Mat4.js';
 import { Vec3 } from '../math/Vec3.js';
 import { WorldGenerator } from '../gameplay/world/WorldGenerator.js';
-import { SaveSystem } from '../systems/SaveSystem.js';
+import { CampaignWorldGenerator } from '../gameplay/world/CampaignWorldGenerator.js';
 import { MenuUI } from '../systems/MenuUI.js';
 
 const SUN_DIRECTION = Vec3.create(0.50, 0.049, 1.0);
@@ -23,6 +23,7 @@ const STATUS_LABELS = {
     playing: 'ĐANG CHƠI',
     dead: 'ĐÃ GỤC NGÃ',
     escaped: 'ĐÃ THOÁT ĐẢO',
+    completed: 'CÓ THỂ TIẾP TỤC',
 };
 
 export class MainMenuScene extends Scene {
@@ -56,7 +57,7 @@ export class MainMenuScene extends Scene {
         this._tutorialRequested = false;
 
         gl.clearColor(...SkyShader.palette.mid, 1.0);
-        SaveSystem.initialize();
+        this.storage = this.engine.worldRepository;
         this._cacheDom();
         this._showMenu();
         this.menuUI = new MenuUI(this.engine, { onGuidePlay: () => this._startWithTutorial() });
@@ -79,6 +80,8 @@ export class MainMenuScene extends Scene {
         this._worldMenu = document.getElementById('world-menu');
         this._worldMenuCloseBtn = document.getElementById('world-menu-close-btn');
         this._worldCreateBtn = document.getElementById('world-create-btn');
+        this._worldImportBtn = document.getElementById('world-import-btn');
+        this._worldImportFile = document.getElementById('world-import-file');
         this._worldList = document.getElementById('world-list');
         this._worldSummary = document.getElementById('world-menu-summary');
         this._worldError = document.getElementById('world-menu-error');
@@ -122,6 +125,19 @@ export class MainMenuScene extends Scene {
         this._onCredits = () => { this.engine.audio.playClick(); this.menuUI.openCredits(); };
         this._onWorldMenuClose = () => this._closeWorldMenu();
         this._onWorldCreate = () => this._showWorldForm();
+        this._onWorldImport = () => this._worldImportFile.click();
+        this._onWorldImportFile = async () => {
+            const file = this._worldImportFile.files[0];
+            if (!file) return;
+            try {
+                const result = await this.storage.importWorld(await file.text());
+                if (!result.ok) throw new Error(result.error);
+                this.selectedWorldId = result.world.id;
+                this._setWorldError('');
+                await this._renderWorlds();
+            } catch (error) { this._setWorldError(error.message); }
+            this._worldImportFile.value = '';
+        };
         this._onWorldPlay = () => this._launchSelectedWorld();
         this._onWorldFormSubmit = event => this._submitWorldForm(event);
         this._onWorldFormClose = () => this._hideWorldForm();
@@ -136,6 +152,8 @@ export class MainMenuScene extends Scene {
         this._creditsBtn?.addEventListener('click', this._onCredits);
         this._worldMenuCloseBtn?.addEventListener('click', this._onWorldMenuClose);
         this._worldCreateBtn?.addEventListener('click', this._onWorldCreate);
+        this._worldImportBtn?.addEventListener('click', this._onWorldImport);
+        this._worldImportFile?.addEventListener('change', this._onWorldImportFile);
         this._worldPlayBtn?.addEventListener('click', this._onWorldPlay);
         this._worldForm?.addEventListener('submit', this._onWorldFormSubmit);
         this._worldFormCloseBtn?.addEventListener('click', this._onWorldFormClose);
@@ -268,8 +286,13 @@ export class MainMenuScene extends Scene {
         this.engine.audio.playClick();
     }
 
-    _renderWorlds() {
-        const worlds = SaveSystem.listWorlds();
+    async _renderWorlds() {
+        const ticket = this._worldRenderTicket = (this._worldRenderTicket || 0) + 1;
+        if (this._worldPlayBtn) this._worldPlayBtn.disabled = true;
+        let worlds;
+        try { worlds = await this.storage.listWorlds(); }
+        catch (error) { this._setWorldError(error.message); return; }
+        if (ticket !== this._worldRenderTicket) return;
         if (!worlds.some(world => world.id === this.selectedWorldId)) {
             this.selectedWorldId = worlds[0]?.id || null;
         }
@@ -316,16 +339,18 @@ export class MainMenuScene extends Scene {
         name.className = 'world-card-name';
         name.textContent = world.name;
         const status = document.createElement('span');
-        status.className = `world-status ${world.status || 'new'}`;
-        status.textContent = STATUS_LABELS[world.status] || STATUS_LABELS.new;
+        status.className = `world-status ${world.recoveryProblem ? 'dead' : world.status || 'new'}`;
+        status.textContent = world.recoveryProblem ? 'Cần khôi phục' : STATUS_LABELS[world.status] || STATUS_LABELS.new;
         top.append(name, status);
 
         const meta = document.createElement('div');
         meta.className = 'world-card-meta';
         for (const text of [
+            world.mode === 'campaign' ? `Chiến dịch · Chương ${world.chapter || 1}` : 'Classic',
             `seed: ${world.seed}`,
             `sinh tồn: ${this._formatDuration(world.survivalSeconds)}`,
             world.lastPlayedAt ? `chơi: ${this._formatDate(world.lastPlayedAt)}` : 'chưa chơi',
+            ...(world.recoveryProblem ? [world.recoveryProblem] : []),
         ]) {
             const item = document.createElement('span');
             item.textContent = text;
@@ -336,6 +361,7 @@ export class MainMenuScene extends Scene {
         const actions = document.createElement('div');
         actions.className = 'world-card-actions';
         actions.append(
+            this._createWorldAction('Xuất bản sao thế giới', 'XUẤT', () => this._exportWorld(world)),
             this._createWorldAction('Đổi tên map', 'SỬA', () => this._showWorldForm(world)),
             this._createWorldAction('Xóa map', 'XÓA', () => this._showDeleteDialog(world), true)
         );
@@ -357,6 +383,20 @@ export class MainMenuScene extends Scene {
         return button;
     }
 
+    async _exportWorld(world) {
+        try {
+            const json = await this.storage.exportWorld(world.id);
+            const recovery = JSON.parse(json).format === 'island-survival-recovery';
+            const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `island-${world.id}${recovery ? '-recovery' : ''}.json`;
+            link.click();
+            if (recovery) this._setWorldError('Đã xuất dữ liệu gốc để phục hồi. Tệp này cần được kiểm tra trước khi có thể nhập lại.');
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) { this._setWorldError(error.message); }
+    }
+
     _showWorldForm(world = null) {
         this.formWorldId = world?.id || null;
         this._worldFormTitle.textContent = world ? 'ĐỔI TÊN MAP' : 'TẠO MAP MỚI';
@@ -364,6 +404,7 @@ export class MainMenuScene extends Scene {
         this._worldNameInput.value = world?.name || '';
         this._worldSeedInput.value = world?.seed || new URLSearchParams(window.location.search).get('seed') || '';
         this._worldSeedInput.closest('.world-field').classList.toggle('hidden', !!world);
+        for (const field of document.querySelectorAll('.world-new-config')) field.classList.toggle('hidden', !!world);
         this._worldFormError.textContent = '';
         this._worldFormModal.classList.remove('hidden');
         this._worldFormModal.setAttribute('aria-hidden', 'false');
@@ -376,11 +417,15 @@ export class MainMenuScene extends Scene {
         this._worldFormModal?.setAttribute('aria-hidden', 'true');
     }
 
-    _submitWorldForm(event) {
+    async _submitWorldForm(event) {
         event.preventDefault();
-        const result = this.formWorldId
-            ? SaveSystem.renameWorld(this.formWorldId, this._worldNameInput.value)
-            : SaveSystem.createWorld({ name: this._worldNameInput.value, seed: this._worldSeedInput.value });
+        let result;
+        try {
+            result = this.formWorldId
+                ? await this.storage.renameWorld(this.formWorldId, this._worldNameInput.value)
+                : await this.storage.createWorld({ name: this._worldNameInput.value, seed: this._worldSeedInput.value,
+                    mode: document.getElementById('world-mode-input').value, difficulty: document.getElementById('world-difficulty-input').value });
+        } catch (error) { this._worldFormError.textContent = error.message; return; }
         if (!result.ok) {
             this._worldFormError.textContent = result.error;
             return;
@@ -405,9 +450,11 @@ export class MainMenuScene extends Scene {
         this._worldDeleteModal?.setAttribute('aria-hidden', 'true');
     }
 
-    _confirmDeleteWorld() {
+    async _confirmDeleteWorld() {
         const deletedWorldId = this.deleteWorldId;
-        const result = SaveSystem.deleteWorld(deletedWorldId);
+        let result;
+        try { result = await this.storage.deleteWorld(deletedWorldId); }
+        catch (error) { this._setWorldError(error.message); return; }
         this._hideDeleteDialog();
         if (!result.ok) {
             this._setWorldError(result.error);
@@ -419,28 +466,32 @@ export class MainMenuScene extends Scene {
     }
 
     async _launchSelectedWorld() {
-        const selected = SaveSystem.getWorld(this.selectedWorldId);
-        if (!selected || this.isLaunching) return;
+        if (this.isLaunching || !this.selectedWorldId) return;
         this.isLaunching = true;
         this._setWorldError('');
         this._renderWorlds();
         this._setLoader(true, 'Đang tạo thế giới...', 18);
 
         try {
-            const save = SaveSystem.loadWorld(selected.id);
-            const world = SaveSystem.prepareWorld(selected.id);
+            const selected = await this.storage.getWorld(this.selectedWorldId);
+            if (!selected) throw new Error('Thế giới không còn tồn tại.');
+            const save = await this.storage.loadWorld(selected.id);
+            const world = await this.storage.prepareWorld(selected.id);
             if (!world) throw new Error('Không thể cập nhật map đã chọn.');
             await new Promise(resolve => requestAnimationFrame(resolve));
-            const generator = new WorldGenerator(120, 100.0);
+            const generator = world.mode === 'campaign' ? new CampaignWorldGenerator() : new WorldGenerator(120, 100.0);
+            if (world.mode === 'campaign' && !this.engine.assets.campaignMetadata) await this.engine.assets.loadCampaignModels();
             const generatedWorld = generator.generate(world.seed, this.engine.assets.environmentMetadata, false);
             this._setLoader(true, 'Đang chuẩn bị môi trường...', 58);
             const paths = Array.from(new Set(generatedWorld.placedObjects.map(object => object.objPath)));
             await this.engine.assets.compileUniqueModels(paths);
             this._setLoader(true, 'Sẵn sàng lên đảo...', 100);
             this.engine.activeWorldId = world.id;
+            this.engine.activeWorld = world;
             this.engine.worldSeed = world.seed;
             this.engine.generatedWorld = generatedWorld;
             this.engine.pendingLoad = save;
+            this.engine.pendingRecoveryWarning = this.storage.recoveryWarnings?.get(world.id) || null;
             if (this._tutorialRequested) {
                 try { localStorage.removeItem('island_survival_tutorial_done'); } catch (e) { }
                 this._tutorialRequested = false;
@@ -515,6 +566,8 @@ export class MainMenuScene extends Scene {
         this._creditsBtn?.removeEventListener('click', this._onCredits);
         this._worldMenuCloseBtn?.removeEventListener('click', this._onWorldMenuClose);
         this._worldCreateBtn?.removeEventListener('click', this._onWorldCreate);
+        this._worldImportBtn?.removeEventListener('click', this._onWorldImport);
+        this._worldImportFile?.removeEventListener('change', this._onWorldImportFile);
         this._worldPlayBtn?.removeEventListener('click', this._onWorldPlay);
         this._worldForm?.removeEventListener('submit', this._onWorldFormSubmit);
         this._worldFormCloseBtn?.removeEventListener('click', this._onWorldFormClose);

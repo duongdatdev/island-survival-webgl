@@ -121,6 +121,16 @@ export class WeatherSystem {
         }
     }
 
+    forceWeather(weather) {
+        if (!['clear', 'cloudy', 'rain', 'storm'].includes(weather)) return false;
+        const values = this._getWeatherValues(weather);
+        this.currentWeather = this.nextWeather = weather;
+        this.transitionTimer = 0; this.weatherTimer = ENVIRONMENT_BALANCE.weatherDurationMaxSeconds;
+        this._fromValues = { ...values }; this._toValues = { ...values };
+        Object.assign(this, values);
+        return true;
+    }
+
     getLightningModulation() {
         return this.lightningModulation;
     }
