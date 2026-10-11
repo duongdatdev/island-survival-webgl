@@ -1,24 +1,47 @@
 import { CollisionMatrix } from './CollisionMatrix.js';
 import { layerNameFromMask } from './CollisionLayers.js';
+import { SpatialGrid } from './SpatialGrid.js';
 
 export class CollisionSystem {
-    constructor() {
+    constructor({ indexed = false } = {}) {
         this.colliders = [];
+        this.index = indexed ? new SpatialGrid(8) : null;
+        this.entries = new Map();
+        this.dynamic = new Set();
         this._debugMode = false;
     }
 
-    register(entity) {
+    register(entity, dynamic = false) {
         if (!entity.collider) return;
-        this.colliders.push({ entity, collider: entity.collider });
+        const entry = { entity, collider: entity.collider };
+        this.colliders.push(entry);
+        if (this.index) { this.entries.set(entity, entry); this.refresh(entity); }
+        if (dynamic) this.dynamic.add(entity);
+    }
+
+    refresh(entity) {
+        const entry = this.entries.get(entity);
+        if (!this.index || !entry) return;
+        const radius = entity.collider.radius || 0, half = CollisionSystem._halfHeight(entity.collider), p = entity.position;
+        this.index.insert(entity, { min: [p[0] - radius, p[1] - half, p[2] - radius], max: [p[0] + radius, p[1] + half, p[2] + radius] }, entry);
+    }
+
+    refreshDynamic() { for (const entity of this.dynamic) this.refresh(entity); }
+
+    _nearby(position, radius, halfHeight = Infinity) {
+        return this.index ? this.index.query({ min: [position[0] - radius, position[1] - halfHeight, position[2] - radius],
+            max: [position[0] + radius, position[1] + halfHeight, position[2] + radius] }) : this.colliders;
     }
 
     unregister(entity) {
         const idx = this.colliders.findIndex(e => e.entity === entity);
         if (idx !== -1) this.colliders.splice(idx, 1);
+        this.index?.remove(entity); this.entries.delete(entity); this.dynamic.delete(entity);
     }
 
     clear() {
         this.colliders.length = 0;
+        this.index?.clear(); this.entries.clear(); this.dynamic.clear();
     }
 
     setDebugMode(enabled) {
@@ -47,7 +70,7 @@ export class CollisionSystem {
         const selfPos = entity.position;
         const snapToTerrain = entity.collider.snapToTerrain !== false;
 
-        for (const { entity: other, collider } of this.colliders) {
+        for (const { entity: other, collider } of this._nearby(selfPos, selfRadius + 2, selfHalfH + 2)) {
             if (other === entity) continue;
             if (collider.type === 'none') continue;
             if (collider.trigger) continue;
@@ -84,6 +107,7 @@ export class CollisionSystem {
             }
             entity.updateModelMatrix();
         }
+        this.refresh(entity);
     }
 
     isInsideTrigger(entity, layer) {
@@ -92,7 +116,7 @@ export class CollisionSystem {
         const ez = entity.position[2];
         const eRadius = entity.collider.radius || 0;
 
-        for (const { entity, collider } of this.colliders) {
+        for (const { entity, collider } of this._nearby([ex, 0, ez], eRadius)) {
             if (collider.type === 'none') continue;
             if (!collider.trigger) continue;
             if (collider.layer !== layer) continue;
@@ -108,7 +132,7 @@ export class CollisionSystem {
 
     queryRadius(position, radius, layerMask) {
         const results = [];
-        for (const { entity, collider } of this.colliders) {
+        for (const { entity, collider } of this._nearby(position, radius)) {
             if (collider.type === 'none') continue;
             if (layerMask && !(collider.layer & layerMask)) continue;
 

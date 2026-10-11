@@ -7,12 +7,31 @@ const SHORE_BAND_WIDTH = 6.0;
 
 const SHORE_BAND_HEIGHT = 0.8;
 
+/** Dense local waves with gradually larger cells toward the distant horizon. */
+export function oceanGridAxis(innerSegments, width, innerWidth, outerSegments) {
+    if (!Number.isInteger(innerSegments) || innerSegments < 2 || !Number.isInteger(outerSegments) || outerSegments < 1
+        || !Number.isFinite(width) || !Number.isFinite(innerWidth) || !(width > innerWidth && innerWidth > 0)) throw new Error('Invalid ocean grid dimensions');
+    const step = innerWidth / innerSegments, reach = (width - innerWidth) / 2;
+    let low = 0, high = Math.max(2, reach / step);
+    const sum = ratio => { let value = 0, cell = step; for (let i = 0; i < outerSegments; i++) { cell *= ratio; value += cell; } return value; };
+    for (let i = 0; i < 64; i++) { const ratio = (low + high) / 2; if (sum(ratio) < reach) low = ratio; else high = ratio; }
+    const ratio = (low + high) / 2, outer = []; let cell = step, edge = innerWidth / 2;
+    for (let i = 0; i < outerSegments; i++) { cell *= ratio; edge += cell; outer.push(edge); }
+    outer[outer.length - 1] = width / 2;
+    return [...[...outer].reverse().map(value => -value),
+        ...Array.from({ length: innerSegments + 1 }, (_, i) => i * step - innerWidth / 2), ...outer];
+}
+
 export class Water extends Entity {
-    constructor(gl, size = 60, width = 100.0, terrain = null) {
+    constructor(gl, size = 60, width = 100.0, terrain = null, localGrid = null) {
         super();
         this.gl = gl;
         this.size = size;
         this.width = width;
+        if (localGrid) {
+            this.gridAxis = oceanGridAxis(size, width, localGrid.innerWidth, localGrid.outerSegments);
+            this.size = this.gridAxis.length - 1;
+        }
 
         const data = this._generateWaterGrid(terrain);
         this.mesh = new Mesh(gl, data);
@@ -35,8 +54,8 @@ export class Water extends Entity {
 
         for (let z = 0; z <= size; z++) {
             for (let x = 0; x <= size; x++) {
-                const px = x * step - halfWidth;
-                const pz = z * step - halfWidth;
+                const px = this.gridAxis?.[x] ?? x * step - halfWidth;
+                const pz = this.gridAxis?.[z] ?? z * step - halfWidth;
                 const py = 0.0;
 
                 positions.push(px, py, pz);

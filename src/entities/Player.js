@@ -106,7 +106,7 @@ export class Player extends Entity {
             }
         }
         
-        const PLAYER_SCALE = 0.32;
+        const PLAYER_SCALE = this.scaleFactor;
         if (terrain) {
             const terrainHeight = terrain.getHeight(this.position[0], this.position[2]);
             this.position[1] = terrainHeight + 0.9 * PLAYER_SCALE;

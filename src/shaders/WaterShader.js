@@ -171,7 +171,8 @@ ${WAVE_GLSL}
                 finalColor = mix(finalColor, uFogColor, clamp(1.0 - exp(-d * d), 0.0, 1.0));
             }
 
-            float alpha = mix(mix(0.45, 0.85, vDepth), 0.97, fresnel);
+            // Deep and grazing-angle water hides seabed/terrain chunk outlines.
+            float alpha = mix(mix(0.45, 1.0, vDepth), 1.0, fresnel);
             alpha = max(alpha, foam * 0.95);
 
             fragColor = vec4(finalColor, alpha);
