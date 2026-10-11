@@ -1,4 +1,5 @@
 import { getRecipeDef } from './RecipeDatabase.js';
+import { transactCraft } from './ItemContainer.js';
 
 export class CraftingSystem {
     static canCraft(recipeId, inventory) {
@@ -21,11 +22,6 @@ export class CraftingSystem {
         const recipe = getRecipeDef(recipeId);
         if (!recipe) return false;
 
-        for (const [ingredientId, requiredCount] of Object.entries(recipe.ingredients)) {
-            inventory.removeItem(ingredientId, requiredCount);
-        }
-
-        inventory.addItem(recipeId, recipe.yield || 1);
-        return true;
+        return transactCraft([inventory], recipe.ingredients, { id: recipe.outputId || recipeId, count: recipe.yield || 1 });
     }
 }

@@ -1,5 +1,6 @@
 
 import { getWeaponProfile } from './CombatConfig.js';
+import { CAMPAIGN_RESOURCES } from '../gameplay/CampaignDatabase.js';
 
 const AXE_PROFILE = getWeaponProfile('stone_axe');
 const SPEAR_PROFILE = getWeaponProfile('spear');
@@ -446,7 +447,7 @@ export function getAllResources() {
 }
 
 export function getResourceDef(resourceId) {
-    return ResourceDatabase[resourceId] || null;
+    return ResourceDatabase[resourceId] || CAMPAIGN_RESOURCES[resourceId] || null;
 }
 
 export function getWeightedRandomType() {
