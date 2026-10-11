@@ -52,6 +52,14 @@ function addRuntimeAsset(files, path) {
 async function collectRuntimeAssets() {
   const files = new Set();
 
+  const audioManifestPath = 'assets/audio/manifest.json';
+  addRuntimeAsset(files, audioManifestPath);
+  const audioManifest = await readJson(audioManifestPath);
+  for (const clip of Object.values(audioManifest.clips)) {
+    for (const file of clip.files) addRuntimeAsset(files, file.path);
+  }
+  for (const license of audioManifest.licenses) addRuntimeAsset(files, license);
+
   const environmentManifestPath = 'assets/environment/manifest.json';
   addRuntimeAsset(files, environmentManifestPath);
   const environmentManifest = await readJson(environmentManifestPath);

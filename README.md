@@ -90,6 +90,15 @@ The table below describes the original Classic route. The complete effective Cam
 
 ## Testing
 
+Audio is played from downloaded files in `assets/audio/`, with three music moods,
+surface footsteps, combat/UI cues, weather, wildlife, campfire and waterfall loops.
+Sources, authors and CC0 / CC BY 3.0 attribution are listed in
+[audio credits](assets/audio/CREDITS.md); per-file provenance is in `assets/audio/manifest.json`.
+The production build includes all referenced audio and credits. To download and
+prepare the library again, run `npm run assets:audio` (Python, `py7zr` and FFmpeg required).
+Run `npx playwright test tests/browser/audio.spec.js` to verify browser decoding,
+playback, mood transitions, volume/mute settings and cancellation during loading.
+
 Run the automated test suite with:
 
 ```bash

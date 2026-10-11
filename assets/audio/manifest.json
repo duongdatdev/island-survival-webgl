@@ -1,0 +1,718 @@
+{
+  "version": 1,
+  "sources": {
+    "rpg-audio": {
+      "author": "Kenney",
+      "page": "https://kenney.nl/assets/rpg-audio",
+      "download": "https://kenney.nl/media/pages/assets/rpg-audio/8e99002d76-1677590336/kenney_rpg-audio.zip",
+      "license": "CC0-1.0"
+    },
+    "impact-sounds": {
+      "author": "Kenney",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "download": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "license": "CC0-1.0"
+    },
+    "interface-sounds": {
+      "author": "Kenney",
+      "page": "https://kenney.nl/assets/interface-sounds",
+      "download": "https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip",
+      "license": "CC0-1.0"
+    },
+    "music-jingles": {
+      "author": "Kenney",
+      "page": "https://kenney.nl/assets/music-jingles",
+      "download": "https://kenney.nl/media/pages/assets/music-jingles/f37e530b9e-1677590399/kenney_music-jingles.zip",
+      "license": "CC0-1.0"
+    },
+    "calm": {
+      "author": "KiluaBoy",
+      "page": "https://opengameart.org/content/sunset-walk-ambient-quiet-sweet-loop",
+      "download": "https://opengameart.org/sites/default/files/SunsetWalk.ogg",
+      "license": "CC0-1.0"
+    },
+    "night": {
+      "author": "Joth",
+      "page": "https://opengameart.org/content/contemplation-0",
+      "download": "https://opengameart.org/sites/default/files/Contemplation.mp3",
+      "license": "CC0-1.0"
+    },
+    "danger": {
+      "author": "iamoneabe",
+      "page": "https://opengameart.org/content/night-shift",
+      "download": "https://opengameart.org/sites/default/files/nightshift_0.mp3",
+      "license": "CC0-1.0"
+    },
+    "waves": {
+      "author": "jasinski (submitted by qubodup)",
+      "page": "https://opengameart.org/node/11174",
+      "download": "https://opengameart.org/sites/default/files/wave_01_cc0-18363__jasinski__alkaibeach.flac",
+      "license": "CC0-1.0"
+    },
+    "birds": {
+      "author": "isaiah658",
+      "page": "https://opengameart.org/content/ambient-bird-sounds",
+      "download": "https://opengameart.org/sites/default/files/birds-isaiah658_0.ogg",
+      "license": "CC0-1.0"
+    },
+    "crickets": {
+      "author": "dklon",
+      "page": "https://opengameart.org/content/crickets",
+      "download": "https://opengameart.org/sites/default/files/crickets_0.mp3",
+      "license": "CC-BY-3.0"
+    },
+    "fire": {
+      "author": "AntumDeluge",
+      "page": "https://opengameart.org/content/fire-crackling",
+      "download": "https://opengameart.org/sites/default/files/fire-1.wav",
+      "license": "CC0-1.0"
+    },
+    "splash": {
+      "author": "Thimras",
+      "page": "https://opengameart.org/content/ocean-splash",
+      "download": "https://opengameart.org/sites/default/files/cannon_miss.ogg",
+      "license": "CC0-1.0"
+    },
+    "heartbeat": {
+      "author": "bart",
+      "page": "https://opengameart.org/content/heartbeat-sounds",
+      "download": "https://opengameart.org/sites/default/files/heartbeat_slow_0.wav",
+      "license": "CC0-1.0"
+    },
+    "thunder": {
+      "author": "WuxiaScrub",
+      "page": "https://opengameart.org/content/rain-long-thunder",
+      "download": "https://opengameart.org/sites/default/files/rain-thunder.ogg",
+      "license": "CC0-1.0"
+    },
+    "rain": {
+      "author": "Ylmir",
+      "page": "https://opengameart.org/content/rain-loopable",
+      "download": "https://opengameart.org/sites/default/files/Rain%20OGG.zip",
+      "license": "CC0-1.0"
+    },
+    "rpg-extra": {
+      "author": "rubberduck",
+      "page": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "download": "https://opengameart.org/sites/default/files/80-CC0-RPG-SFX_0.zip",
+      "license": "CC0-1.0"
+    },
+    "nature": {
+      "author": "Blender Foundation (submitted by Lamoot)",
+      "page": "https://opengameart.org/content/ambient-mountain-river-wind-and-forest-and-waterfall",
+      "download": "https://opengameart.org/sites/default/files/ambient_mountains_forest_river_waterfall_wind.7z",
+      "license": "CC-BY-3.0"
+    }
+  },
+  "clips": {
+    "pickup": {
+      "source": "rpg-audio",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/pickup-0.ogg",
+          "original": "handleCoins.ogg",
+          "sha256": "8a91f969e932df709df80ee124d86a51389eed9b67f22e5e716bc2bbf60d8dab"
+        }
+      ]
+    },
+    "open": {
+      "source": "rpg-audio",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/open-0.ogg",
+          "original": "bookOpen.ogg",
+          "sha256": "953390534377222bee89ac8cd9e60a58fdc037c71a4d7c18c43cd647c7f34ba8"
+        }
+      ]
+    },
+    "close": {
+      "source": "rpg-audio",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/close-0.ogg",
+          "original": "bookClose.ogg",
+          "sha256": "81e976532565f4372abd14e83d2684195fa548d0a28d345de221e56052454f32"
+        }
+      ]
+    },
+    "chop": {
+      "source": "rpg-audio",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/chop-0.ogg",
+          "original": "chop.ogg",
+          "sha256": "d00c2b3c9fff07e376145c8c8c45c90e5084ec192f6ce0387db233f7b86f1486"
+        }
+      ]
+    },
+    "bow": {
+      "source": "rpg-audio",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/bow-0.ogg",
+          "original": "drawKnife1.ogg",
+          "sha256": "276403e72c3b71c47bc24db3083970c23f8e5551ffa78f436f83483c56f3f0bb"
+        }
+      ]
+    },
+    "click": {
+      "source": "interface-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/click-0.ogg",
+          "original": "click_001.ogg",
+          "sha256": "ccfb7fa0cccdd9faec0eb16033c732b1e308d139d80f799161495d58f7adcdb9"
+        }
+      ]
+    },
+    "hover": {
+      "source": "interface-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/hover-0.ogg",
+          "original": "select_001.ogg",
+          "sha256": "aec0c31ea934a35936ae0d2ab8fac8123c93aa5647f935853a58dbaf90278b7a"
+        }
+      ]
+    },
+    "error": {
+      "source": "interface-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/error-0.ogg",
+          "original": "error_003.ogg",
+          "sha256": "885b28175c7b511118bcffab95675b48bbac9005cf6514656ebdad979276b3ab"
+        }
+      ]
+    },
+    "heal": {
+      "source": "interface-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/heal-0.ogg",
+          "original": "confirmation_002.ogg",
+          "sha256": "33b17a9a9a2397c62b285c52c33a907fdffb476909c99e42dde603f6a7a8b12c"
+        }
+      ]
+    },
+    "achievement": {
+      "source": "interface-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/achievement-0.ogg",
+          "original": "confirmation_004.ogg",
+          "sha256": "568967a3d9f8a8f6af54ea01729c4882284308f2a27d78c07ffd7ee0d6951661"
+        }
+      ]
+    },
+    "step-sand": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/step-sand-0.ogg",
+          "original": "footstep_snow_000.ogg",
+          "sha256": "c05fa4a9dc9a7aabc04996466fb589537e49af76de9998d8f9e6270ec92dcef7"
+        },
+        {
+          "path": "assets/audio/sfx/step-sand-1.ogg",
+          "original": "footstep_snow_001.ogg",
+          "sha256": "980fb9a1c9227aed7995067b0357f373053337f2416316db8ea0438418542fb4"
+        },
+        {
+          "path": "assets/audio/sfx/step-sand-2.ogg",
+          "original": "footstep_snow_002.ogg",
+          "sha256": "db52bafdc66304f3b999f2c29227826c65993916e630ac2ffbca17d07b263178"
+        },
+        {
+          "path": "assets/audio/sfx/step-sand-3.ogg",
+          "original": "footstep_snow_003.ogg",
+          "sha256": "68272e3f1cabcabd02d328fd344454d7c04cb58b5a86972fcdd858f845e3d007"
+        }
+      ]
+    },
+    "step-grass": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/step-grass-0.ogg",
+          "original": "footstep_grass_000.ogg",
+          "sha256": "9d49497777405d78d7cf7f2888e28277f3a23192300cfd1d79d54876b20f479f"
+        },
+        {
+          "path": "assets/audio/sfx/step-grass-1.ogg",
+          "original": "footstep_grass_001.ogg",
+          "sha256": "fb28781bd22b2eefdc14077f1adf5c94d7fe9c3a130194633b55f3e0d39d9f04"
+        },
+        {
+          "path": "assets/audio/sfx/step-grass-2.ogg",
+          "original": "footstep_grass_002.ogg",
+          "sha256": "73a520139f5be716a403bfe9c80e0e94d1e61d8e9de04a354b336392164b53dc"
+        },
+        {
+          "path": "assets/audio/sfx/step-grass-3.ogg",
+          "original": "footstep_grass_003.ogg",
+          "sha256": "0546e1d8ab2def714425701a18bd34c5ee2794b12e858e5b595aabcf38a34137"
+        }
+      ]
+    },
+    "step-rock": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/step-rock-0.ogg",
+          "original": "footstep_concrete_000.ogg",
+          "sha256": "d7267e183067757c92c169de2a379abea592cfca6b39bb2e8feea15221ad79fe"
+        },
+        {
+          "path": "assets/audio/sfx/step-rock-1.ogg",
+          "original": "footstep_concrete_001.ogg",
+          "sha256": "507a75eb19b897087855a3be3cf11a12d7fa37d143ad535eeebe0b8031c7325d"
+        },
+        {
+          "path": "assets/audio/sfx/step-rock-2.ogg",
+          "original": "footstep_concrete_002.ogg",
+          "sha256": "b21fa546d74941196b25da8a20b7010abd8c05c4fcf93545d1f344e66a664e13"
+        },
+        {
+          "path": "assets/audio/sfx/step-rock-3.ogg",
+          "original": "footstep_concrete_003.ogg",
+          "sha256": "8b513c2f0316324060b9174b8f28df6c2147418c506e6a53b77f18e149a5547b"
+        }
+      ]
+    },
+    "step-wood": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/step-wood-0.ogg",
+          "original": "footstep_wood_000.ogg",
+          "sha256": "5f1c252942a220d658121bd9417448cd19649ded9fff2ff15f6e50899373ce8e"
+        },
+        {
+          "path": "assets/audio/sfx/step-wood-1.ogg",
+          "original": "footstep_wood_001.ogg",
+          "sha256": "e4f68e1c9fd55b4dc8ca89ed2bbab6f200171bc54bdc18aa96b80d8e7336f462"
+        },
+        {
+          "path": "assets/audio/sfx/step-wood-2.ogg",
+          "original": "footstep_wood_002.ogg",
+          "sha256": "9ff095b05cee5eec40b081defe3f0eef7232bb16d4865ce03b9f6dbab875cfdd"
+        },
+        {
+          "path": "assets/audio/sfx/step-wood-3.ogg",
+          "original": "footstep_wood_003.ogg",
+          "sha256": "2a68a083daa9eda08fed0ea5da5280dfbe0de226196c576be02f95259dd139d9"
+        }
+      ]
+    },
+    "punch": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/punch-0.ogg",
+          "original": "impactPunch_medium_000.ogg",
+          "sha256": "486988aa2d6440ffc4c62a0e8ccf3c23673ba84424bd4723378d451b7255eb5c"
+        },
+        {
+          "path": "assets/audio/sfx/punch-1.ogg",
+          "original": "impactPunch_medium_001.ogg",
+          "sha256": "e71d23abcc3f10d9d6bc9615b2a431fff70b12333a5fcdd9964457564ace4349"
+        },
+        {
+          "path": "assets/audio/sfx/punch-2.ogg",
+          "original": "impactPunch_medium_002.ogg",
+          "sha256": "6492f9ccbc8d24dcef607bb1b48790b7870961474561f7fe5601e1c73a3018ef"
+        }
+      ]
+    },
+    "hit": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/hit-0.ogg",
+          "original": "impactPunch_heavy_000.ogg",
+          "sha256": "b33a8f14068aec24ec69ba85e5e87fdc41228975f6a1a3e44a6e7d6fc3d9f8d8"
+        },
+        {
+          "path": "assets/audio/sfx/hit-1.ogg",
+          "original": "impactPunch_heavy_001.ogg",
+          "sha256": "f92f5cb6ba4ff2766497292ffd90865654317eeca976f5652e0708dbdcdc0dd9"
+        },
+        {
+          "path": "assets/audio/sfx/hit-2.ogg",
+          "original": "impactPunch_heavy_002.ogg",
+          "sha256": "7993dd4c156b9979ad69f17be5ebe31850b16039a3857f8477141be54dfee1b3"
+        }
+      ]
+    },
+    "mine": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/mine-0.ogg",
+          "original": "impactMining_000.ogg",
+          "sha256": "36b4ea107222d073c67ca64dde26944975609202d5090b2f2021213c1a7e35cd"
+        },
+        {
+          "path": "assets/audio/sfx/mine-1.ogg",
+          "original": "impactMining_001.ogg",
+          "sha256": "61235a18de3f3d92118235398222dbf51d448f1be70b1c8bc962b10b86f2d9c6"
+        },
+        {
+          "path": "assets/audio/sfx/mine-2.ogg",
+          "original": "impactMining_002.ogg",
+          "sha256": "059558ec751115ca6b1441e00f0adc837c1a3eeb0a066b109e0fd879fc5d0b0c"
+        },
+        {
+          "path": "assets/audio/sfx/mine-3.ogg",
+          "original": "impactMining_003.ogg",
+          "sha256": "4237fa2cd80364ad81cd0af44f67d7497f1c5edcc7bdb02cd22be2ba4580c83d"
+        }
+      ]
+    },
+    "craft": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/craft-0.ogg",
+          "original": "impactWood_medium_000.ogg",
+          "sha256": "1723a9fd25103ed41af06054814e84e65f4a772bac86ab2dc927da93d9592ff5"
+        },
+        {
+          "path": "assets/audio/sfx/craft-1.ogg",
+          "original": "impactWood_medium_001.ogg",
+          "sha256": "15271dbe8e2872dbb0ff1aeb7b12b2d2b92b7c1951c88532b9ab9158c36dfc73"
+        },
+        {
+          "path": "assets/audio/sfx/craft-2.ogg",
+          "original": "impactWood_medium_002.ogg",
+          "sha256": "3f3f1917428b828f733a963167833c707bf88296ff158e1559c57c5cb813d799"
+        }
+      ]
+    },
+    "raft": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/raft-0.ogg",
+          "original": "impactPlank_medium_000.ogg",
+          "sha256": "8403cd7a043f0391574c88c55dd205743725b5363d2407f6de145f201690b68f"
+        },
+        {
+          "path": "assets/audio/sfx/raft-1.ogg",
+          "original": "impactPlank_medium_001.ogg",
+          "sha256": "d7c304319f8beac616231b62041fa8da74045b62d7155965516efb9b19303df4"
+        },
+        {
+          "path": "assets/audio/sfx/raft-2.ogg",
+          "original": "impactPlank_medium_002.ogg",
+          "sha256": "f6a14da45994229676b4f29e6a35f504b5c2ec2b8166fb1a3b1aa004bc6911ef"
+        }
+      ]
+    },
+    "eat": {
+      "source": "impact-sounds",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/eat-0.ogg",
+          "original": "impactSoft_medium_000.ogg",
+          "sha256": "7d3ba0bb5e60a11b5d3e558c141303dcf494256675fbf753c0d252d2cf0481e3"
+        },
+        {
+          "path": "assets/audio/sfx/eat-1.ogg",
+          "original": "impactSoft_medium_001.ogg",
+          "sha256": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf"
+        },
+        {
+          "path": "assets/audio/sfx/eat-2.ogg",
+          "original": "impactSoft_medium_002.ogg",
+          "sha256": "5069e3571a77d7f7aae9ef71d0364aa245fb7d64a7c8cc9956f221d03088c089"
+        }
+      ]
+    },
+    "swing": {
+      "source": "rpg-extra",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/swing-0.ogg",
+          "original": "blade_01.ogg",
+          "sha256": "caf7a7cb9b25cda4bd487c1d12d18b74a34bb18c816fd67277cf3c8d7ef32a3a"
+        },
+        {
+          "path": "assets/audio/sfx/swing-1.ogg",
+          "original": "blade_02.ogg",
+          "sha256": "c770afec8f62f14d3d082d5437c5cec28e2751d393df645ddd938eabc2588abd"
+        },
+        {
+          "path": "assets/audio/sfx/swing-2.ogg",
+          "original": "blade_03.ogg",
+          "sha256": "2cd9e6926f4602a4350e703eeae4df520053e290f358ab692632d651ad368a7c"
+        }
+      ]
+    },
+    "thrust": {
+      "source": "rpg-extra",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/thrust-0.ogg",
+          "original": "blade_02.ogg",
+          "sha256": "c770afec8f62f14d3d082d5437c5cec28e2751d393df645ddd938eabc2588abd"
+        }
+      ]
+    },
+    "arrow": {
+      "source": "rpg-extra",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/arrow-0.ogg",
+          "original": "wood_02.ogg",
+          "sha256": "e64b95a1ec7675f28f8837ee4e4e81aa8e5b28e272159a0b3ed124fed037fc4f"
+        }
+      ]
+    },
+    "tree-fall": {
+      "source": "rpg-extra",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/tree-fall-0.ogg",
+          "original": "wood_05.ogg",
+          "sha256": "767fbe18abd5c37ced7d9fa86b36862f9680abb79bb0acda448f70850675e7bf"
+        }
+      ]
+    },
+    "creature-hurt": {
+      "source": "rpg-extra",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/creature-hurt-0.ogg",
+          "original": "creature_hurt_01.ogg",
+          "sha256": "9948f9ce067e1aae7bd780e974d51ceae03f2611a52afffb0e092ba47e9dc8e1"
+        },
+        {
+          "path": "assets/audio/sfx/creature-hurt-1.ogg",
+          "original": "creature_hurt_02.ogg",
+          "sha256": "a4ea983e62ace874754c51d78239bd8b6532227119bd511c38fa827b2ccbca70"
+        }
+      ]
+    },
+    "creature-die": {
+      "source": "rpg-extra",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/creature-die-0.ogg",
+          "original": "creature_die_01.ogg",
+          "sha256": "b34a816a401c5d80c77a61dabbedef7d1918a01320bbb67286c70f22db4acd43"
+        }
+      ]
+    },
+    "drink": {
+      "source": "rpg-extra",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/drink-0.ogg",
+          "original": "creature_slime_01.ogg",
+          "sha256": "746d6ef073abfadd43fe184c50c6a2528350d4f566f2c0f54cd51ff0eb665118"
+        }
+      ]
+    },
+    "victory": {
+      "source": "music-jingles",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/victory-0.ogg",
+          "original": "jingles_STEEL00.ogg",
+          "sha256": "8799eb726d784ae0aa1a9df80648a873ac60015bc00aea12c8e2dd1431a2bd7d"
+        }
+      ]
+    },
+    "death": {
+      "source": "music-jingles",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/death-0.ogg",
+          "original": "jingles_PIZZI16.ogg",
+          "sha256": "1b1211b6360aae37ea685fee057bcabd034a749c1dfac6a9d643086d96e9b9aa"
+        }
+      ]
+    },
+    "splash": {
+      "source": "splash",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/splash-0.ogg",
+          "original": "splash.ogg",
+          "sha256": "d91a1effc2964673033fa9f8d22093029fa0b500aea0bafb86724738c0e89fe3"
+        }
+      ]
+    },
+    "heartbeat": {
+      "source": "heartbeat",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/heartbeat-0.ogg",
+          "original": "heartbeat.wav",
+          "sha256": "094977227b41e9d59b67de2654384b043bd00541ea91e01f89ddb92a77d85681"
+        }
+      ]
+    },
+    "thunder": {
+      "source": "thunder",
+      "category": "sfx",
+      "files": [
+        {
+          "path": "assets/audio/sfx/thunder-0.ogg",
+          "original": "thunder.ogg",
+          "sha256": "a05ae0a6cba0f90a3e1bcc6212d965d7a63740f835631b8756108e97310bc4a1"
+        }
+      ]
+    },
+    "waves": {
+      "source": "waves",
+      "category": "ambience",
+      "files": [
+        {
+          "path": "assets/audio/ambience/waves-0.ogg",
+          "original": "waves.flac",
+          "sha256": "0e2090120787f24c5e0b619b82b53de2b51c55c8ac1dfca3f4509628909e26f7"
+        }
+      ]
+    },
+    "rain": {
+      "source": "rain",
+      "category": "ambience",
+      "files": [
+        {
+          "path": "assets/audio/ambience/rain-0.ogg",
+          "original": "1.ogg",
+          "sha256": "b7cb941801f60e998c914191042f976d34e2e95e97b05156ca8e718a44618ba3"
+        }
+      ]
+    },
+    "daylife": {
+      "source": "birds",
+      "category": "ambience",
+      "files": [
+        {
+          "path": "assets/audio/ambience/daylife-0.ogg",
+          "original": "birds.ogg",
+          "sha256": "e9e03b4b077355b928df7e0b768668eae0855cbdc901e506381041b4f8a928ee"
+        }
+      ]
+    },
+    "nightlife": {
+      "source": "crickets",
+      "category": "ambience",
+      "files": [
+        {
+          "path": "assets/audio/ambience/nightlife-0.ogg",
+          "original": "crickets.mp3",
+          "sha256": "7f6e5993a4083fb0975e4a9e42381530e404db72ecada684fbc4634d1793f722"
+        }
+      ]
+    },
+    "campfire": {
+      "source": "fire",
+      "category": "ambience",
+      "files": [
+        {
+          "path": "assets/audio/ambience/campfire-0.ogg",
+          "original": "fire.wav",
+          "sha256": "458da58665972abbe614d58ecd21f36ac04da53eeaef37320ec7bbcd75ae3902"
+        }
+      ]
+    },
+    "waterfall": {
+      "source": "nature",
+      "category": "ambience",
+      "files": [
+        {
+          "path": "assets/audio/ambience/waterfall-0.ogg",
+          "original": "amb_waterfall.flac",
+          "sha256": "e8884afc1838e06bb18f256fe085ae6db52b9c24d2c3e05da9c1d9956192bdfd"
+        }
+      ]
+    },
+    "wind": {
+      "source": "nature",
+      "category": "ambience",
+      "files": [
+        {
+          "path": "assets/audio/ambience/wind-0.ogg",
+          "original": "amb_wind_1.flac",
+          "sha256": "2230e7bf55425035c4dba8162d52dc874fe9610e96acd48901587dc4cff2eaf6"
+        }
+      ]
+    },
+    "music-calm": {
+      "source": "calm",
+      "category": "music",
+      "files": [
+        {
+          "path": "assets/audio/music/music-calm-0.ogg",
+          "original": "calm.ogg",
+          "sha256": "3e083a31812c5f18949b42c207422d3f8a0eff4cf678d87070fb15d2decea595"
+        }
+      ]
+    },
+    "music-night": {
+      "source": "night",
+      "category": "music",
+      "files": [
+        {
+          "path": "assets/audio/music/music-night-0.ogg",
+          "original": "night.mp3",
+          "sha256": "06a7b0bac80e855345cf519ee3a70e44da508694dd71b00ceaab087409e94b4a"
+        }
+      ]
+    },
+    "music-danger": {
+      "source": "danger",
+      "category": "music",
+      "files": [
+        {
+          "path": "assets/audio/music/music-danger-0.ogg",
+          "original": "danger.mp3",
+          "sha256": "37a6a0ea2d4e0b1bcdda36bc556457ff98a7906fac81030501b30609ec76eda1"
+        }
+      ]
+    }
+  },
+  "licenses": [
+    "assets/audio/CREDITS.md",
+    "assets/audio/licenses/impact-sounds.txt",
+    "assets/audio/licenses/interface-sounds.txt",
+    "assets/audio/licenses/music-jingles.txt",
+    "assets/audio/licenses/rpg-audio.txt"
+  ]
+}

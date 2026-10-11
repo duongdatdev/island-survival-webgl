@@ -63,27 +63,35 @@ The **Island Survival: Escape** codebase is built around modular, decoupled syst
 
 ---
 
-## 8. Audio System (v1.1)
-*Classes:* [AudioManager](file:///d:/Project/webgl/island-survival/src/core/AudioManager.js), [AmbienceDirector](file:///d:/Project/webgl/island-survival/src/core/audio/AmbienceDirector.js), [MusicDirector](file:///d:/Project/webgl/island-survival/src/core/audio/MusicDirector.js), [AudioBuffers](file:///d:/Project/webgl/island-survival/src/core/audio/AudioBuffers.js), [Spatial](file:///d:/Project/webgl/island-survival/src/core/audio/Spatial.js)
+## 8. Audio System
 
-Architecture (v1.1 restructure):
-```
-master ─┬─ sfx ──────────── one-shots (AudioManager)
-        └─ duck ─┬─ ambient ──── loops + 3D emitters (AmbienceDirector)
-                 └─ music ────── procedural pad (MusicDirector)
-```
+The game plays 70 downloaded Vorbis files from `assets/audio/` (about 3.7 MiB).
+Sources, licenses and per-file hashes are recorded in `manifest.json`; author
+attribution is included in `CREDITS.md`, the production build and the game's credits.
+Run `npm run assets:audio` to reproduce the library using Python, py7zr and FFmpeg.
 
-* **AudioManager** — facade. Initializes the `AudioContext` on first user gesture and owns the mixer graph, per-bus volume sliders, and every one-shot SFX method (pickups, combat, crafting, footsteps, UI feedback). Noise-based cues render through `AudioBuffers` rather than building arrays at play time.
-* **AudioBuffers** — pre-rendered, cached procedural sample banks. Multiple randomised variants per key so repeated plays don't sound identical. Also holds `crossfadeLoop`, `fillNoiseBurst` and `fillBrownNoise` helpers.
-* **AmbienceDirector** — every looping, world-driven sound: surf, wind, rain, day/night wildlife beds (insects, crickets), scheduled one-shots (birdsong, owl hoots), and positional 3D emitters (waterfall, campfire). Levels smooth toward targets each frame for fade transitions.
-* **MusicDirector** — procedural ambient score. Four chord voices (detuned oscillator pairs) through a lowpass filter and tremolo. Mood changes (`calm`/`night`/`danger`) retune the same voices instead of restarting.
-* **Spatial** — `createPanner`, `setPannerPosition`, `setListenerPose` wrappers that detect `AudioParam` vs legacy `setPosition()`/`setOrientation()` support.
-* Per-call `detune` (±35 cents) on every one-shot prevents mechanical repetition.
-* The **duck bus** pulls ambient + music under menus and death screens while SFX stays audible.
-* **Heartbeat** fades in below 35% health; frequency increases with severity.
-* **Positional emitters** use `PannerNode` with distance profiles per emitter class (`prop`, `landmark`, `creature`).
-* Thunder is routed through the ambient bus (not SFX) so the ambient volume slider controls it.
-* Manages volume states and saves user preferences to `localStorage`.
+* **AudioManager** owns the Web Audio mixer: SFX feeds master directly; music and
+  ambience feed a shared duck bus before master. A compressor limits output peaks.
+  Existing gameplay SFX methods now select downloaded clips, with surface variants
+  for footsteps and spatial panners for world events. Stale transient events are
+  discarded if downloading takes too long. No oscillator/noise synthesis remains.
+* **AudioBuffers** fetches the manifest and deduplicates file fetching/decoding with
+  cached promises. Short cues preload; music and ambience load on demand. Disposal
+  aborts requests and prevents late decodes from becoming playable.
+* **AmbienceDirector** loops surf, wind, rain, birds, crickets, campfire and waterfall
+  recordings. Day/night and weather blend their levels; positional emitters use
+  `PannerNode`. Stopped layers cannot restart when a pending download finishes.
+* **MusicDirector** crossfades between Sunset Walk (calm), Contemplation (night)
+  and an excerpt of Night Shift (danger). A generation token rejects obsolete
+  transitions; stopping cancels both audible tracks and pending playback.
+* **Spatial** updates the listener and positional emitters with distance attenuation.
+* Master, SFX, ambience, music and mute changes apply immediately and persist through
+  SettingsManager. The duck bus lowers music/ambience beneath menus. The heartbeat
+  sample speeds up below 35% health and stops at zero health; thunder uses ambience.
+
+Browser coverage in `tests/browser/audio.spec.js` decodes every file, checks nonzero
+PCM, verifies live mixer output, changes music moods and settings, and stops pending
+loads to ensure they cannot create delayed sources.
 
 ---
 

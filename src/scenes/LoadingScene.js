@@ -30,7 +30,7 @@ export class LoadingScene extends Scene {
             '🖱️ Di chuột để nhìn xung quanh ở góc nhìn thứ nhất.',
             '📦 Bấm E khi đứng gần tài nguyên để nhặt.',
             '🎮 Dùng phím W A S D để di chuyển nhân vật.',
-            '🔊 Âm thanh được tạo hoàn toàn bằng Web Audio API!',
+            '🔊 Lắng nghe tiếng sóng, thời tiết và bước chân trên đảo!',
         ];
         this._tipIndex = Math.floor(Math.random() * this._tips.length);
         this._tipTimer = 0;

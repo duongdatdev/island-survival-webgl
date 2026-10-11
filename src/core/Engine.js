@@ -66,7 +66,7 @@ export class Engine {
 
         this._unsubscribeSettings = this.settings.onChange((key) => {
             if (key === 'renderScale' || key === '*') this._resize(true);
-            if (key === 'masterVolume' || key === 'sfxVolume' || key === 'ambientVolume' || key === '*') {
+            if (['masterVolume', 'sfxVolume', 'ambientVolume', 'musicVolume', 'muted', '*'].includes(key)) {
                 this.audio.applySettings(this.settings);
             }
             if (key === 'keyBindings' || key === '*') {
