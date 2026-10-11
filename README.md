@@ -2,6 +2,8 @@
 
 Island Survival: Escape is a browser-based first-person survival game built with WebGL 2 and vanilla JavaScript. Explore a procedurally generated tropical island, manage your condition, gather resources, craft a raft, and escape before the island defeats you.
 
+The **2.0 Campaign is in development**: new worlds default to a 640 m island with six chapters, modular bases, shared chests, fuelled production, farming, diving, field repairs and two controllable endings. Existing worlds remain Classic. The target of several real-day sessions and 8–12 active hours is **not yet validated by first-time human playtests**. Implementation and acceptance evidence: [progress](tasks/implementation-progress.md), [update roadmap](tasks/update-roadmap.vi.md), [player guide in Vietnamese](tasks/player-guide.vi.md).
+
 ![Gameplay overview](docs/images/gameplay-overview.png)
 
 ## Highlights
@@ -19,6 +21,8 @@ Island Survival: Escape is a browser-based first-person survival game built with
 ## Goal
 
 Your objective is to escape the island. Collect materials, craft a Raft Frame, Barrel Floats, and a Paddle, then install them at the shoreline raft site and launch your escape.
+
+That three-part route describes **Classic**. In **Campaign**, follow the chapter journal through the mine, weather station and submerged wreck. Prepare either the equipped sailing raft or the radio/signal tower, then complete its real-time challenge. Checkpoints permit retry, and returning after an ending preserves the same world for the other route. Use the journal and departure panel for current prerequisites.
 
 ## Requirements
 
@@ -60,15 +64,22 @@ The production output is written to `dist/`. The build copies only models and ma
 | E | Interact, collect, or install raft parts |
 | Tab or C | Open or close inventory and crafting |
 | Q | Use or place the active item |
+| B (Campaign) | Open construction; R rotates the selected part |
+| J / M (Campaign) | Chapter journal / explored map |
+| Space / Ctrl (Campaign, in water) | Swim up / dive down |
 | Esc | Pause and release the pointer |
 | L | Lock the mouse cursor for direct camera look |
 | Escape | Pause the game |
 | F3 | Toggle the debug panel |
 | K | Developer-only cheat while running the Vite development server |
 
+Movement, interaction, inventory and hotbar bindings can be changed in Settings. Controls also include **Giảm chuyển động**, which suppresses camera/hand bob and sprint FOV changes and respects the OS reduced-motion preference. Campaign panels support keyboard focus; the map uses arrow keys, Shift+arrows, Home and Enter/Space for markers.
+
 ![Raft escape sequence](docs/images/raft-escape.png)
 
 ## Crafting Path
+
+The table below describes the original Classic route. The complete effective Campaign list is generated from runtime data in [recipe-catalogue.vi.md](tasks/recipe-catalogue.vi.md); regenerate it with `node scripts/document-campaign-recipes.mjs` after changing recipes or structures.
 
 | Item | Materials | Purpose |
 | --- | --- | --- |

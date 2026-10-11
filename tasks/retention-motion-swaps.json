@@ -1,0 +1,1462 @@
+{
+  "status": "measured",
+  "pid": 2312,
+  "startedAt": "2026-10-11T02:44:35.388Z",
+  "requestedMinutes": 0,
+  "requestedSwaps": 10,
+  "buildSHA256": "a90279a7d9ebc749869141b1c1d72f41aeb0a4f376e40829851ea5368cc3c8a6",
+  "buildDirectory": "D:\\Project\\webgl\\island-survival\\.cache\\performance\\retention-build-2026-10-11T02-44-35-153Z",
+  "viewport": [
+    1280,
+    800
+  ],
+  "scope": "Real wall-clock unpaused Campaign renderer/simulation with a safety fixture, autosaves, then alternating worlds through menu controls. This does not test human campaign duration or maximum construction performance.",
+  "safetyFixture": "Tutorial skipped, pointer lock disabled, contact/exposure damage temporarily protected and hunger/thirst/health replenished every 30 seconds through vital APIs to isolate resource retention. Normal metabolism, production, weather, AI, event and autosave updates remain enabled. This is not survival balance evidence.",
+  "hardware": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 5 7535HS with Radeon Graphics        ",
+    "logicalCores": 12,
+    "memoryBytes": 16312721408
+  },
+  "samples": [
+    {
+      "label": "swap-1",
+      "recordedAt": "2026-10-11T02:44:55.694Z",
+      "heapBytes": 29550996,
+      "nodes": 5925,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "988e026d-ebce-48b1-a367-d64e6675846e",
+      "playSeconds": 2.261299999999998,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93212000000057,
+        "thirst": 99.9057222222222,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.981799999992,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 20548,
+          "deleted": 15297,
+          "live": 5251
+        },
+        "Texture": {
+          "created": 79,
+          "deleted": 12,
+          "live": 67
+        },
+        "Program": {
+          "created": 44,
+          "deleted": 35,
+          "live": 9
+        },
+        "Shader": {
+          "created": 88,
+          "deleted": 88,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 4586,
+          "deleted": 3412,
+          "live": 1174
+        },
+        "Framebuffer": {
+          "created": 15,
+          "deleted": 12,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 5,
+          "deleted": 4,
+          "live": 1
+        }
+      },
+      "position": [
+        -211.6791229248047,
+        1.1200000047683716,
+        -125.23757934570312
+      ]
+    },
+    {
+      "label": "swap-2",
+      "recordedAt": "2026-10-11T02:44:59.995Z",
+      "heapBytes": 36278004,
+      "nodes": 5902,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "20ad7aa5-2af3-439e-9af8-9a81a60fa9fb",
+      "playSeconds": 3.5215999999999985,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93211333333394,
+        "thirst": 99.9057129629629,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.981699999992,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 26162,
+          "deleted": 20916,
+          "live": 5246
+        },
+        "Texture": {
+          "created": 82,
+          "deleted": 15,
+          "live": 67
+        },
+        "Program": {
+          "created": 55,
+          "deleted": 46,
+          "live": 9
+        },
+        "Shader": {
+          "created": 110,
+          "deleted": 110,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 5826,
+          "deleted": 4653,
+          "live": 1173
+        },
+        "Framebuffer": {
+          "created": 18,
+          "deleted": 15,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 6,
+          "deleted": 5,
+          "live": 1
+        }
+      },
+      "position": [
+        178.3645782470703,
+        1.1200000047683716,
+        -165.13104248046875
+      ]
+    },
+    {
+      "label": "swap-3",
+      "recordedAt": "2026-10-11T02:45:04.284Z",
+      "heapBytes": 29197372,
+      "nodes": 5879,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "988e026d-ebce-48b1-a367-d64e6675846e",
+      "playSeconds": 3.387899999999995,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93323333333392,
+        "thirst": 99.90726851851846,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.998499999991,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 31801,
+          "deleted": 26540,
+          "live": 5261
+        },
+        "Texture": {
+          "created": 85,
+          "deleted": 18,
+          "live": 67
+        },
+        "Program": {
+          "created": 66,
+          "deleted": 57,
+          "live": 9
+        },
+        "Shader": {
+          "created": 132,
+          "deleted": 132,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 7071,
+          "deleted": 5895,
+          "live": 1176
+        },
+        "Framebuffer": {
+          "created": 21,
+          "deleted": 18,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 7,
+          "deleted": 6,
+          "live": 1
+        }
+      },
+      "position": [
+        -211.6791229248047,
+        1.1200000047683716,
+        -125.23757934570312
+      ]
+    },
+    {
+      "label": "swap-4",
+      "recordedAt": "2026-10-11T02:45:08.603Z",
+      "heapBytes": 35277584,
+      "nodes": 5879,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "20ad7aa5-2af3-439e-9af8-9a81a60fa9fb",
+      "playSeconds": 4.656500000000006,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93267333333384,
+        "thirst": 99.9064907407407,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.9900999999923,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 37415,
+          "deleted": 32169,
+          "live": 5246
+        },
+        "Texture": {
+          "created": 88,
+          "deleted": 21,
+          "live": 67
+        },
+        "Program": {
+          "created": 77,
+          "deleted": 68,
+          "live": 9
+        },
+        "Shader": {
+          "created": 154,
+          "deleted": 154,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 8311,
+          "deleted": 7138,
+          "live": 1173
+        },
+        "Framebuffer": {
+          "created": 24,
+          "deleted": 21,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 8,
+          "deleted": 7,
+          "live": 1
+        }
+      },
+      "position": [
+        178.3645782470703,
+        1.1200000047683716,
+        -165.13104248046875
+      ]
+    },
+    {
+      "label": "swap-5",
+      "recordedAt": "2026-10-11T02:45:12.894Z",
+      "heapBytes": 29561012,
+      "nodes": 5925,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "988e026d-ebce-48b1-a367-d64e6675846e",
+      "playSeconds": 4.539299999999984,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93101333333385,
+        "thirst": 99.90418518518527,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.965199999992,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 43044,
+          "deleted": 37793,
+          "live": 5251
+        },
+        "Texture": {
+          "created": 91,
+          "deleted": 24,
+          "live": 67
+        },
+        "Program": {
+          "created": 88,
+          "deleted": 79,
+          "live": 9
+        },
+        "Shader": {
+          "created": 176,
+          "deleted": 176,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 9554,
+          "deleted": 8380,
+          "live": 1174
+        },
+        "Framebuffer": {
+          "created": 27,
+          "deleted": 24,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 9,
+          "deleted": 8,
+          "live": 1
+        }
+      },
+      "position": [
+        -211.6791229248047,
+        1.1200000047683716,
+        -125.23757934570312
+      ]
+    },
+    {
+      "label": "swap-6",
+      "recordedAt": "2026-10-11T02:45:17.200Z",
+      "heapBytes": 35939288,
+      "nodes": 5925,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "20ad7aa5-2af3-439e-9af8-9a81a60fa9fb",
+      "playSeconds": 5.791300000000016,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93212666666723,
+        "thirst": 99.90573148148158,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.981899999994,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 48643,
+          "deleted": 43412,
+          "live": 5231
+        },
+        "Texture": {
+          "created": 94,
+          "deleted": 27,
+          "live": 67
+        },
+        "Program": {
+          "created": 99,
+          "deleted": 90,
+          "live": 9
+        },
+        "Shader": {
+          "created": 198,
+          "deleted": 198,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 10791,
+          "deleted": 9621,
+          "live": 1170
+        },
+        "Framebuffer": {
+          "created": 30,
+          "deleted": 27,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 10,
+          "deleted": 9,
+          "live": 1
+        }
+      },
+      "position": [
+        178.3645782470703,
+        1.1200000047683716,
+        -165.13104248046875
+      ]
+    },
+    {
+      "label": "swap-7",
+      "recordedAt": "2026-10-11T02:45:21.493Z",
+      "heapBytes": 29164236,
+      "nodes": 5879,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "988e026d-ebce-48b1-a367-d64e6675846e",
+      "playSeconds": 5.674199999999988,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93212000000054,
+        "thirst": 99.90572222222234,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.9817999999923,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 54262,
+          "deleted": 49021,
+          "live": 5241
+        },
+        "Texture": {
+          "created": 97,
+          "deleted": 30,
+          "live": 67
+        },
+        "Program": {
+          "created": 110,
+          "deleted": 101,
+          "live": 9
+        },
+        "Shader": {
+          "created": 220,
+          "deleted": 220,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 12032,
+          "deleted": 10860,
+          "live": 1172
+        },
+        "Framebuffer": {
+          "created": 33,
+          "deleted": 30,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 11,
+          "deleted": 10,
+          "live": 1
+        }
+      },
+      "position": [
+        -211.6791229248047,
+        1.1200000047683716,
+        -125.23757934570312
+      ]
+    },
+    {
+      "label": "swap-8",
+      "recordedAt": "2026-10-11T02:45:25.894Z",
+      "heapBytes": 35124120,
+      "nodes": 5810,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "20ad7aa5-2af3-439e-9af8-9a81a60fa9fb",
+      "playSeconds": 6.92630000000003,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93211333333382,
+        "thirst": 99.905712962963,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.9816999999925,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 59881,
+          "deleted": 54630,
+          "live": 5251
+        },
+        "Texture": {
+          "created": 100,
+          "deleted": 33,
+          "live": 67
+        },
+        "Program": {
+          "created": 121,
+          "deleted": 112,
+          "live": 9
+        },
+        "Shader": {
+          "created": 242,
+          "deleted": 242,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 13273,
+          "deleted": 12099,
+          "live": 1174
+        },
+        "Framebuffer": {
+          "created": 36,
+          "deleted": 33,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 12,
+          "deleted": 11,
+          "live": 1
+        }
+      },
+      "position": [
+        178.3645782470703,
+        1.1200000047683716,
+        -165.13104248046875
+      ]
+    },
+    {
+      "label": "swap-9",
+      "recordedAt": "2026-10-11T02:45:30.413Z",
+      "heapBytes": 29729832,
+      "nodes": 5925,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "988e026d-ebce-48b1-a367-d64e6675846e",
+      "playSeconds": 6.8173,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.93212000000062,
+        "thirst": 99.90572222222232,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.9817999999914,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 65515,
+          "deleted": 60259,
+          "live": 5256
+        },
+        "Texture": {
+          "created": 103,
+          "deleted": 36,
+          "live": 67
+        },
+        "Program": {
+          "created": 132,
+          "deleted": 123,
+          "live": 9
+        },
+        "Shader": {
+          "created": 264,
+          "deleted": 264,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 14517,
+          "deleted": 13342,
+          "live": 1175
+        },
+        "Framebuffer": {
+          "created": 39,
+          "deleted": 36,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 13,
+          "deleted": 12,
+          "live": 1
+        }
+      },
+      "position": [
+        -211.6791229248047,
+        1.1200000047683716,
+        -125.23757934570312
+      ]
+    },
+    {
+      "label": "swap-10",
+      "recordedAt": "2026-10-11T02:45:34.753Z",
+      "heapBytes": 36239224,
+      "nodes": 5902,
+      "listeners": 361,
+      "scene": "Game",
+      "worldId": "20ad7aa5-2af3-439e-9af8-9a81a60fa9fb",
+      "playSeconds": 8.069600000000028,
+      "campaign": true,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "vitals": {
+        "hunger": 99.9321266666673,
+        "thirst": 99.9057314814816,
+        "stamina": 100,
+        "health": 100
+      },
+      "protectionSeconds": 3598.9818999999934,
+      "weather": "clear",
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 71119,
+          "deleted": 65883,
+          "live": 5236
+        },
+        "Texture": {
+          "created": 106,
+          "deleted": 39,
+          "live": 67
+        },
+        "Program": {
+          "created": 143,
+          "deleted": 134,
+          "live": 9
+        },
+        "Shader": {
+          "created": 286,
+          "deleted": 286,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 15755,
+          "deleted": 14584,
+          "live": 1171
+        },
+        "Framebuffer": {
+          "created": 42,
+          "deleted": 39,
+          "live": 3
+        },
+        "Renderbuffer": {
+          "created": 14,
+          "deleted": 13,
+          "live": 1
+        }
+      },
+      "position": [
+        178.3645782470703,
+        1.1200000047683716,
+        -165.13104248046875
+      ]
+    }
+  ],
+  "menuSamples": [
+    {
+      "label": "warmed-menu",
+      "recordedAt": "2026-10-11T02:44:47.709Z",
+      "heapBytes": 7665312,
+      "nodes": 3110,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 9310,
+          "deleted": 8088,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 73,
+          "deleted": 9,
+          "live": 64
+        },
+        "Program": {
+          "created": 24,
+          "deleted": 22,
+          "live": 2
+        },
+        "Shader": {
+          "created": 48,
+          "deleted": 48,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 2105,
+          "deleted": 1852,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 9,
+          "deleted": 9,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 3,
+          "deleted": 3,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "after-soak-menu",
+      "recordedAt": "2026-10-11T02:44:52.040Z",
+      "heapBytes": 8880696,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 14924,
+          "deleted": 13702,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 76,
+          "deleted": 12,
+          "live": 64
+        },
+        "Program": {
+          "created": 35,
+          "deleted": 33,
+          "live": 2
+        },
+        "Shader": {
+          "created": 70,
+          "deleted": 70,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 3345,
+          "deleted": 3092,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 12,
+          "deleted": 12,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 4,
+          "deleted": 4,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-1",
+      "recordedAt": "2026-10-11T02:44:56.385Z",
+      "heapBytes": 9117540,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 20553,
+          "deleted": 19331,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 79,
+          "deleted": 15,
+          "live": 64
+        },
+        "Program": {
+          "created": 46,
+          "deleted": 44,
+          "live": 2
+        },
+        "Shader": {
+          "created": 92,
+          "deleted": 92,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 4588,
+          "deleted": 4335,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 15,
+          "deleted": 15,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 5,
+          "deleted": 5,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-2",
+      "recordedAt": "2026-10-11T02:45:00.674Z",
+      "heapBytes": 9248208,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 26167,
+          "deleted": 24945,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 82,
+          "deleted": 18,
+          "live": 64
+        },
+        "Program": {
+          "created": 57,
+          "deleted": 55,
+          "live": 2
+        },
+        "Shader": {
+          "created": 114,
+          "deleted": 114,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 5828,
+          "deleted": 5575,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 18,
+          "deleted": 18,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 6,
+          "deleted": 6,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-3",
+      "recordedAt": "2026-10-11T02:45:04.957Z",
+      "heapBytes": 9328056,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 31806,
+          "deleted": 30584,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 85,
+          "deleted": 21,
+          "live": 64
+        },
+        "Program": {
+          "created": 68,
+          "deleted": 66,
+          "live": 2
+        },
+        "Shader": {
+          "created": 136,
+          "deleted": 136,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 7073,
+          "deleted": 6820,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 21,
+          "deleted": 21,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 7,
+          "deleted": 7,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-4",
+      "recordedAt": "2026-10-11T02:45:09.278Z",
+      "heapBytes": 9429632,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 37420,
+          "deleted": 36198,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 88,
+          "deleted": 24,
+          "live": 64
+        },
+        "Program": {
+          "created": 79,
+          "deleted": 77,
+          "live": 2
+        },
+        "Shader": {
+          "created": 158,
+          "deleted": 158,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 8313,
+          "deleted": 8060,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 24,
+          "deleted": 24,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 8,
+          "deleted": 8,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-5",
+      "recordedAt": "2026-10-11T02:45:13.570Z",
+      "heapBytes": 9480356,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 43049,
+          "deleted": 41827,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 91,
+          "deleted": 27,
+          "live": 64
+        },
+        "Program": {
+          "created": 90,
+          "deleted": 88,
+          "live": 2
+        },
+        "Shader": {
+          "created": 180,
+          "deleted": 180,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 9556,
+          "deleted": 9303,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 27,
+          "deleted": 27,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 9,
+          "deleted": 9,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-6",
+      "recordedAt": "2026-10-11T02:45:17.875Z",
+      "heapBytes": 9656692,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 48648,
+          "deleted": 47426,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 94,
+          "deleted": 30,
+          "live": 64
+        },
+        "Program": {
+          "created": 101,
+          "deleted": 99,
+          "live": 2
+        },
+        "Shader": {
+          "created": 202,
+          "deleted": 202,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 10793,
+          "deleted": 10540,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 30,
+          "deleted": 30,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 10,
+          "deleted": 10,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-7",
+      "recordedAt": "2026-10-11T02:45:22.192Z",
+      "heapBytes": 9667368,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 54267,
+          "deleted": 53045,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 97,
+          "deleted": 33,
+          "live": 64
+        },
+        "Program": {
+          "created": 112,
+          "deleted": 110,
+          "live": 2
+        },
+        "Shader": {
+          "created": 224,
+          "deleted": 224,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 12034,
+          "deleted": 11781,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 33,
+          "deleted": 33,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 11,
+          "deleted": 11,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-8",
+      "recordedAt": "2026-10-11T02:45:26.652Z",
+      "heapBytes": 9715176,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 59886,
+          "deleted": 58664,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 100,
+          "deleted": 36,
+          "live": 64
+        },
+        "Program": {
+          "created": 123,
+          "deleted": 121,
+          "live": 2
+        },
+        "Shader": {
+          "created": 246,
+          "deleted": 246,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 13275,
+          "deleted": 13022,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 36,
+          "deleted": 36,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 12,
+          "deleted": 12,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-9",
+      "recordedAt": "2026-10-11T02:45:31.108Z",
+      "heapBytes": 9782800,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 65520,
+          "deleted": 64298,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 103,
+          "deleted": 39,
+          "live": 64
+        },
+        "Program": {
+          "created": 134,
+          "deleted": 132,
+          "live": 2
+        },
+        "Shader": {
+          "created": 268,
+          "deleted": 268,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 14519,
+          "deleted": 14266,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 39,
+          "deleted": 39,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 13,
+          "deleted": 13,
+          "live": 0
+        }
+      },
+      "position": null
+    },
+    {
+      "label": "menu-10",
+      "recordedAt": "2026-10-11T02:45:35.450Z",
+      "heapBytes": 9779876,
+      "nodes": 3108,
+      "listeners": 341,
+      "scene": "MainMenu",
+      "worldId": null,
+      "playSeconds": 0,
+      "campaign": false,
+      "paused": false,
+      "pauseReasons": {
+        "scene": false,
+        "engine": false,
+        "hidden": false
+      },
+      "deaths": 0,
+      "weather": null,
+      "glError": 0,
+      "contextLosses": 0,
+      "gl": {
+        "Buffer": {
+          "created": 71124,
+          "deleted": 69902,
+          "live": 1222
+        },
+        "Texture": {
+          "created": 106,
+          "deleted": 42,
+          "live": 64
+        },
+        "Program": {
+          "created": 145,
+          "deleted": 143,
+          "live": 2
+        },
+        "Shader": {
+          "created": 290,
+          "deleted": 290,
+          "live": 0
+        },
+        "VertexArray": {
+          "created": 15757,
+          "deleted": 15504,
+          "live": 253
+        },
+        "Framebuffer": {
+          "created": 42,
+          "deleted": 42,
+          "live": 0
+        },
+        "Renderbuffer": {
+          "created": 14,
+          "deleted": 14,
+          "live": 0
+        }
+      },
+      "position": null
+    }
+  ],
+  "errors": [],
+  "glCountsAre": "Explicit creation minus explicit deletion; wrappers are held only in a WeakMap. These counters do not measure GPU bytes or automatic driver reclamation.",
+  "renderer": {
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+  },
+  "soakStartedAt": "2026-10-11T02:44:51.358Z",
+  "soakWallSeconds": 0.002414600000000064,
+  "soakPlaySeconds": 0,
+  "completedSwaps": 10,
+  "menuDelta": {
+    "listeners": 0,
+    "nodes": -2,
+    "heapBytes": 2114564,
+    "explicitGL": {
+      "Buffer": 0,
+      "Texture": 0,
+      "Program": 0,
+      "Shader": 0,
+      "VertexArray": 0,
+      "Framebuffer": 0,
+      "Renderbuffer": 0
+    }
+  },
+  "retentionFindings": [],
+  "meetsDuration": false,
+  "finishedAt": "2026-10-11T02:45:35.451Z"
+}

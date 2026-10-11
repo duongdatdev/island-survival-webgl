@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "pid": 13780,
+  "root": "D:\\Project\\webgl\\island-survival\\.cache\\browser-snapshots\\2026-10-11T01-42-22-033Z\\app",
+  "sourceAndRuntimeSHA256": "a8d8cfe99b3313eac3c73481c6d164f9fbd4c3eba4e991e8672694f2461f0f6e",
+  "selectedPatterns": [],
+  "startedAt": "2026-10-11T01:42:24.248Z",
+  "scope": "Frozen source, browser stories and runtime assets; native Chrome dev-server regression. Dependencies resolve from the existing workspace installation. No current worktree HMR changes can affect this run.",
+  "childPid": 33692,
+  "exitCode": 0,
+  "finishedAt": "2026-10-11T01:54:17.225Z",
+  "resultCounts": {
+    "passed": 29,
+    "failed": 0,
+    "total": 29
+  },
+  "evidenceLog": ".cache/browser-snapshot-full-current.log",
+  "qualification": "Complete native Chrome regression of the final protected record-site source before keyboard focus/map improvements. The included early-campaign story covers chapters 1-3 only. Does not prove whole-campaign traversal, human duration, current-build long-session retention or universal hardware performance. Later focused keyboard/map and field-survey cases passed separately; an expanded connected chapters 1-5 story is running."
+}

@@ -1,0 +1,3733 @@
+{
+  "pid": 19776,
+  "status": "observed",
+  "startedAt": "2026-10-11T01:16:35.240Z",
+  "build": "index-BHNf6HKB.js",
+  "scope": "Three native Chrome production reloads. Fetch/body and GL call durations are instrumented; 60 s is a diagnostic observation window, not acceptance. No gameplay state is edited.",
+  "boots": [
+    {
+      "index": 0,
+      "start": 1882.7059,
+      "console": [
+        {
+          "ms": 285.4254000000001,
+          "type": "log",
+          "text": "App: Bootstrapping Island Survival: Escape foundation..."
+        },
+        {
+          "ms": 364.01760000000013,
+          "type": "log",
+          "text": "Engine: WebGL 2 context initialized successfully."
+        },
+        {
+          "ms": 371.5724,
+          "type": "log",
+          "text": "SceneManager: Transitioning to scene 'Loading'..."
+        },
+        {
+          "ms": 371.9715000000001,
+          "type": "log",
+          "text": "LoadingScene: Initializing resources..."
+        },
+        {
+          "ms": 608.0896000000002,
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "ms": 629.5392999999999,
+          "type": "log",
+          "text": "LoadingScene: Loaded 11 Survival Pack models."
+        },
+        {
+          "ms": 2384.0748000000003,
+          "type": "log",
+          "text": "LoadingScene: Compiling 1 shared models..."
+        },
+        {
+          "ms": 2912.5531,
+          "type": "log",
+          "text": "LoadingScene: Assets loaded. Transitioning to Main Menu..."
+        },
+        {
+          "ms": 2912.6412,
+          "type": "log",
+          "text": "SceneManager: Transitioning to scene 'MainMenu'..."
+        },
+        {
+          "ms": 2912.9055,
+          "type": "log",
+          "text": "LoadingScene destroyed."
+        }
+      ],
+      "errors": [],
+      "menuReady": true,
+      "wallMs": 3363.0522,
+      "diagnostics": {
+        "started": 24.400000002235174,
+        "fetch": [
+          {
+            "url": "assets/environment/manifest.json",
+            "start": 352.30000000074506,
+            "status": 200,
+            "headersMs": 33.30000000074506
+          },
+          {
+            "url": "assets/creatures/manifest.json",
+            "start": 353,
+            "status": 200,
+            "headersMs": 32.400000002235174
+          },
+          {
+            "url": "assets/environment/chest.glb",
+            "start": 353.4000000022352,
+            "status": 200,
+            "headersMs": 32.099999997764826
+          },
+          {
+            "url": "assets/survival-pack/survival-items.json",
+            "start": 353.80000000074506,
+            "status": 200,
+            "headersMs": 31.899999998509884
+          },
+          {
+            "url": "assets/creatures/boar.glb",
+            "start": 401.9000000022352,
+            "status": 200,
+            "headersMs": 40.599999997764826
+          },
+          {
+            "url": "assets/creatures/crab.glb",
+            "start": 402.1000000014901,
+            "status": 200,
+            "headersMs": 40.80000000074506
+          },
+          {
+            "url": "assets/creatures/seagull.glb",
+            "start": 402.30000000074506,
+            "status": 200,
+            "headersMs": 40.399999998509884
+          },
+          {
+            "url": "assets/creatures/shark.glb",
+            "start": 402.6000000014901,
+            "status": 200,
+            "headersMs": 40.5
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_1.asset.json",
+            "start": 425,
+            "status": 200,
+            "headersMs": 47.400000002235174
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_2.asset.json",
+            "start": 425.6000000014901,
+            "status": 200,
+            "headersMs": 47.099999997764826
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_3.asset.json",
+            "start": 425.9000000022352,
+            "status": 200,
+            "headersMs": 47
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_4.asset.json",
+            "start": 426,
+            "status": 200,
+            "headersMs": 47.100000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_5.asset.json",
+            "start": 426.1000000014901,
+            "status": 200,
+            "headersMs": 47.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Bush.asset.json",
+            "start": 426.19999999925494,
+            "status": 200,
+            "headersMs": 47.20000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Flowers.asset.json",
+            "start": 426.30000000074506,
+            "status": 200,
+            "headersMs": 47.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Large.asset.json",
+            "start": 426.5,
+            "status": 200,
+            "headersMs": 47.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Large_Flowers.asset.json",
+            "start": 426.69999999925494,
+            "status": 200,
+            "headersMs": 47.20000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Small.asset.json",
+            "start": 426.80000000074506,
+            "status": 200,
+            "headersMs": 47.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Small_Flowers.asset.json",
+            "start": 427,
+            "status": 200,
+            "headersMs": 47.100000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_1.asset.json",
+            "start": 427,
+            "status": 200,
+            "headersMs": 47.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_10.asset.json",
+            "start": 427.30000000074506,
+            "status": 200,
+            "headersMs": 47
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_2.asset.json",
+            "start": 427.30000000074506,
+            "status": 200,
+            "headersMs": 47.100000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_3.asset.json",
+            "start": 427.5,
+            "status": 200,
+            "headersMs": 47
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_4.asset.json",
+            "start": 427.6000000014901,
+            "status": 200,
+            "headersMs": 47.099999997764826
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_5.asset.json",
+            "start": 427.69999999925494,
+            "status": 200,
+            "headersMs": 47
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_6.asset.json",
+            "start": 427.80000000074506,
+            "status": 200,
+            "headersMs": 47
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_7.asset.json",
+            "start": 428.80000000074506,
+            "status": 200,
+            "headersMs": 48.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_8.asset.json",
+            "start": 429,
+            "status": 200,
+            "headersMs": 49
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_9.asset.json",
+            "start": 429,
+            "status": 200,
+            "headersMs": 48.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_1.asset.json",
+            "start": 429.1000000014901,
+            "status": 200,
+            "headersMs": 49.099999997764826
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_1_Clump.asset.json",
+            "start": 429.19999999925494,
+            "status": 200,
+            "headersMs": 49.20000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_2.asset.json",
+            "start": 429.30000000074506,
+            "status": 200,
+            "headersMs": 49.100000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_2_Clump.asset.json",
+            "start": 429.4000000022352,
+            "status": 200,
+            "headersMs": 56.899999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_3_Clump.asset.json",
+            "start": 429.5,
+            "status": 200,
+            "headersMs": 56.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_4_Clump.asset.json",
+            "start": 429.80000000074506,
+            "status": 200,
+            "headersMs": 56.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_5_Clump.asset.json",
+            "start": 430.19999999925494,
+            "status": 200,
+            "headersMs": 56.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Large.asset.json",
+            "start": 430.30000000074506,
+            "status": 200,
+            "headersMs": 56.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Large_Extruded.asset.json",
+            "start": 430.4000000022352,
+            "status": 200,
+            "headersMs": 56.899999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Small.asset.json",
+            "start": 430.5,
+            "status": 200,
+            "headersMs": 63.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_1.asset.json",
+            "start": 430.5,
+            "status": 200,
+            "headersMs": 64.10000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_2.asset.json",
+            "start": 430.6000000014901,
+            "status": 200,
+            "headersMs": 64.59999999776483
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_3.asset.json",
+            "start": 430.80000000074506,
+            "status": 200,
+            "headersMs": 63.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_4.asset.json",
+            "start": 430.80000000074506,
+            "status": 200,
+            "headersMs": 64.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_5.asset.json",
+            "start": 430.9000000022352,
+            "status": 200,
+            "headersMs": 64.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_1.asset.json",
+            "start": 431,
+            "status": 200,
+            "headersMs": 76.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_2.asset.json",
+            "start": 431,
+            "status": 200,
+            "headersMs": 76.10000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_3.asset.json",
+            "start": 431.1000000014901,
+            "status": 200,
+            "headersMs": 76.39999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_4.asset.json",
+            "start": 431.19999999925494,
+            "status": 200,
+            "headersMs": 76.20000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_5.asset.json",
+            "start": 431.30000000074506,
+            "status": 200,
+            "headersMs": 76.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_1.asset.json",
+            "start": 431.4000000022352,
+            "status": 200,
+            "headersMs": 76.29999999701977
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_2.asset.json",
+            "start": 431.5,
+            "status": 200,
+            "headersMs": 85.5
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_3.asset.json",
+            "start": 431.5,
+            "status": 200,
+            "headersMs": 85.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_4.asset.json",
+            "start": 431.69999999925494,
+            "status": 200,
+            "headersMs": 85.70000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_5.asset.json",
+            "start": 431.69999999925494,
+            "status": 200,
+            "headersMs": 85.90000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_1.asset.json",
+            "start": 431.80000000074506,
+            "status": 200,
+            "headersMs": 85.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_2.asset.json",
+            "start": 431.9000000022352,
+            "status": 200,
+            "headersMs": 85.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_3.asset.json",
+            "start": 432,
+            "status": 200,
+            "headersMs": 94.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_4.asset.json",
+            "start": 432.1000000014901,
+            "status": 200,
+            "headersMs": 94.5
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_1.asset.json",
+            "start": 432.1000000014901,
+            "status": 200,
+            "headersMs": 94.59999999776483
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_2.asset.json",
+            "start": 432.30000000074506,
+            "status": 200,
+            "headersMs": 94.5
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_3.asset.json",
+            "start": 432.4000000022352,
+            "status": 200,
+            "headersMs": 94.5
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_4.asset.json",
+            "start": 432.69999999925494,
+            "status": 200,
+            "headersMs": 94.40000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_5.asset.json",
+            "start": 432.69999999925494,
+            "status": 200,
+            "headersMs": 102.10000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_1.asset.json",
+            "start": 432.9000000022352,
+            "status": 200,
+            "headersMs": 102.09999999776483
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_2.asset.json",
+            "start": 433,
+            "status": 200,
+            "headersMs": 102.10000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_Flowers.asset.json",
+            "start": 433,
+            "status": 200,
+            "headersMs": 102.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_1.asset.json",
+            "start": 433.1000000014901,
+            "status": 200,
+            "headersMs": 102.39999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_2.asset.json",
+            "start": 433.19999999925494,
+            "status": 200,
+            "headersMs": 102.60000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_3.asset.json",
+            "start": 433.30000000074506,
+            "status": 200,
+            "headersMs": 109
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_4.asset.json",
+            "start": 433.4000000022352,
+            "status": 200,
+            "headersMs": 109.09999999776483
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_5.asset.json",
+            "start": 433.5,
+            "status": 200,
+            "headersMs": 109.30000000074506
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodLog.obj",
+            "start": 434.6000000014901,
+            "status": 200,
+            "headersMs": 108.09999999776483
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodLog.mtl",
+            "start": 434.9000000022352,
+            "status": 200,
+            "headersMs": 108
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe.obj",
+            "start": 435.1000000014901,
+            "status": 200,
+            "headersMs": 108
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe.mtl",
+            "start": 435.19999999925494,
+            "status": 200,
+            "headersMs": 114.40000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe_Small.obj",
+            "start": 435.30000000074506,
+            "status": 200,
+            "headersMs": 113.89999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe_Small.mtl",
+            "start": 435.4000000022352,
+            "status": 200,
+            "headersMs": 114.59999999776483
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.obj",
+            "start": 435.5,
+            "status": 200,
+            "headersMs": 115
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.mtl",
+            "start": 435.6000000014901,
+            "status": 200,
+            "headersMs": 114.69999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Shovel.obj",
+            "start": 435.69999999925494,
+            "status": 200,
+            "headersMs": 122.60000000149012
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Shovel.mtl",
+            "start": 435.80000000074506,
+            "status": 200,
+            "headersMs": 142.39999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Torch.obj",
+            "start": 435.80000000074506,
+            "status": 200,
+            "headersMs": 142.69999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Torch.mtl",
+            "start": 435.9000000022352,
+            "status": 200,
+            "headersMs": 142.89999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.obj",
+            "start": 435.9000000022352,
+            "status": 200,
+            "headersMs": 143.39999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.mtl",
+            "start": 436,
+            "status": 200,
+            "headersMs": 143.5
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Can_Closed.obj",
+            "start": 436.1000000014901,
+            "status": 200,
+            "headersMs": 143.5
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Can_Closed.mtl",
+            "start": 436.1000000014901,
+            "status": 200,
+            "headersMs": 143.80000000074506
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Pan.obj",
+            "start": 436.19999999925494,
+            "status": 200,
+            "headersMs": 143.60000000149012
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Pan.mtl",
+            "start": 437.19999999925494,
+            "status": 200,
+            "headersMs": 142.90000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/GasCan.obj",
+            "start": 437.4000000022352,
+            "status": 200,
+            "headersMs": 142.89999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/GasCan.mtl",
+            "start": 437.5,
+            "status": 200,
+            "headersMs": 142.90000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.obj",
+            "start": 437.69999999925494,
+            "status": 200,
+            "headersMs": 142.80000000074506
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.mtl",
+            "start": 437.80000000074506,
+            "status": 200,
+            "headersMs": 152.89999999850988
+          },
+          {
+            "url": "assets/Ultimate Animated Character Pack - Nov 2019/OBJ/Casual_Male.mtl",
+            "start": 2358.60000000149,
+            "status": 200,
+            "headersMs": 5.099999997764826
+          },
+          {
+            "url": "assets/Ultimate Animated Character Pack - Nov 2019/OBJ/Casual_Male.obj",
+            "start": 2364.400000002235,
+            "status": 200,
+            "headersMs": 5.799999997019768
+          }
+        ],
+        "bodies": [
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/manifest.json",
+            "method": "json",
+            "start": 385.4000000022352,
+            "ms": 16.299999997019768
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/chest.glb",
+            "method": "arrayBuffer",
+            "start": 385.5,
+            "ms": 18.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/manifest.json",
+            "method": "json",
+            "start": 385.6000000014901,
+            "ms": 39.399999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/survival-items.json",
+            "method": "json",
+            "start": 385.69999999925494,
+            "ms": 48.70000000298023
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/boar.glb",
+            "method": "arrayBuffer",
+            "start": 442.5,
+            "ms": 4.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/seagull.glb",
+            "method": "arrayBuffer",
+            "start": 442.69999999925494,
+            "ms": 8.400000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/crab.glb",
+            "method": "arrayBuffer",
+            "start": 442.9000000022352,
+            "ms": 13.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/shark.glb",
+            "method": "arrayBuffer",
+            "start": 443.1000000014901,
+            "ms": 21.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_1.asset.json",
+            "method": "json",
+            "start": 472.4000000022352,
+            "ms": 5.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_2.asset.json",
+            "method": "json",
+            "start": 472.69999999925494,
+            "ms": 5.700000002980232
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_3.asset.json",
+            "method": "json",
+            "start": 472.9000000022352,
+            "ms": 5.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_4.asset.json",
+            "method": "json",
+            "start": 473.1000000014901,
+            "ms": 5.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_5.asset.json",
+            "method": "json",
+            "start": 473.30000000074506,
+            "ms": 5.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush.asset.json",
+            "method": "json",
+            "start": 473.4000000022352,
+            "ms": 5.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Flowers.asset.json",
+            "method": "json",
+            "start": 473.6000000014901,
+            "ms": 5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Large.asset.json",
+            "method": "json",
+            "start": 473.69999999925494,
+            "ms": 4.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Large_Flowers.asset.json",
+            "method": "json",
+            "start": 473.9000000022352,
+            "ms": 4.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Small.asset.json",
+            "method": "json",
+            "start": 474,
+            "ms": 4.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Small_Flowers.asset.json",
+            "method": "json",
+            "start": 474.1000000014901,
+            "ms": 4.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_1.asset.json",
+            "method": "json",
+            "start": 474.19999999925494,
+            "ms": 4.400000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_10.asset.json",
+            "method": "json",
+            "start": 474.30000000074506,
+            "ms": 4.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_2.asset.json",
+            "method": "json",
+            "start": 474.4000000022352,
+            "ms": 4.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_3.asset.json",
+            "method": "json",
+            "start": 474.5,
+            "ms": 4.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_4.asset.json",
+            "method": "json",
+            "start": 474.69999999925494,
+            "ms": 3.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_5.asset.json",
+            "method": "json",
+            "start": 474.69999999925494,
+            "ms": 3.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_6.asset.json",
+            "method": "json",
+            "start": 474.80000000074506,
+            "ms": 3.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_7.asset.json",
+            "method": "json",
+            "start": 477.4000000022352,
+            "ms": 2.099999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_9.asset.json",
+            "method": "json",
+            "start": 477.6000000014901,
+            "ms": 2
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_8.asset.json",
+            "method": "json",
+            "start": 478,
+            "ms": 1.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_1.asset.json",
+            "method": "json",
+            "start": 478.19999999925494,
+            "ms": 1.4000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_2.asset.json",
+            "method": "json",
+            "start": 478.4000000022352,
+            "ms": 1.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_1_Clump.asset.json",
+            "method": "json",
+            "start": 478.4000000022352,
+            "ms": 1.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_3_Clump.asset.json",
+            "method": "json",
+            "start": 486.1000000014901,
+            "ms": 1.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_2_Clump.asset.json",
+            "method": "json",
+            "start": 486.30000000074506,
+            "ms": 1.8999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_4_Clump.asset.json",
+            "method": "json",
+            "start": 486.5,
+            "ms": 1.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_5_Clump.asset.json",
+            "method": "json",
+            "start": 486.80000000074506,
+            "ms": 1.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Large.asset.json",
+            "method": "json",
+            "start": 487.1000000014901,
+            "ms": 1.0999999977648258
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Large_Extruded.asset.json",
+            "method": "json",
+            "start": 487.30000000074506,
+            "ms": 0.8999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Small.asset.json",
+            "method": "json",
+            "start": 494.19999999925494,
+            "ms": 2.2000000029802322
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_3.asset.json",
+            "method": "json",
+            "start": 494.5,
+            "ms": 2.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_1.asset.json",
+            "method": "json",
+            "start": 494.6000000014901,
+            "ms": 2.099999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_2.asset.json",
+            "method": "json",
+            "start": 495.19999999925494,
+            "ms": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_4.asset.json",
+            "method": "json",
+            "start": 495.6000000014901,
+            "ms": 1.0999999977648258
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_5.asset.json",
+            "method": "json",
+            "start": 495.80000000074506,
+            "ms": 0.8999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_2.asset.json",
+            "method": "json",
+            "start": 507.1000000014901,
+            "ms": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_1.asset.json",
+            "method": "json",
+            "start": 507.19999999925494,
+            "ms": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_4.asset.json",
+            "method": "json",
+            "start": 507.4000000022352,
+            "ms": 1.2999999970197678
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_3.asset.json",
+            "method": "json",
+            "start": 507.5,
+            "ms": 1.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_5.asset.json",
+            "method": "json",
+            "start": 507.6000000014901,
+            "ms": 1.0999999977648258
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_1.asset.json",
+            "method": "json",
+            "start": 507.69999999925494,
+            "ms": 1
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_2.asset.json",
+            "method": "json",
+            "start": 517,
+            "ms": 1.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_3.asset.json",
+            "method": "json",
+            "start": 517.1999999992549,
+            "ms": 1.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_4.asset.json",
+            "method": "json",
+            "start": 517.4000000022352,
+            "ms": 1.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_5.asset.json",
+            "method": "json",
+            "start": 517.6000000014901,
+            "ms": 1.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_1.asset.json",
+            "method": "json",
+            "start": 517.6999999992549,
+            "ms": 1.1000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_2.asset.json",
+            "method": "json",
+            "start": 517.8000000007451,
+            "ms": 1
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_3.asset.json",
+            "method": "json",
+            "start": 526.3000000007451,
+            "ms": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_4.asset.json",
+            "method": "json",
+            "start": 526.6000000014901,
+            "ms": 1.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_1.asset.json",
+            "method": "json",
+            "start": 526.6999999992549,
+            "ms": 1.2000000029802322
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_2.asset.json",
+            "method": "json",
+            "start": 526.8000000007451,
+            "ms": 1.1000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_3.asset.json",
+            "method": "json",
+            "start": 527,
+            "ms": 0.9000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_4.asset.json",
+            "method": "json",
+            "start": 527.1000000014901,
+            "ms": 0.8000000007450581
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_5.asset.json",
+            "method": "json",
+            "start": 534.8000000007451,
+            "ms": 1.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_1.asset.json",
+            "method": "json",
+            "start": 535,
+            "ms": 1.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_2.asset.json",
+            "method": "json",
+            "start": 535.1000000014901,
+            "ms": 1.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_1.asset.json",
+            "method": "json",
+            "start": 535.5,
+            "ms": 0.9000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_Flowers.asset.json",
+            "method": "json",
+            "start": 535.6999999992549,
+            "ms": 0.7000000029802322
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_2.asset.json",
+            "method": "json",
+            "start": 535.8000000007451,
+            "ms": 0.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_3.asset.json",
+            "method": "json",
+            "start": 542.3000000007451,
+            "ms": 1.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_4.asset.json",
+            "method": "json",
+            "start": 542.5,
+            "ms": 1.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodLog.obj",
+            "method": "text",
+            "start": 542.6999999992549,
+            "ms": 1
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_5.asset.json",
+            "method": "json",
+            "start": 542.8000000007451,
+            "ms": 1
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodLog.mtl",
+            "method": "text",
+            "start": 543,
+            "ms": 0.8000000007450581
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe.obj",
+            "method": "text",
+            "start": 543.1000000014901,
+            "ms": 0.6999999992549419
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe_Small.obj",
+            "method": "text",
+            "start": 549.1999999992549,
+            "ms": 1.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe.mtl",
+            "method": "text",
+            "start": 549.6000000014901,
+            "ms": 1.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe_Small.mtl",
+            "method": "text",
+            "start": 550,
+            "ms": 1
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.mtl",
+            "method": "text",
+            "start": 550.3000000007451,
+            "ms": 0.6999999992549419
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.obj",
+            "method": "text",
+            "start": 550.5,
+            "ms": 0.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Shovel.obj",
+            "method": "text",
+            "start": 558.3000000007451,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Shovel.mtl",
+            "method": "text",
+            "start": 578.1999999992549,
+            "ms": 8.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Torch.obj",
+            "method": "text",
+            "start": 578.5,
+            "ms": 7.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Torch.mtl",
+            "method": "text",
+            "start": 578.8000000007451,
+            "ms": 7.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.obj",
+            "method": "text",
+            "start": 579.3000000007451,
+            "ms": 7.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.mtl",
+            "method": "text",
+            "start": 579.5,
+            "ms": 6.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Can_Closed.obj",
+            "method": "text",
+            "start": 579.6000000014901,
+            "ms": 6.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Pan.obj",
+            "method": "text",
+            "start": 579.8000000007451,
+            "ms": 6.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Can_Closed.mtl",
+            "method": "text",
+            "start": 579.9000000022352,
+            "ms": 6.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Pan.mtl",
+            "method": "text",
+            "start": 580.1000000014901,
+            "ms": 6.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/GasCan.obj",
+            "method": "text",
+            "start": 580.3000000007451,
+            "ms": 6.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/GasCan.mtl",
+            "method": "text",
+            "start": 580.4000000022352,
+            "ms": 6
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.obj",
+            "method": "text",
+            "start": 580.5,
+            "ms": 6
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.mtl",
+            "method": "text",
+            "start": 590.6999999992549,
+            "ms": 0.20000000298023224
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/Ultimate%20Animated%20Character%20Pack%20-%20Nov%202019/OBJ/Casual_Male.mtl",
+            "method": "text",
+            "start": 2363.800000000745,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/Ultimate%20Animated%20Character%20Pack%20-%20Nov%202019/OBJ/Casual_Male.obj",
+            "method": "text",
+            "start": 2370.199999999255,
+            "ms": 2
+          }
+        ],
+        "gl": {
+          "createTexture": {
+            "count": 2,
+            "totalMs": 0.19999999925494194,
+            "maxMs": 0.10000000149011612
+          },
+          "texImage2D": {
+            "count": 4,
+            "totalMs": 0.5,
+            "maxMs": 0.30000000074505806
+          },
+          "createBuffer": {
+            "count": 138,
+            "totalMs": 0.19999999925494194,
+            "maxMs": 0.10000000149011612
+          },
+          "bufferData": {
+            "count": 138,
+            "totalMs": 1.7000000104308128,
+            "maxMs": 0.19999999925494194
+          },
+          "compileShader": {
+            "count": 4,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          "linkProgram": {
+            "count": 2,
+            "totalMs": 0.09999999776482582,
+            "maxMs": 0.09999999776482582
+          }
+        },
+        "loaded": 96,
+        "total": 96,
+        "pendingModels": []
+      }
+    },
+    {
+      "index": 1,
+      "start": 5273.3647,
+      "console": [
+        {
+          "ms": 557.1188999999995,
+          "type": "log",
+          "text": "App: Bootstrapping Island Survival: Escape foundation..."
+        },
+        {
+          "ms": 563.5788000000002,
+          "type": "log",
+          "text": "Engine: WebGL 2 context initialized successfully."
+        },
+        {
+          "ms": 569.1485999999995,
+          "type": "log",
+          "text": "SceneManager: Transitioning to scene 'Loading'..."
+        },
+        {
+          "ms": 569.4535999999998,
+          "type": "log",
+          "text": "LoadingScene: Initializing resources..."
+        },
+        {
+          "ms": 759.7695999999996,
+          "type": "log",
+          "text": "LoadingScene: Loaded 11 Survival Pack models."
+        },
+        {
+          "ms": 2579.6094999999996,
+          "type": "log",
+          "text": "LoadingScene: Compiling 1 shared models..."
+        },
+        {
+          "ms": 3118.7554,
+          "type": "log",
+          "text": "LoadingScene: Assets loaded. Transitioning to Main Menu..."
+        },
+        {
+          "ms": 3119.152899999999,
+          "type": "log",
+          "text": "SceneManager: Transitioning to scene 'MainMenu'..."
+        },
+        {
+          "ms": 3119.2009,
+          "type": "log",
+          "text": "LoadingScene destroyed."
+        },
+        {
+          "ms": 3207.0067,
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        }
+      ],
+      "errors": [],
+      "menuReady": true,
+      "wallMs": 3578.4804000000004,
+      "diagnostics": {
+        "started": 492.9000000022352,
+        "fetch": [
+          {
+            "url": "assets/environment/manifest.json",
+            "start": 560.3000000007451,
+            "status": 200,
+            "headersMs": 8.100000001490116
+          },
+          {
+            "url": "assets/creatures/manifest.json",
+            "start": 560.6000000014901,
+            "status": 200,
+            "headersMs": 8
+          },
+          {
+            "url": "assets/environment/chest.glb",
+            "start": 560.6999999992549,
+            "status": 200,
+            "headersMs": 8.100000001490116
+          },
+          {
+            "url": "assets/survival-pack/survival-items.json",
+            "start": 560.9000000022352,
+            "status": 200,
+            "headersMs": 13.199999999254942
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_1.asset.json",
+            "start": 577.1000000014901,
+            "status": 200,
+            "headersMs": 38.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_2.asset.json",
+            "start": 577.4000000022352,
+            "status": 200,
+            "headersMs": 38.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_3.asset.json",
+            "start": 577.6000000014901,
+            "status": 200,
+            "headersMs": 47.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_4.asset.json",
+            "start": 577.6999999992549,
+            "status": 200,
+            "headersMs": 49.400000002235174
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_5.asset.json",
+            "start": 577.8000000007451,
+            "status": 200,
+            "headersMs": 49.399999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Bush.asset.json",
+            "start": 577.9000000022352,
+            "status": 200,
+            "headersMs": 49.5
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Flowers.asset.json",
+            "start": 578,
+            "status": 200,
+            "headersMs": 49.5
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Large.asset.json",
+            "start": 578.1000000014901,
+            "status": 200,
+            "headersMs": 49.5
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Large_Flowers.asset.json",
+            "start": 578.3000000007451,
+            "status": 200,
+            "headersMs": 49.899999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Small.asset.json",
+            "start": 578.5,
+            "status": 200,
+            "headersMs": 50.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Small_Flowers.asset.json",
+            "start": 578.6999999992549,
+            "status": 200,
+            "headersMs": 50.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_1.asset.json",
+            "start": 578.8000000007451,
+            "status": 200,
+            "headersMs": 53.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_10.asset.json",
+            "start": 579,
+            "status": 200,
+            "headersMs": 53.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_2.asset.json",
+            "start": 579,
+            "status": 200,
+            "headersMs": 53.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_3.asset.json",
+            "start": 579.3000000007451,
+            "status": 200,
+            "headersMs": 53.399999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_4.asset.json",
+            "start": 579.4000000022352,
+            "status": 200,
+            "headersMs": 53.399999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_5.asset.json",
+            "start": 579.6000000014901,
+            "status": 200,
+            "headersMs": 53.5
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_6.asset.json",
+            "start": 579.6000000014901,
+            "status": 200,
+            "headersMs": 53.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_7.asset.json",
+            "start": 580,
+            "status": 200,
+            "headersMs": 53.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_8.asset.json",
+            "start": 580.1000000014901,
+            "status": 200,
+            "headersMs": 53.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_9.asset.json",
+            "start": 580.4000000022352,
+            "status": 200,
+            "headersMs": 53.5
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_1.asset.json",
+            "start": 580.5,
+            "status": 200,
+            "headersMs": 53.5
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_1_Clump.asset.json",
+            "start": 580.6999999992549,
+            "status": 200,
+            "headersMs": 53.400000002235174
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_2.asset.json",
+            "start": 581,
+            "status": 200,
+            "headersMs": 53.100000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_2_Clump.asset.json",
+            "start": 581.1000000014901,
+            "status": 200,
+            "headersMs": 55.399999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_3_Clump.asset.json",
+            "start": 581.3000000007451,
+            "status": 200,
+            "headersMs": 55.399999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_4_Clump.asset.json",
+            "start": 581.5,
+            "status": 200,
+            "headersMs": 58.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_5_Clump.asset.json",
+            "start": 581.6000000014901,
+            "status": 200,
+            "headersMs": 58.899999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Large.asset.json",
+            "start": 581.6000000014901,
+            "status": 200,
+            "headersMs": 60.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Large_Extruded.asset.json",
+            "start": 581.6999999992549,
+            "status": 200,
+            "headersMs": 61
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Small.asset.json",
+            "start": 581.9000000022352,
+            "status": 200,
+            "headersMs": 66.39999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_1.asset.json",
+            "start": 582.1999999992549,
+            "status": 200,
+            "headersMs": 66.20000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_2.asset.json",
+            "start": 582.3000000007451,
+            "status": 200,
+            "headersMs": 67.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_3.asset.json",
+            "start": 582.4000000022352,
+            "status": 200,
+            "headersMs": 72.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_4.asset.json",
+            "start": 582.4000000022352,
+            "status": 200,
+            "headersMs": 72.5
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_5.asset.json",
+            "start": 582.6000000014901,
+            "status": 200,
+            "headersMs": 72.5
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_1.asset.json",
+            "start": 582.8000000007451,
+            "status": 200,
+            "headersMs": 72.39999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_2.asset.json",
+            "start": 582.9000000022352,
+            "status": 200,
+            "headersMs": 75.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_3.asset.json",
+            "start": 582.9000000022352,
+            "status": 200,
+            "headersMs": 75.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_4.asset.json",
+            "start": 583,
+            "status": 200,
+            "headersMs": 76
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_5.asset.json",
+            "start": 583.1000000014901,
+            "status": 200,
+            "headersMs": 76.5
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_1.asset.json",
+            "start": 583.1999999992549,
+            "status": 200,
+            "headersMs": 76.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_2.asset.json",
+            "start": 583.3000000007451,
+            "status": 200,
+            "headersMs": 78.5
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_3.asset.json",
+            "start": 583.3000000007451,
+            "status": 200,
+            "headersMs": 81.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_4.asset.json",
+            "start": 583.4000000022352,
+            "status": 200,
+            "headersMs": 81.79999999701977
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_5.asset.json",
+            "start": 583.5,
+            "status": 200,
+            "headersMs": 82.40000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_1.asset.json",
+            "start": 583.6000000014901,
+            "status": 200,
+            "headersMs": 84.5
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_2.asset.json",
+            "start": 583.9000000022352,
+            "status": 200,
+            "headersMs": 84.5
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_3.asset.json",
+            "start": 584.1000000014901,
+            "status": 200,
+            "headersMs": 88.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_4.asset.json",
+            "start": 584.1000000014901,
+            "status": 200,
+            "headersMs": 89
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_1.asset.json",
+            "start": 584.1999999992549,
+            "status": 200,
+            "headersMs": 89.70000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_2.asset.json",
+            "start": 584.3000000007451,
+            "status": 200,
+            "headersMs": 90.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_3.asset.json",
+            "start": 584.4000000022352,
+            "status": 200,
+            "headersMs": 92.09999999776483
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_4.asset.json",
+            "start": 584.5,
+            "status": 200,
+            "headersMs": 92.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_5.asset.json",
+            "start": 584.6999999992549,
+            "status": 200,
+            "headersMs": 93.60000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_1.asset.json",
+            "start": 584.9000000022352,
+            "status": 200,
+            "headersMs": 96.5
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_2.asset.json",
+            "start": 584.9000000022352,
+            "status": 200,
+            "headersMs": 96.79999999701977
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_Flowers.asset.json",
+            "start": 585.1000000014901,
+            "status": 200,
+            "headersMs": 98.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_1.asset.json",
+            "start": 585.1999999992549,
+            "status": 200,
+            "headersMs": 98.90000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_2.asset.json",
+            "start": 585.1999999992549,
+            "status": 200,
+            "headersMs": 99.90000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_3.asset.json",
+            "start": 585.4000000022352,
+            "status": 200,
+            "headersMs": 101.29999999701977
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_4.asset.json",
+            "start": 585.6000000014901,
+            "status": 200,
+            "headersMs": 103.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_5.asset.json",
+            "start": 585.8000000007451,
+            "status": 200,
+            "headersMs": 103.80000000074506
+          },
+          {
+            "url": "assets/creatures/boar.glb",
+            "start": 587.6999999992549,
+            "status": 200,
+            "headersMs": 102.30000000074506
+          },
+          {
+            "url": "assets/creatures/crab.glb",
+            "start": 588.1999999992549,
+            "status": 200,
+            "headersMs": 105.30000000074506
+          },
+          {
+            "url": "assets/creatures/seagull.glb",
+            "start": 588.3000000007451,
+            "status": 200,
+            "headersMs": 106.60000000149012
+          },
+          {
+            "url": "assets/creatures/shark.glb",
+            "start": 588.5,
+            "status": 200,
+            "headersMs": 117.90000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodLog.obj",
+            "start": 610,
+            "status": 200,
+            "headersMs": 96.69999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodLog.mtl",
+            "start": 610.3000000007451,
+            "status": 200,
+            "headersMs": 96.60000000149012
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe.obj",
+            "start": 610.4000000022352,
+            "status": 200,
+            "headersMs": 93.29999999701977
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe.mtl",
+            "start": 610.5,
+            "status": 200,
+            "headersMs": 96.60000000149012
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe_Small.obj",
+            "start": 610.6000000014901,
+            "status": 200,
+            "headersMs": 96.59999999776483
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe_Small.mtl",
+            "start": 610.8000000007451,
+            "status": 200,
+            "headersMs": 101.5
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.obj",
+            "start": 610.8000000007451,
+            "status": 200,
+            "headersMs": 105.69999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.mtl",
+            "start": 610.9000000022352,
+            "status": 200,
+            "headersMs": 105.89999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Shovel.obj",
+            "start": 611,
+            "status": 200,
+            "headersMs": 105.90000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Shovel.mtl",
+            "start": 611.1999999992549,
+            "status": 200,
+            "headersMs": 105.80000000074506
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Torch.obj",
+            "start": 611.3000000007451,
+            "status": 200,
+            "headersMs": 105.69999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Torch.mtl",
+            "start": 611.3000000007451,
+            "status": 200,
+            "headersMs": 106.10000000149012
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.obj",
+            "start": 611.5,
+            "status": 200,
+            "headersMs": 110.90000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.mtl",
+            "start": 611.6000000014901,
+            "status": 200,
+            "headersMs": 112.59999999776483
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Can_Closed.obj",
+            "start": 611.8000000007451,
+            "status": 200,
+            "headersMs": 112.80000000074506
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Can_Closed.mtl",
+            "start": 612,
+            "status": 200,
+            "headersMs": 112.90000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Pan.obj",
+            "start": 612,
+            "status": 200,
+            "headersMs": 114.40000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Pan.mtl",
+            "start": 612.1999999992549,
+            "status": 200,
+            "headersMs": 114.70000000298023
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/GasCan.obj",
+            "start": 612.1999999992549,
+            "status": 200,
+            "headersMs": 115.5
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/GasCan.mtl",
+            "start": 612.3000000007451,
+            "status": 200,
+            "headersMs": 115.5
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.obj",
+            "start": 612.5,
+            "status": 200,
+            "headersMs": 115.69999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.mtl",
+            "start": 612.5,
+            "status": 200,
+            "headersMs": 116.60000000149012
+          },
+          {
+            "url": "assets/Ultimate Animated Character Pack - Nov 2019/OBJ/Casual_Male.mtl",
+            "start": 2567,
+            "status": 200,
+            "headersMs": 3.199999999254942
+          },
+          {
+            "url": "assets/Ultimate Animated Character Pack - Nov 2019/OBJ/Casual_Male.obj",
+            "start": 2570.800000000745,
+            "status": 200,
+            "headersMs": 4.600000001490116
+          }
+        ],
+        "bodies": [
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/manifest.json",
+            "method": "json",
+            "start": 568.4000000022352,
+            "ms": 8.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/manifest.json",
+            "method": "json",
+            "start": 568.6000000014901,
+            "ms": 19
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/chest.glb",
+            "method": "arrayBuffer",
+            "start": 568.8000000007451,
+            "ms": 20.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/survival-items.json",
+            "method": "json",
+            "start": 574.1999999992549,
+            "ms": 35.80000000074506
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_1.asset.json",
+            "method": "json",
+            "start": 615.8000000007451,
+            "ms": 3.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_2.asset.json",
+            "method": "json",
+            "start": 616.1000000014901,
+            "ms": 11.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_3.asset.json",
+            "method": "json",
+            "start": 624.9000000022352,
+            "ms": 2.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_4.asset.json",
+            "method": "json",
+            "start": 627.1000000014901,
+            "ms": 0.8999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_5.asset.json",
+            "method": "json",
+            "start": 627.1999999992549,
+            "ms": 1.2000000029802322
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush.asset.json",
+            "method": "json",
+            "start": 627.4000000022352,
+            "ms": 2.099999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Flowers.asset.json",
+            "method": "json",
+            "start": 627.5,
+            "ms": 2
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Large.asset.json",
+            "method": "json",
+            "start": 627.6000000014901,
+            "ms": 2
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Large_Flowers.asset.json",
+            "method": "json",
+            "start": 628.1999999992549,
+            "ms": 5.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Small.asset.json",
+            "method": "json",
+            "start": 629.3000000007451,
+            "ms": 5.899999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Small_Flowers.asset.json",
+            "method": "json",
+            "start": 629.5,
+            "ms": 5.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_2.asset.json",
+            "method": "json",
+            "start": 632.1999999992549,
+            "ms": 4.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_1.asset.json",
+            "method": "json",
+            "start": 632.5,
+            "ms": 3.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_10.asset.json",
+            "method": "json",
+            "start": 632.6000000014901,
+            "ms": 3.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_3.asset.json",
+            "method": "json",
+            "start": 632.6999999992549,
+            "ms": 3.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_4.asset.json",
+            "method": "json",
+            "start": 632.8000000007451,
+            "ms": 3.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_5.asset.json",
+            "method": "json",
+            "start": 633.1000000014901,
+            "ms": 3.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_6.asset.json",
+            "method": "json",
+            "start": 633.3000000007451,
+            "ms": 3.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_7.asset.json",
+            "method": "json",
+            "start": 633.6000000014901,
+            "ms": 3
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_8.asset.json",
+            "method": "json",
+            "start": 633.8000000007451,
+            "ms": 2.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_9.asset.json",
+            "method": "json",
+            "start": 633.9000000022352,
+            "ms": 2.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_1.asset.json",
+            "method": "json",
+            "start": 634,
+            "ms": 2.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_1_Clump.asset.json",
+            "method": "json",
+            "start": 634.1000000014901,
+            "ms": 2.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_2.asset.json",
+            "method": "json",
+            "start": 634.1000000014901,
+            "ms": 2.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_2_Clump.asset.json",
+            "method": "json",
+            "start": 636.5,
+            "ms": 0.9000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_3_Clump.asset.json",
+            "method": "json",
+            "start": 636.6999999992549,
+            "ms": 3
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_4_Clump.asset.json",
+            "method": "json",
+            "start": 640.3000000007451,
+            "ms": 0.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_5_Clump.asset.json",
+            "method": "json",
+            "start": 640.5,
+            "ms": 0.4000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Large.asset.json",
+            "method": "json",
+            "start": 641.8000000007451,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Large_Extruded.asset.json",
+            "method": "json",
+            "start": 642.6999999992549,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Small.asset.json",
+            "method": "json",
+            "start": 648.3000000007451,
+            "ms": 0.6999999992549419
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_1.asset.json",
+            "method": "json",
+            "start": 648.5,
+            "ms": 0.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_2.asset.json",
+            "method": "json",
+            "start": 649.6000000014901,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_3.asset.json",
+            "method": "json",
+            "start": 654.6000000014901,
+            "ms": 4.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_4.asset.json",
+            "method": "json",
+            "start": 654.9000000022352,
+            "ms": 4.399999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_5.asset.json",
+            "method": "json",
+            "start": 655.1000000014901,
+            "ms": 4.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_1.asset.json",
+            "method": "json",
+            "start": 655.1999999992549,
+            "ms": 4.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_2.asset.json",
+            "method": "json",
+            "start": 658.1000000014901,
+            "ms": 1.5999999977648258
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_3.asset.json",
+            "method": "json",
+            "start": 658.8000000007451,
+            "ms": 0.8999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_4.asset.json",
+            "method": "json",
+            "start": 659,
+            "ms": 0.8000000007450581
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_5.asset.json",
+            "method": "json",
+            "start": 659.6000000014901,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_1.asset.json",
+            "method": "json",
+            "start": 660,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_2.asset.json",
+            "method": "json",
+            "start": 661.8000000007451,
+            "ms": 3
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_3.asset.json",
+            "method": "json",
+            "start": 665,
+            "ms": 0.6999999992549419
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_4.asset.json",
+            "method": "json",
+            "start": 665.1999999992549,
+            "ms": 0.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_5.asset.json",
+            "method": "json",
+            "start": 665.9000000022352,
+            "ms": 0.29999999701976776
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_1.asset.json",
+            "method": "json",
+            "start": 668.1000000014901,
+            "ms": 0.8000000007450581
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_2.asset.json",
+            "method": "json",
+            "start": 668.4000000022352,
+            "ms": 0.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_3.asset.json",
+            "method": "json",
+            "start": 672.9000000022352,
+            "ms": 0.6999999992549419
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_4.asset.json",
+            "method": "json",
+            "start": 673.1000000014901,
+            "ms": 0.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_1.asset.json",
+            "method": "json",
+            "start": 673.9000000022352,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_2.asset.json",
+            "method": "json",
+            "start": 675.1999999992549,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_3.asset.json",
+            "method": "json",
+            "start": 676.6000000014901,
+            "ms": 0.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_4.asset.json",
+            "method": "json",
+            "start": 676.6999999992549,
+            "ms": 0.4000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_5.asset.json",
+            "method": "json",
+            "start": 678.3000000007451,
+            "ms": 2.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_1.asset.json",
+            "method": "json",
+            "start": 681.4000000022352,
+            "ms": 1.0999999977648258
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_2.asset.json",
+            "method": "json",
+            "start": 681.6999999992549,
+            "ms": 0.9000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_Flowers.asset.json",
+            "method": "json",
+            "start": 683.4000000022352,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_1.asset.json",
+            "method": "json",
+            "start": 684.1000000014901,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_2.asset.json",
+            "method": "json",
+            "start": 685.1000000014901,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_3.asset.json",
+            "method": "json",
+            "start": 686.6999999992549,
+            "ms": 0.20000000298023224
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_4.asset.json",
+            "method": "json",
+            "start": 689.4000000022352,
+            "ms": 0.5999999977648258
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_5.asset.json",
+            "method": "json",
+            "start": 689.6000000014901,
+            "ms": 0.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/boar.glb",
+            "method": "arrayBuffer",
+            "start": 690,
+            "ms": 0.4000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/crab.glb",
+            "method": "arrayBuffer",
+            "start": 693.5,
+            "ms": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/seagull.glb",
+            "method": "arrayBuffer",
+            "start": 694.9000000022352,
+            "ms": 13.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe.obj",
+            "method": "text",
+            "start": 703.6999999992549,
+            "ms": 13.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/shark.glb",
+            "method": "arrayBuffer",
+            "start": 706.4000000022352,
+            "ms": 13.099999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodLog.obj",
+            "method": "text",
+            "start": 706.6999999992549,
+            "ms": 15.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodLog.mtl",
+            "method": "text",
+            "start": 706.9000000022352,
+            "ms": 15.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe.mtl",
+            "method": "text",
+            "start": 707.1000000014901,
+            "ms": 15.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe_Small.obj",
+            "method": "text",
+            "start": 707.1999999992549,
+            "ms": 15.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe_Small.mtl",
+            "method": "text",
+            "start": 712.3000000007451,
+            "ms": 12
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.obj",
+            "method": "text",
+            "start": 716.5,
+            "ms": 10.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.mtl",
+            "method": "text",
+            "start": 716.8000000007451,
+            "ms": 9.899999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Shovel.obj",
+            "method": "text",
+            "start": 716.9000000022352,
+            "ms": 9.899999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Shovel.mtl",
+            "method": "text",
+            "start": 717,
+            "ms": 9.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Torch.obj",
+            "method": "text",
+            "start": 717,
+            "ms": 9.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Torch.mtl",
+            "method": "text",
+            "start": 717.4000000022352,
+            "ms": 9.799999997019768
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.obj",
+            "method": "text",
+            "start": 722.4000000022352,
+            "ms": 5.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.mtl",
+            "method": "text",
+            "start": 724.1999999992549,
+            "ms": 4.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Can_Closed.obj",
+            "method": "text",
+            "start": 724.6000000014901,
+            "ms": 3.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Can_Closed.mtl",
+            "method": "text",
+            "start": 724.9000000022352,
+            "ms": 3.399999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Pan.obj",
+            "method": "text",
+            "start": 726.4000000022352,
+            "ms": 2.7999999970197678
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Pan.mtl",
+            "method": "text",
+            "start": 726.9000000022352,
+            "ms": 2.2999999970197678
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/GasCan.obj",
+            "method": "text",
+            "start": 727.6999999992549,
+            "ms": 2.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/GasCan.mtl",
+            "method": "text",
+            "start": 727.8000000007451,
+            "ms": 4.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.obj",
+            "method": "text",
+            "start": 728.1999999992549,
+            "ms": 4.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.mtl",
+            "method": "text",
+            "start": 729.1000000014901,
+            "ms": 3.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/Ultimate%20Animated%20Character%20Pack%20-%20Nov%202019/OBJ/Casual_Male.mtl",
+            "method": "text",
+            "start": 2570.199999999255,
+            "ms": 0.4000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/Ultimate%20Animated%20Character%20Pack%20-%20Nov%202019/OBJ/Casual_Male.obj",
+            "method": "text",
+            "start": 2575.400000002235,
+            "ms": 3
+          }
+        ],
+        "gl": {
+          "createTexture": {
+            "count": 2,
+            "totalMs": 0.10000000149011612,
+            "maxMs": 0.10000000149011612
+          },
+          "texImage2D": {
+            "count": 4,
+            "totalMs": 0.29999999701976776,
+            "maxMs": 0.10000000149011612
+          },
+          "createBuffer": {
+            "count": 138,
+            "totalMs": 0.3999999985098839,
+            "maxMs": 0.10000000149011612
+          },
+          "bufferData": {
+            "count": 138,
+            "totalMs": 2.1999999955296516,
+            "maxMs": 0.30000000074505806
+          },
+          "compileShader": {
+            "count": 4,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          "linkProgram": {
+            "count": 2,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        },
+        "loaded": 96,
+        "total": 96,
+        "pendingModels": []
+      }
+    },
+    {
+      "index": 2,
+      "start": 8875.2624,
+      "console": [
+        {
+          "ms": 69.86260000000038,
+          "type": "log",
+          "text": "App: Bootstrapping Island Survival: Escape foundation..."
+        },
+        {
+          "ms": 77.31440000000111,
+          "type": "log",
+          "text": "Engine: WebGL 2 context initialized successfully."
+        },
+        {
+          "ms": 83.57619999999952,
+          "type": "log",
+          "text": "SceneManager: Transitioning to scene 'Loading'..."
+        },
+        {
+          "ms": 83.63440000000082,
+          "type": "log",
+          "text": "LoadingScene: Initializing resources..."
+        },
+        {
+          "ms": 263.16309999999976,
+          "type": "log",
+          "text": "LoadingScene: Loaded 11 Survival Pack models."
+        },
+        {
+          "ms": 2091.918600000001,
+          "type": "log",
+          "text": "LoadingScene: Compiling 1 shared models..."
+        },
+        {
+          "ms": 2622.3613000000005,
+          "type": "log",
+          "text": "LoadingScene: Assets loaded. Transitioning to Main Menu..."
+        },
+        {
+          "ms": 2622.4426000000003,
+          "type": "log",
+          "text": "SceneManager: Transitioning to scene 'MainMenu'..."
+        },
+        {
+          "ms": 2622.7286999999997,
+          "type": "log",
+          "text": "LoadingScene destroyed."
+        },
+        {
+          "ms": 2716.1841000000004,
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        }
+      ],
+      "errors": [],
+      "menuReady": true,
+      "wallMs": 3083.9552999999996,
+      "diagnostics": {
+        "started": 21.199999999254942,
+        "fetch": [
+          {
+            "url": "assets/environment/manifest.json",
+            "start": 75.19999999925494,
+            "status": 200,
+            "headersMs": 7.099999997764826
+          },
+          {
+            "url": "assets/creatures/manifest.json",
+            "start": 75.69999999925494,
+            "status": 200,
+            "headersMs": 6.800000000745058
+          },
+          {
+            "url": "assets/environment/chest.glb",
+            "start": 75.89999999850988,
+            "status": 200,
+            "headersMs": 6.699999999254942
+          },
+          {
+            "url": "assets/survival-pack/survival-items.json",
+            "start": 76.09999999776483,
+            "status": 200,
+            "headersMs": 11.5
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_1.asset.json",
+            "start": 87.89999999850988,
+            "status": 200,
+            "headersMs": 49.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_2.asset.json",
+            "start": 88.09999999776483,
+            "status": 200,
+            "headersMs": 49.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_3.asset.json",
+            "start": 88.29999999701977,
+            "status": 200,
+            "headersMs": 49.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_4.asset.json",
+            "start": 88.29999999701977,
+            "status": 200,
+            "headersMs": 50
+          },
+          {
+            "url": "assets/environment/OBJ/BirchTree_5.asset.json",
+            "start": 88.39999999850988,
+            "status": 200,
+            "headersMs": 50
+          },
+          {
+            "url": "assets/environment/OBJ/Bush.asset.json",
+            "start": 88.5,
+            "status": 200,
+            "headersMs": 50.099999997764826
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Flowers.asset.json",
+            "start": 88.59999999776483,
+            "status": 200,
+            "headersMs": 55
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Large.asset.json",
+            "start": 88.59999999776483,
+            "status": 200,
+            "headersMs": 55.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Large_Flowers.asset.json",
+            "start": 88.79999999701977,
+            "status": 200,
+            "headersMs": 55.20000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Small.asset.json",
+            "start": 88.79999999701977,
+            "status": 200,
+            "headersMs": 55.400000002235174
+          },
+          {
+            "url": "assets/environment/OBJ/Bush_Small_Flowers.asset.json",
+            "start": 88.89999999850988,
+            "status": 200,
+            "headersMs": 55.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_1.asset.json",
+            "start": 88.89999999850988,
+            "status": 200,
+            "headersMs": 55.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_10.asset.json",
+            "start": 89,
+            "status": 200,
+            "headersMs": 55.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_2.asset.json",
+            "start": 89,
+            "status": 200,
+            "headersMs": 55.79999999701977
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_3.asset.json",
+            "start": 89.29999999701977,
+            "status": 200,
+            "headersMs": 55.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_4.asset.json",
+            "start": 89.39999999850988,
+            "status": 200,
+            "headersMs": 55.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_5.asset.json",
+            "start": 89.5,
+            "status": 200,
+            "headersMs": 55.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_6.asset.json",
+            "start": 89.59999999776483,
+            "status": 200,
+            "headersMs": 56.400000002235174
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_7.asset.json",
+            "start": 89.69999999925494,
+            "status": 200,
+            "headersMs": 56.399999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_8.asset.json",
+            "start": 89.79999999701977,
+            "status": 200,
+            "headersMs": 56.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/DeadTree_9.asset.json",
+            "start": 90,
+            "status": 200,
+            "headersMs": 56.599999997764826
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_1.asset.json",
+            "start": 90.09999999776483,
+            "status": 200,
+            "headersMs": 56.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_1_Clump.asset.json",
+            "start": 90.29999999701977,
+            "status": 200,
+            "headersMs": 56.70000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_2.asset.json",
+            "start": 90.5,
+            "status": 200,
+            "headersMs": 56.899999998509884
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_2_Clump.asset.json",
+            "start": 90.69999999925494,
+            "status": 200,
+            "headersMs": 56.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_3_Clump.asset.json",
+            "start": 91,
+            "status": 200,
+            "headersMs": 56.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_4_Clump.asset.json",
+            "start": 91.19999999925494,
+            "status": 200,
+            "headersMs": 56.599999997764826
+          },
+          {
+            "url": "assets/environment/OBJ/Flower_5_Clump.asset.json",
+            "start": 91.29999999701977,
+            "status": 200,
+            "headersMs": 56.600000001490116
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Large.asset.json",
+            "start": 91.39999999850988,
+            "status": 200,
+            "headersMs": 55.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Large_Extruded.asset.json",
+            "start": 91.39999999850988,
+            "status": 200,
+            "headersMs": 56.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/Grass_Small.asset.json",
+            "start": 91.5,
+            "status": 200,
+            "headersMs": 57.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_1.asset.json",
+            "start": 91.69999999925494,
+            "status": 200,
+            "headersMs": 58.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_2.asset.json",
+            "start": 91.79999999701977,
+            "status": 200,
+            "headersMs": 59.70000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_3.asset.json",
+            "start": 91.79999999701977,
+            "status": 200,
+            "headersMs": 62.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_4.asset.json",
+            "start": 92,
+            "status": 200,
+            "headersMs": 63.599999997764826
+          },
+          {
+            "url": "assets/environment/OBJ/MapleTree_5.asset.json",
+            "start": 92,
+            "status": 200,
+            "headersMs": 64
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_1.asset.json",
+            "start": 92.09999999776483,
+            "status": 200,
+            "headersMs": 64.40000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_2.asset.json",
+            "start": 92.19999999925494,
+            "status": 200,
+            "headersMs": 64.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_3.asset.json",
+            "start": 92.19999999925494,
+            "status": 200,
+            "headersMs": 68.59999999776483
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_4.asset.json",
+            "start": 92.5,
+            "status": 200,
+            "headersMs": 68.39999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/NormalTree_5.asset.json",
+            "start": 92.5,
+            "status": 200,
+            "headersMs": 68.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_1.asset.json",
+            "start": 92.59999999776483,
+            "status": 200,
+            "headersMs": 75.5
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_2.asset.json",
+            "start": 92.69999999925494,
+            "status": 200,
+            "headersMs": 75.69999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_3.asset.json",
+            "start": 92.89999999850988,
+            "status": 200,
+            "headersMs": 76
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_4.asset.json",
+            "start": 93.29999999701977,
+            "status": 200,
+            "headersMs": 76.60000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/PalmTree_5.asset.json",
+            "start": 93.5,
+            "status": 200,
+            "headersMs": 76.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_1.asset.json",
+            "start": 93.79999999701977,
+            "status": 200,
+            "headersMs": 80.20000000298023
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_2.asset.json",
+            "start": 93.79999999701977,
+            "status": 200,
+            "headersMs": 80.40000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_3.asset.json",
+            "start": 94,
+            "status": 200,
+            "headersMs": 83.5
+          },
+          {
+            "url": "assets/environment/OBJ/Petals_4.asset.json",
+            "start": 94,
+            "status": 200,
+            "headersMs": 83.59999999776483
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_1.asset.json",
+            "start": 94.19999999925494,
+            "status": 200,
+            "headersMs": 83.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_2.asset.json",
+            "start": 94.39999999850988,
+            "status": 200,
+            "headersMs": 84.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_3.asset.json",
+            "start": 94.79999999701977,
+            "status": 200,
+            "headersMs": 84.90000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_4.asset.json",
+            "start": 95,
+            "status": 200,
+            "headersMs": 86.19999999925494
+          },
+          {
+            "url": "assets/environment/OBJ/PineTree_5.asset.json",
+            "start": 95.09999999776483,
+            "status": 200,
+            "headersMs": 86.80000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_1.asset.json",
+            "start": 95.29999999701977,
+            "status": 200,
+            "headersMs": 89.40000000223517
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_2.asset.json",
+            "start": 95.39999999850988,
+            "status": 200,
+            "headersMs": 89.60000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Plant_Flowers.asset.json",
+            "start": 95.39999999850988,
+            "status": 200,
+            "headersMs": 90.60000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_1.asset.json",
+            "start": 95.59999999776483,
+            "status": 200,
+            "headersMs": 91.30000000074506
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_2.asset.json",
+            "start": 95.69999999925494,
+            "status": 200,
+            "headersMs": 92.89999999850988
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_3.asset.json",
+            "start": 95.79999999701977,
+            "status": 200,
+            "headersMs": 93.60000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_4.asset.json",
+            "start": 95.89999999850988,
+            "status": 200,
+            "headersMs": 94.10000000149012
+          },
+          {
+            "url": "assets/environment/OBJ/Rock_5.asset.json",
+            "start": 96,
+            "status": 200,
+            "headersMs": 97.09999999776483
+          },
+          {
+            "url": "assets/creatures/boar.glb",
+            "start": 97,
+            "status": 200,
+            "headersMs": 97.19999999925494
+          },
+          {
+            "url": "assets/creatures/crab.glb",
+            "start": 97.19999999925494,
+            "status": 200,
+            "headersMs": 97.09999999776483
+          },
+          {
+            "url": "assets/creatures/seagull.glb",
+            "start": 97.29999999701977,
+            "status": 200,
+            "headersMs": 110.30000000074506
+          },
+          {
+            "url": "assets/creatures/shark.glb",
+            "start": 97.39999999850988,
+            "status": 200,
+            "headersMs": 110.5
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodLog.obj",
+            "start": 107.89999999850988,
+            "status": 200,
+            "headersMs": 100.19999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodLog.mtl",
+            "start": 108.19999999925494,
+            "status": 200,
+            "headersMs": 100
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe.obj",
+            "start": 108.5,
+            "status": 200,
+            "headersMs": 101.79999999701977
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe.mtl",
+            "start": 108.59999999776483,
+            "status": 200,
+            "headersMs": 102
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe_Small.obj",
+            "start": 108.69999999925494,
+            "status": 200,
+            "headersMs": 102.19999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Axe_Small.mtl",
+            "start": 108.89999999850988,
+            "status": 200,
+            "headersMs": 102.39999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.obj",
+            "start": 109.19999999925494,
+            "status": 200,
+            "headersMs": 102.19999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.mtl",
+            "start": 109.29999999701977,
+            "status": 200,
+            "headersMs": 102.20000000298023
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Shovel.obj",
+            "start": 109.39999999850988,
+            "status": 200,
+            "headersMs": 102.19999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Shovel.mtl",
+            "start": 109.5,
+            "status": 200,
+            "headersMs": 103.5
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Torch.obj",
+            "start": 109.59999999776483,
+            "status": 200,
+            "headersMs": 107.10000000149012
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Torch.mtl",
+            "start": 109.69999999925494,
+            "status": 200,
+            "headersMs": 112.30000000074506
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.obj",
+            "start": 109.69999999925494,
+            "status": 200,
+            "headersMs": 112.89999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.mtl",
+            "start": 109.89999999850988,
+            "status": 200,
+            "headersMs": 112.89999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Can_Closed.obj",
+            "start": 110.19999999925494,
+            "status": 200,
+            "headersMs": 115.69999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Can_Closed.mtl",
+            "start": 110.5,
+            "status": 200,
+            "headersMs": 117.19999999925494
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Pan.obj",
+            "start": 110.69999999925494,
+            "status": 200,
+            "headersMs": 117.30000000074506
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Pan.mtl",
+            "start": 110.69999999925494,
+            "status": 200,
+            "headersMs": 117.39999999850988
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/GasCan.obj",
+            "start": 110.89999999850988,
+            "status": 200,
+            "headersMs": 117.60000000149012
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/GasCan.mtl",
+            "start": 111,
+            "status": 200,
+            "headersMs": 118.09999999776483
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.obj",
+            "start": 111.29999999701977,
+            "status": 200,
+            "headersMs": 117.90000000223517
+          },
+          {
+            "url": "assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.mtl",
+            "start": 111.39999999850988,
+            "status": 200,
+            "headersMs": 117.89999999850988
+          },
+          {
+            "url": "assets/Ultimate Animated Character Pack - Nov 2019/OBJ/Casual_Male.mtl",
+            "start": 2079.199999999255,
+            "status": 200,
+            "headersMs": 3.699999999254942
+          },
+          {
+            "url": "assets/Ultimate Animated Character Pack - Nov 2019/OBJ/Casual_Male.obj",
+            "start": 2083.2999999970198,
+            "status": 200,
+            "headersMs": 4.5
+          }
+        ],
+        "bodies": [
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/manifest.json",
+            "method": "json",
+            "start": 82.29999999701977,
+            "ms": 5.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/manifest.json",
+            "method": "json",
+            "start": 82.5,
+            "ms": 14.399999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/chest.glb",
+            "method": "arrayBuffer",
+            "start": 82.59999999776483,
+            "ms": 15
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/survival-items.json",
+            "method": "json",
+            "start": 87.59999999776483,
+            "ms": 20.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_1.asset.json",
+            "method": "json",
+            "start": 137.5,
+            "ms": 1.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_2.asset.json",
+            "method": "json",
+            "start": 137.79999999701977,
+            "ms": 1.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_3.asset.json",
+            "method": "json",
+            "start": 137.89999999850988,
+            "ms": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_4.asset.json",
+            "method": "json",
+            "start": 138.29999999701977,
+            "ms": 1.2000000029802322
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/BirchTree_5.asset.json",
+            "method": "json",
+            "start": 138.39999999850988,
+            "ms": 1.1000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush.asset.json",
+            "method": "json",
+            "start": 138.59999999776483,
+            "ms": 0.9000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Flowers.asset.json",
+            "method": "json",
+            "start": 143.59999999776483,
+            "ms": 2
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Large.asset.json",
+            "method": "json",
+            "start": 143.89999999850988,
+            "ms": 3.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Large_Flowers.asset.json",
+            "method": "json",
+            "start": 144,
+            "ms": 3.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Small.asset.json",
+            "method": "json",
+            "start": 144.19999999925494,
+            "ms": 3.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Bush_Small_Flowers.asset.json",
+            "method": "json",
+            "start": 144.19999999925494,
+            "ms": 3.899999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_1.asset.json",
+            "method": "json",
+            "start": 144.5,
+            "ms": 4
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_10.asset.json",
+            "method": "json",
+            "start": 144.69999999925494,
+            "ms": 3.899999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_2.asset.json",
+            "method": "json",
+            "start": 144.79999999701977,
+            "ms": 4.200000002980232
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_3.asset.json",
+            "method": "json",
+            "start": 144.89999999850988,
+            "ms": 4.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_4.asset.json",
+            "method": "json",
+            "start": 145,
+            "ms": 4.799999997019768
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_5.asset.json",
+            "method": "json",
+            "start": 145.19999999925494,
+            "ms": 5.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_6.asset.json",
+            "method": "json",
+            "start": 146,
+            "ms": 8.799999997019768
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_7.asset.json",
+            "method": "json",
+            "start": 146.09999999776483,
+            "ms": 8.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_8.asset.json",
+            "method": "json",
+            "start": 146.39999999850988,
+            "ms": 8.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/DeadTree_9.asset.json",
+            "method": "json",
+            "start": 146.59999999776483,
+            "ms": 8.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_1.asset.json",
+            "method": "json",
+            "start": 146.89999999850988,
+            "ms": 8.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_1_Clump.asset.json",
+            "method": "json",
+            "start": 147,
+            "ms": 8.299999997019768
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Large.asset.json",
+            "method": "json",
+            "start": 147.19999999925494,
+            "ms": 8.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_2.asset.json",
+            "method": "json",
+            "start": 147.39999999850988,
+            "ms": 8
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_2_Clump.asset.json",
+            "method": "json",
+            "start": 147.5,
+            "ms": 7.899999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_3_Clump.asset.json",
+            "method": "json",
+            "start": 147.69999999925494,
+            "ms": 7.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_4_Clump.asset.json",
+            "method": "json",
+            "start": 147.79999999701977,
+            "ms": 7.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Flower_5_Clump.asset.json",
+            "method": "json",
+            "start": 147.89999999850988,
+            "ms": 8
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Large_Extruded.asset.json",
+            "method": "json",
+            "start": 148.09999999776483,
+            "ms": 7.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Grass_Small.asset.json",
+            "method": "json",
+            "start": 149.19999999925494,
+            "ms": 7.099999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_1.asset.json",
+            "method": "json",
+            "start": 150,
+            "ms": 6.299999997019768
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_2.asset.json",
+            "method": "json",
+            "start": 151.5,
+            "ms": 5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_3.asset.json",
+            "method": "json",
+            "start": 154.59999999776483,
+            "ms": 2.400000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_4.asset.json",
+            "method": "json",
+            "start": 155.59999999776483,
+            "ms": 1.4000000022351742
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/MapleTree_5.asset.json",
+            "method": "json",
+            "start": 156,
+            "ms": 4.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_1.asset.json",
+            "method": "json",
+            "start": 156.5,
+            "ms": 4.099999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_2.asset.json",
+            "method": "json",
+            "start": 157.09999999776483,
+            "ms": 3.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_3.asset.json",
+            "method": "json",
+            "start": 160.79999999701977,
+            "ms": 0.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_4.asset.json",
+            "method": "json",
+            "start": 160.89999999850988,
+            "ms": 0.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/NormalTree_5.asset.json",
+            "method": "json",
+            "start": 161.39999999850988,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_1.asset.json",
+            "method": "json",
+            "start": 168.09999999776483,
+            "ms": 0.8000000007450581
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_2.asset.json",
+            "method": "json",
+            "start": 168.39999999850988,
+            "ms": 0.6000000014901161
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_3.asset.json",
+            "method": "json",
+            "start": 168.89999999850988,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_4.asset.json",
+            "method": "json",
+            "start": 169.89999999850988,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PalmTree_5.asset.json",
+            "method": "json",
+            "start": 170.39999999850988,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_1.asset.json",
+            "method": "json",
+            "start": 174,
+            "ms": 3.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_2.asset.json",
+            "method": "json",
+            "start": 174.19999999925494,
+            "ms": 3.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_3.asset.json",
+            "method": "json",
+            "start": 177.5,
+            "ms": 0.5999999977648258
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Petals_4.asset.json",
+            "method": "json",
+            "start": 177.59999999776483,
+            "ms": 0.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_1.asset.json",
+            "method": "json",
+            "start": 178.09999999776483,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_2.asset.json",
+            "method": "json",
+            "start": 178.59999999776483,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_3.asset.json",
+            "method": "json",
+            "start": 179.69999999925494,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_4.asset.json",
+            "method": "json",
+            "start": 181.19999999925494,
+            "ms": 0.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/PineTree_5.asset.json",
+            "method": "json",
+            "start": 181.89999999850988,
+            "ms": 3.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_1.asset.json",
+            "method": "json",
+            "start": 184.69999999925494,
+            "ms": 0.6999999992549419
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_2.asset.json",
+            "method": "json",
+            "start": 185,
+            "ms": 0.3999999985098839
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Plant_Flowers.asset.json",
+            "method": "json",
+            "start": 186,
+            "ms": 0.29999999701976776
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_1.asset.json",
+            "method": "json",
+            "start": 186.89999999850988,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_2.asset.json",
+            "method": "json",
+            "start": 188.59999999776483,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_3.asset.json",
+            "method": "json",
+            "start": 189.39999999850988,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_4.asset.json",
+            "method": "json",
+            "start": 190,
+            "ms": 2.7999999970197678
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/environment/OBJ/Rock_5.asset.json",
+            "method": "json",
+            "start": 193.09999999776483,
+            "ms": 0.30000000074505806
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/boar.glb",
+            "method": "arrayBuffer",
+            "start": 194.19999999925494,
+            "ms": 1.800000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/crab.glb",
+            "method": "arrayBuffer",
+            "start": 194.29999999701977,
+            "ms": 5.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/seagull.glb",
+            "method": "arrayBuffer",
+            "start": 207.59999999776483,
+            "ms": 9.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/creatures/shark.glb",
+            "method": "arrayBuffer",
+            "start": 207.89999999850988,
+            "ms": 12.899999998509884
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodLog.obj",
+            "method": "text",
+            "start": 208.09999999776483,
+            "ms": 14.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodLog.mtl",
+            "method": "text",
+            "start": 208.19999999925494,
+            "ms": 14.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe.obj",
+            "method": "text",
+            "start": 210.29999999701977,
+            "ms": 12.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe.mtl",
+            "method": "text",
+            "start": 210.59999999776483,
+            "ms": 15
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe_Small.obj",
+            "method": "text",
+            "start": 210.89999999850988,
+            "ms": 14.699999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Axe_Small.mtl",
+            "method": "text",
+            "start": 211.29999999701977,
+            "ms": 14.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.obj",
+            "method": "text",
+            "start": 211.39999999850988,
+            "ms": 14.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Raft_Paddle.mtl",
+            "method": "text",
+            "start": 211.5,
+            "ms": 14.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Shovel.obj",
+            "method": "text",
+            "start": 211.59999999776483,
+            "ms": 14.100000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Shovel.mtl",
+            "method": "text",
+            "start": 213,
+            "ms": 15.599999997764826
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Torch.obj",
+            "method": "text",
+            "start": 216.69999999925494,
+            "ms": 14.5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Torch.mtl",
+            "method": "text",
+            "start": 222.09999999776483,
+            "ms": 9.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.obj",
+            "method": "text",
+            "start": 222.59999999776483,
+            "ms": 9.600000001490116
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/WoodenTorch.mtl",
+            "method": "text",
+            "start": 222.79999999701977,
+            "ms": 9.400000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Can_Closed.obj",
+            "method": "text",
+            "start": 225.89999999850988,
+            "ms": 7
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Can_Closed.mtl",
+            "method": "text",
+            "start": 227.69999999925494,
+            "ms": 5.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Pan.obj",
+            "method": "text",
+            "start": 228,
+            "ms": 5
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Pan.mtl",
+            "method": "text",
+            "start": 228.09999999776483,
+            "ms": 4.900000002235174
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/GasCan.obj",
+            "method": "text",
+            "start": 228.5,
+            "ms": 6.799999997019768
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/GasCan.mtl",
+            "method": "text",
+            "start": 229.09999999776483,
+            "ms": 6.300000000745058
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.obj",
+            "method": "text",
+            "start": 229.19999999925494,
+            "ms": 6.199999999254942
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/survival-pack/SurvivalPack/OBJ/Bonfire_Fire.mtl",
+            "method": "text",
+            "start": 229.29999999701977,
+            "ms": 6.200000002980232
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/Ultimate%20Animated%20Character%20Pack%20-%20Nov%202019/OBJ/Casual_Male.mtl",
+            "method": "text",
+            "start": 2082.89999999851,
+            "ms": 0.19999999925494194
+          },
+          {
+            "url": "http://127.0.0.1:4178/assets/Ultimate%20Animated%20Character%20Pack%20-%20Nov%202019/OBJ/Casual_Male.obj",
+            "method": "text",
+            "start": 2087.7999999970198,
+            "ms": 1.7000000029802322
+          }
+        ],
+        "gl": {
+          "createTexture": {
+            "count": 2,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          "texImage2D": {
+            "count": 4,
+            "totalMs": 0.20000000298023224,
+            "maxMs": 0.10000000149011612
+          },
+          "createBuffer": {
+            "count": 138,
+            "totalMs": 0.29999999701976776,
+            "maxMs": 0.10000000149011612
+          },
+          "bufferData": {
+            "count": 138,
+            "totalMs": 2.299999989569187,
+            "maxMs": 0.6999999992549419
+          },
+          "compileShader": {
+            "count": 4,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          "linkProgram": {
+            "count": 2,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        },
+        "loaded": 96,
+        "total": 96,
+        "pendingModels": []
+      }
+    }
+  ],
+  "finishedAt": "2026-10-11T01:16:46.275Z"
+}

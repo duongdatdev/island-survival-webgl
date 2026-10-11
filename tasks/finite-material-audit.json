@@ -1,0 +1,527 @@
+{
+  "recordedAt": "2026-10-10T21:00:00.362Z",
+  "scope": "Ground-node material counts over 100 generated worlds; historical finite-source finding before deep mining. These counts exclude the new repeatable deep faces and are not total current-world material limits or duration evidence.",
+  "ironOreRange": [
+    83,
+    107
+  ],
+  "copperOreRange": [
+    63,
+    92
+  ],
+  "recipes": {
+    "largeChestIron": 2,
+    "largeChestRefundIron": 1,
+    "barrelIron": 1
+  },
+  "counts": [
+    {
+      "seed": "0",
+      "ironOre": 95,
+      "copperOre": 77
+    },
+    {
+      "seed": "1",
+      "ironOre": 97,
+      "copperOre": 85
+    },
+    {
+      "seed": "2",
+      "ironOre": 102,
+      "copperOre": 83
+    },
+    {
+      "seed": "3",
+      "ironOre": 97,
+      "copperOre": 83
+    },
+    {
+      "seed": "4",
+      "ironOre": 95,
+      "copperOre": 78
+    },
+    {
+      "seed": "5",
+      "ironOre": 96,
+      "copperOre": 75
+    },
+    {
+      "seed": "6",
+      "ironOre": 93,
+      "copperOre": 77
+    },
+    {
+      "seed": "7",
+      "ironOre": 92,
+      "copperOre": 68
+    },
+    {
+      "seed": "8",
+      "ironOre": 90,
+      "copperOre": 80
+    },
+    {
+      "seed": "9",
+      "ironOre": 98,
+      "copperOre": 89
+    },
+    {
+      "seed": "10",
+      "ironOre": 104,
+      "copperOre": 86
+    },
+    {
+      "seed": "11",
+      "ironOre": 94,
+      "copperOre": 83
+    },
+    {
+      "seed": "12",
+      "ironOre": 93,
+      "copperOre": 88
+    },
+    {
+      "seed": "13",
+      "ironOre": 87,
+      "copperOre": 79
+    },
+    {
+      "seed": "14",
+      "ironOre": 102,
+      "copperOre": 76
+    },
+    {
+      "seed": "15",
+      "ironOre": 90,
+      "copperOre": 86
+    },
+    {
+      "seed": "16",
+      "ironOre": 94,
+      "copperOre": 74
+    },
+    {
+      "seed": "17",
+      "ironOre": 87,
+      "copperOre": 78
+    },
+    {
+      "seed": "18",
+      "ironOre": 93,
+      "copperOre": 72
+    },
+    {
+      "seed": "19",
+      "ironOre": 94,
+      "copperOre": 78
+    },
+    {
+      "seed": "20",
+      "ironOre": 102,
+      "copperOre": 77
+    },
+    {
+      "seed": "21",
+      "ironOre": 101,
+      "copperOre": 75
+    },
+    {
+      "seed": "22",
+      "ironOre": 84,
+      "copperOre": 74
+    },
+    {
+      "seed": "23",
+      "ironOre": 88,
+      "copperOre": 76
+    },
+    {
+      "seed": "24",
+      "ironOre": 90,
+      "copperOre": 90
+    },
+    {
+      "seed": "25",
+      "ironOre": 95,
+      "copperOre": 87
+    },
+    {
+      "seed": "26",
+      "ironOre": 91,
+      "copperOre": 80
+    },
+    {
+      "seed": "27",
+      "ironOre": 90,
+      "copperOre": 78
+    },
+    {
+      "seed": "28",
+      "ironOre": 92,
+      "copperOre": 76
+    },
+    {
+      "seed": "29",
+      "ironOre": 85,
+      "copperOre": 80
+    },
+    {
+      "seed": "30",
+      "ironOre": 83,
+      "copperOre": 81
+    },
+    {
+      "seed": "31",
+      "ironOre": 97,
+      "copperOre": 79
+    },
+    {
+      "seed": "32",
+      "ironOre": 99,
+      "copperOre": 69
+    },
+    {
+      "seed": "33",
+      "ironOre": 101,
+      "copperOre": 71
+    },
+    {
+      "seed": "34",
+      "ironOre": 86,
+      "copperOre": 79
+    },
+    {
+      "seed": "35",
+      "ironOre": 97,
+      "copperOre": 78
+    },
+    {
+      "seed": "36",
+      "ironOre": 99,
+      "copperOre": 86
+    },
+    {
+      "seed": "37",
+      "ironOre": 96,
+      "copperOre": 83
+    },
+    {
+      "seed": "38",
+      "ironOre": 96,
+      "copperOre": 79
+    },
+    {
+      "seed": "39",
+      "ironOre": 95,
+      "copperOre": 81
+    },
+    {
+      "seed": "40",
+      "ironOre": 86,
+      "copperOre": 72
+    },
+    {
+      "seed": "41",
+      "ironOre": 96,
+      "copperOre": 91
+    },
+    {
+      "seed": "42",
+      "ironOre": 93,
+      "copperOre": 78
+    },
+    {
+      "seed": "43",
+      "ironOre": 97,
+      "copperOre": 78
+    },
+    {
+      "seed": "44",
+      "ironOre": 94,
+      "copperOre": 80
+    },
+    {
+      "seed": "45",
+      "ironOre": 88,
+      "copperOre": 81
+    },
+    {
+      "seed": "46",
+      "ironOre": 99,
+      "copperOre": 79
+    },
+    {
+      "seed": "47",
+      "ironOre": 98,
+      "copperOre": 91
+    },
+    {
+      "seed": "48",
+      "ironOre": 91,
+      "copperOre": 79
+    },
+    {
+      "seed": "49",
+      "ironOre": 101,
+      "copperOre": 82
+    },
+    {
+      "seed": "50",
+      "ironOre": 88,
+      "copperOre": 79
+    },
+    {
+      "seed": "51",
+      "ironOre": 100,
+      "copperOre": 71
+    },
+    {
+      "seed": "52",
+      "ironOre": 103,
+      "copperOre": 69
+    },
+    {
+      "seed": "53",
+      "ironOre": 93,
+      "copperOre": 80
+    },
+    {
+      "seed": "54",
+      "ironOre": 91,
+      "copperOre": 75
+    },
+    {
+      "seed": "55",
+      "ironOre": 94,
+      "copperOre": 71
+    },
+    {
+      "seed": "56",
+      "ironOre": 91,
+      "copperOre": 83
+    },
+    {
+      "seed": "57",
+      "ironOre": 103,
+      "copperOre": 79
+    },
+    {
+      "seed": "58",
+      "ironOre": 89,
+      "copperOre": 83
+    },
+    {
+      "seed": "59",
+      "ironOre": 92,
+      "copperOre": 77
+    },
+    {
+      "seed": "60",
+      "ironOre": 92,
+      "copperOre": 72
+    },
+    {
+      "seed": "61",
+      "ironOre": 83,
+      "copperOre": 85
+    },
+    {
+      "seed": "62",
+      "ironOre": 107,
+      "copperOre": 78
+    },
+    {
+      "seed": "63",
+      "ironOre": 90,
+      "copperOre": 85
+    },
+    {
+      "seed": "64",
+      "ironOre": 99,
+      "copperOre": 82
+    },
+    {
+      "seed": "65",
+      "ironOre": 102,
+      "copperOre": 77
+    },
+    {
+      "seed": "66",
+      "ironOre": 89,
+      "copperOre": 81
+    },
+    {
+      "seed": "67",
+      "ironOre": 98,
+      "copperOre": 72
+    },
+    {
+      "seed": "68",
+      "ironOre": 100,
+      "copperOre": 79
+    },
+    {
+      "seed": "69",
+      "ironOre": 97,
+      "copperOre": 70
+    },
+    {
+      "seed": "70",
+      "ironOre": 91,
+      "copperOre": 73
+    },
+    {
+      "seed": "71",
+      "ironOre": 101,
+      "copperOre": 89
+    },
+    {
+      "seed": "72",
+      "ironOre": 93,
+      "copperOre": 77
+    },
+    {
+      "seed": "73",
+      "ironOre": 86,
+      "copperOre": 85
+    },
+    {
+      "seed": "74",
+      "ironOre": 96,
+      "copperOre": 76
+    },
+    {
+      "seed": "75",
+      "ironOre": 96,
+      "copperOre": 78
+    },
+    {
+      "seed": "76",
+      "ironOre": 93,
+      "copperOre": 77
+    },
+    {
+      "seed": "77",
+      "ironOre": 90,
+      "copperOre": 81
+    },
+    {
+      "seed": "78",
+      "ironOre": 91,
+      "copperOre": 75
+    },
+    {
+      "seed": "79",
+      "ironOre": 98,
+      "copperOre": 74
+    },
+    {
+      "seed": "80",
+      "ironOre": 96,
+      "copperOre": 63
+    },
+    {
+      "seed": "81",
+      "ironOre": 100,
+      "copperOre": 80
+    },
+    {
+      "seed": "82",
+      "ironOre": 97,
+      "copperOre": 73
+    },
+    {
+      "seed": "83",
+      "ironOre": 101,
+      "copperOre": 83
+    },
+    {
+      "seed": "84",
+      "ironOre": 90,
+      "copperOre": 80
+    },
+    {
+      "seed": "85",
+      "ironOre": 87,
+      "copperOre": 74
+    },
+    {
+      "seed": "86",
+      "ironOre": 87,
+      "copperOre": 89
+    },
+    {
+      "seed": "87",
+      "ironOre": 106,
+      "copperOre": 71
+    },
+    {
+      "seed": "88",
+      "ironOre": 92,
+      "copperOre": 82
+    },
+    {
+      "seed": "89",
+      "ironOre": 105,
+      "copperOre": 92
+    },
+    {
+      "seed": "90",
+      "ironOre": 89,
+      "copperOre": 74
+    },
+    {
+      "seed": "91",
+      "ironOre": 99,
+      "copperOre": 86
+    },
+    {
+      "seed": "92",
+      "ironOre": 94,
+      "copperOre": 77
+    },
+    {
+      "seed": "93",
+      "ironOre": 88,
+      "copperOre": 84
+    },
+    {
+      "seed": "94",
+      "ironOre": 86,
+      "copperOre": 71
+    },
+    {
+      "seed": "95",
+      "ironOre": 87,
+      "copperOre": 75
+    },
+    {
+      "seed": "96",
+      "ironOre": 106,
+      "copperOre": 77
+    },
+    {
+      "seed": "97",
+      "ironOre": 97,
+      "copperOre": 85
+    },
+    {
+      "seed": "98",
+      "ironOre": 90,
+      "copperOre": 88
+    },
+    {
+      "seed": "99",
+      "ironOre": 94,
+      "copperOre": 68
+    }
+  ],
+  "findingBeforeChange": "Ground iron/copper nodes are finite. Storm cargo contains no metal ore/ingots. Repeated optional large-chest building/dismantling consumes one net iron ingot per cycle, and barrels can consume the last ingot. No renewable metal source is currently implemented; long-term base expansion can exhaust the source needed for compass/tower and other remaining crafts.",
+  "status": "addressed-by-repeatable-deep-mining",
+  "resolution": {
+    "system": "src/systems/MineExtraction.js",
+    "description": "Two reusable deep faces inside the cave yield two iron/copper ore under eligible held input; six seconds with iron pick or ten with stone, with partial/pending progress saved and no offline generation.",
+    "evidence": "236 full unit cases passed, including 100-seed mine-face collision/line-of-sight checks; native mining and station-story cases passed in 1.8 minutes.",
+    "recordedAt": "2026-10-10T21:21:26.868Z"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "scope": "Five-second active ocean renderer at night/storm near 400 m, medium preset, fixed day-night time. Not a full stress or human-duration gate.",
+  "recordedAt": "2026-10-10T20:29:22.254Z",
+  "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+  "viewport": [
+    1280,
+    800
+  ],
+  "renderSize": [
+    1088,
+    680
+  ],
+  "frames": 601,
+  "elapsedMs": 5009.200000000186,
+  "fps": 119.82136448821726,
+  "p95Ms": 8.400000000001455,
+  "p99Ms": 8.5,
+  "livePlaySeconds": 5.024200000000024,
+  "paused": false,
+  "status": "active",
+  "storm": true,
+  "glError": 0,
+  "buildMode": "Vite development server used by Playwright webServer"
+}

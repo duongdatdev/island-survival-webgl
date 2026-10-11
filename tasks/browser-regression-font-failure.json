@@ -1,0 +1,19 @@
+{
+  "status": "failed",
+  "pid": 25060,
+  "root": "D:\\Project\\webgl\\island-survival\\.cache\\browser-snapshots\\2026-10-11T01-30-09-582Z\\app",
+  "sourceAndRuntimeSHA256": "45c5f9c4332648bfc65bfa8e7827ebed2c81dc1e566f51112a5bd012cc032e84",
+  "startedAt": "2026-10-11T01:30:11.281Z",
+  "scope": "Frozen source, browser stories and runtime assets; native Chrome dev-server regression. Dependencies resolve from the existing workspace installation. No current worktree HMR changes can affect this run.",
+  "childPid": 8732,
+  "exitCode": 1,
+  "finishedAt": "2026-10-11T01:39:49.543Z",
+  "resultCounts": {
+    "passed": 27,
+    "failed": 1,
+    "total": 28
+  },
+  "failure": "loading.spec.js raw Cinzel font assertion: snapshot copied production runtime assets, whose fonts are bundled under _vite, but omitted source assets/fonts and fonts.css.",
+  "qualification": "27 functional stories passed on this frozen source; overall run failed. Its UI used fallback fonts, so it does not establish final typography or a fully green suite. Corrected source-font capture passed the three-case asset/loading/storage smoke; a fresh complete run is in progress.",
+  "evidenceLog": ".cache/browser-snapshot-live-3.log"
+}

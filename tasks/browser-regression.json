@@ -1,0 +1,22 @@
+{
+    "status":  "passed",
+    "pid":  30104,
+    "root":  "D:\\Project\\webgl\\island-survival\\.cache\\browser-snapshots\\2026-10-11T02-25-02-274Z\\app",
+    "sourceAndRuntimeSHA256":  "014f612c1388af6a46e61d7164e530adb8ac37b8def21ca2b3da2b07a4db9c3b",
+    "selectedPatterns":  [
+
+                         ],
+    "baseURL":  "http://127.0.0.1:4183",
+    "startedAt":  "2026-10-11T02:25:10.852Z",
+    "scope":  "Frozen source, browser stories and runtime assets; native Chrome dev-server regression. Dependencies resolve from the existing workspace installation. No current worktree HMR changes can affect this run.",
+    "childPid":  33324,
+    "exitCode":  0,
+    "finishedAt":  "2026-10-11T02:43:06.083Z",
+    "resultCounts":  {
+                         "passed":  33,
+                         "failed":  0,
+                         "total":  33
+                     },
+    "evidenceLog":  ".cache/browser-full-polish.log",
+    "qualification":  "Complete 33-case native Chrome regression of frozen protected records, keyboard/map, onboarding, objective/recipe pins and corrected wreck manifest; includes connected chapters 1-5 with supplied raw materials/approaches/solutions. Source predates manual/live OS motion preference, which separately passed the final motion plus keyboard/map checks 2/2. Not human duration, full physical traversal, current-build 90-minute retention or hardware-wide performance proof."
+}

@@ -1,0 +1,169 @@
+{
+  "recordedAt": "2026-10-06T04:55:27.380Z",
+  "viewport": [
+    1280,
+    800
+  ],
+  "seed": "performance-baseline",
+  "renderer": {
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4050 Laptop GPU (0x000028A1) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+  },
+  "results": [
+    {
+      "quality": "medium",
+      "location": "wreck_beach",
+      "frames": 1201,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 14.999992420665684,
+        "renderSize": [
+          1088,
+          680
+        ],
+        "viewDistance": 90
+      }
+    },
+    {
+      "quality": "medium",
+      "location": "abandoned_camp",
+      "frames": 1200,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 15.000001824626816,
+        "renderSize": [
+          1088,
+          680
+        ],
+        "viewDistance": 90
+      }
+    },
+    {
+      "quality": "medium",
+      "location": "weather_station",
+      "frames": 1200,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 15.00000665208617,
+        "renderSize": [
+          1088,
+          680
+        ],
+        "viewDistance": 90
+      }
+    },
+    {
+      "quality": "medium",
+      "location": "signal_tower",
+      "frames": 1200,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 14.999997052878095,
+        "renderSize": [
+          1088,
+          680
+        ],
+        "viewDistance": 90
+      }
+    },
+    {
+      "quality": "low",
+      "location": "wreck_beach",
+      "frames": 1200,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 14.999992420665684,
+        "renderSize": [
+          896,
+          560
+        ],
+        "viewDistance": 60
+      }
+    },
+    {
+      "quality": "low",
+      "location": "abandoned_camp",
+      "frames": 1200,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 15.000001824626816,
+        "renderSize": [
+          896,
+          560
+        ],
+        "viewDistance": 60
+      }
+    },
+    {
+      "quality": "low",
+      "location": "weather_station",
+      "frames": 1200,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 15.00000665208617,
+        "renderSize": [
+          896,
+          560
+        ],
+        "viewDistance": 60
+      }
+    },
+    {
+      "quality": "low",
+      "location": "signal_tower",
+      "frames": 1200,
+      "averageFPS": 120,
+      "p95ms": 8.4,
+      "p99ms": 8.5,
+      "state": {
+        "paused": false,
+        "deaths": 0,
+        "distanceFromPOI": 14.999997052878095,
+        "renderSize": [
+          896,
+          560
+        ],
+        "viewDistance": 60
+      }
+    }
+  ],
+  "errors": [],
+  "scope": "Ten seconds at each POI/quality after settling. Initial campaign only; not a maximum-construction or 90-minute retention acceptance.",
+  "hardware": {
+    "cpu": "AMD Ryzen 5 7535HS with Radeon Graphics, 6 cores",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpuDriver": "32.0.16.1692",
+    "os": "Windows 11 Home Single Language",
+    "ramKiB": 15930392
+  },
+  "buildArtifact": "index-CY2W0XLX.js"
+}
