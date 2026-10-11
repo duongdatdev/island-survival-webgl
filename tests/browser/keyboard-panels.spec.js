@@ -1,0 +1,60 @@
+import { test, expect } from '@playwright/test';
+
+test('keyboard focus survives recipe changes and crafting, stays in the dialog and returns to its opener', async ({ page }) => {
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.goto('/'); await expect(page.locator('#main-menu')).toBeVisible({ timeout: 30000 });
+    await page.locator('#menu-play-btn').click(); await page.locator('#world-create-btn').click();
+    await page.locator('#world-name-input').fill('Keyboard panels');
+    await page.locator('#world-form button[type="submit"]').click(); await page.locator('#world-play-btn').click();
+    await expect(page.locator('.campaign-toolbar')).toBeVisible({ timeout: 45000 });
+    await page.evaluate(() => {
+        const s = window.__GAME_ENGINE__.scenes.activeScene;
+        s.tutorial.skip(); s.engine.input.setPointerLockEnabled(false);
+        const slots = Array(28).fill(null); slots[0] = { id: 'fiber', count: 6 }; s.inventory.restore(slots);
+    });
+    const opener = page.locator('[data-action="panel"][data-arg="craft"]');
+    await opener.focus(); await page.keyboard.press('Enter');
+    const close = page.locator('#campaign-panel [data-action="close"]');
+    await expect(close).toBeFocused();
+    const recipe = page.locator('[data-action="recipe"][data-arg="rope"]');
+    await recipe.focus(); await page.keyboard.press('Enter'); await expect(recipe).toBeFocused();
+    const craft = page.locator('[data-action="craft"][data-arg="rope"]');
+    await craft.focus(); await page.keyboard.press('Enter');
+    await expect(craft).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(craft).toBeDisabled(); await expect(close).toBeFocused();
+    expect(await page.evaluate(() => window.__GAME_ENGINE__.scenes.activeScene.inventory.getCount('rope'))).toBe(2);
+    // Both boundaries wrap, including recovery after an outside element receives focus.
+    await page.keyboard.press('Shift+Tab');
+    await expect(page.locator('[data-action="pin"][data-arg="rope"]')).toBeFocused();
+    await page.keyboard.press('Tab'); await expect(close).toBeFocused();
+    await opener.focus(); await page.keyboard.press('Tab'); await expect(close).toBeFocused();
+    await page.keyboard.press('Escape'); await expect(page.locator('#campaign-panel')).toBeHidden(); await expect(opener).toBeFocused();
+    await page.locator('[data-action="panel"][data-arg="map"]').click();
+    const map = page.locator('#campaign-map'); await map.focus();
+    await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('#campaign-map-cursor')).toContainText('đã khám phá');
+    await page.keyboard.press('Enter'); await expect(map).toBeFocused();
+    await expect(page.locator('#campaign-panel-feedback')).toHaveText('Đã đặt dấu trên bản đồ.');
+    await page.keyboard.press('Shift+ArrowRight');
+    const marker = await page.evaluate(() => window.__GAME_ENGINE__.scenes.activeScene.campaign.markers[0]);
+    expect(marker.label).toBe('Điểm 1');
+    // Walk the cursor to the world boundary; fog must still prevent marking it.
+    for (let i = 0; i < 16; i++) await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('Enter'); await expect(map).toBeFocused();
+    await expect(page.locator('#campaign-panel-feedback')).toContainText('khám phá vùng này');
+    expect(await page.evaluate(() => window.__GAME_ENGINE__.scenes.activeScene.campaign.markers.length)).toBe(1);
+    const bounds = await map.boundingBox();
+    expect(bounds.y + bounds.height).toBeLessThan(800);
+    await expect(page.locator('#campaign-map-cursor')).toBeInViewport();
+    await expect(page.locator('#campaign-panel-feedback')).toBeInViewport();
+    await page.screenshot({ path: '.cache/keyboard-panels-results/keyboard-map.png' });
+    await page.keyboard.press('Escape');
+    await page.evaluate(async () => { const s = window.__GAME_ENGINE__.scenes.activeScene; await s.saveController.save(false); });
+    await page.reload(); await expect(page.locator('#main-menu')).toBeVisible({ timeout: 30000 });
+    await page.locator('#menu-play-btn').click(); await page.locator('#world-play-btn').click();
+    await expect(page.locator('.campaign-toolbar')).toBeVisible({ timeout: 45000 });
+    expect(await page.evaluate(() => window.__GAME_ENGINE__.scenes.activeScene.campaign.markers)).toEqual([marker]);
+    await page.screenshot({ path: '.cache/keyboard-panels-results/focus-return.png' });
+    expect(errors).toEqual([]);
+});
