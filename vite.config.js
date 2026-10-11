@@ -74,6 +74,13 @@ async function collectRuntimeAssets() {
     addRuntimeAsset(files, item.mtlPath);
   }
 
+  const campaignManifestPath = 'assets/campaign/manifest.json';
+  addRuntimeAsset(files, campaignManifestPath);
+  const campaignManifest = await readJson(campaignManifestPath);
+  for (const model of campaignManifest.models || []) addRuntimeAsset(files, model.path);
+  for (const license of campaignManifest.licenses || []) addRuntimeAsset(files, license);
+  addRuntimeAsset(files, 'assets/fonts/OFL-Cinzel.txt');
+
   // The current player renderer uses one fixed character. Keep this explicit so
   // adding character selection also requires updating the production payload.
   addRuntimeAsset(files, 'assets/Ultimate Animated Character Pack - Nov 2019/OBJ/Casual_Male.obj');
@@ -121,6 +128,8 @@ export default defineConfig({
   },
   server: {
     open: shouldOpenBrowser,
+    // Browser traces and isolated QA builds are generated continuously during verification.
+    watch: { ignored: ['**/.cache/**'] },
   },
   preview: {
     open: shouldOpenBrowser,

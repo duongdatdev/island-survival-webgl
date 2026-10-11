@@ -9,6 +9,8 @@ export class ModelAsset {
         this.textures = textures;
         this.animationNames = metadata.animationNames || [];
         this.targetSize = metadata.targetSize || [1, 1, 1];
+        this.bounds = metadata.bounds || null;
+        this.collisionGeometry = metadata.collisionGeometry || null;
         this._worldMatrix = Mat4.create();
     }
 
@@ -35,15 +37,17 @@ export class ModelAsset {
         }
 
         const bounds = ModelAsset._computeWorldBounds(primitiveEntries);
-        const normalization = ModelAsset._createNormalizationMatrix(
+        const normalization = options.nativeScale ? Mat4.create() : ModelAsset._createNormalizationMatrix(
             bounds,
             targetSize,
             yawOffset,
             preserveAspect
         );
+        if (options.grounded && !options.nativeScale) normalization[13] += targetSize[1] * 0.5;
         const textureCache = new Map();
         const drawables = [];
         const compiledMeshes = [];
+        const collisionGeometry = [];
 
         try {
             for (const entry of primitiveEntries) {
@@ -67,6 +71,15 @@ export class ModelAsset {
                 const localMatrix = Mat4.create();
                 Mat4.multiply(localMatrix, normalization, entry.nodeMatrix);
                 drawables.push({ mesh: rendererMesh, texture, localMatrix });
+                if (options.retainGeometry) {
+                    const indices = meshData.indices || Array.from({ length: meshData.positions.length / 3 }, (_, index) => index);
+                    for (const index of indices) {
+                        const x = meshData.positions[index * 3], y = meshData.positions[index * 3 + 1], z = meshData.positions[index * 3 + 2];
+                        collisionGeometry.push(localMatrix[0] * x + localMatrix[4] * y + localMatrix[8] * z + localMatrix[12],
+                            localMatrix[1] * x + localMatrix[5] * y + localMatrix[9] * z + localMatrix[13],
+                            localMatrix[2] * x + localMatrix[6] * y + localMatrix[10] * z + localMatrix[14]);
+                    }
+                }
             }
         } catch (error) {
             for (const mesh of compiledMeshes) mesh.delete();
@@ -84,7 +97,8 @@ export class ModelAsset {
             gl,
             drawables,
             Array.from(textureCache.values()).filter(Boolean),
-            { animationNames, targetSize }
+            { animationNames, collisionGeometry: options.retainGeometry ? new Float32Array(collisionGeometry) : null, targetSize: options.nativeScale
+                ? bounds.max.map((value, axis) => value - bounds.min[axis]) : targetSize, bounds }
         );
     }
 

@@ -1,0 +1,2588 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "building_column",
+      "path": "assets/campaign/models/building_column.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.5,
+        2.4,
+        0.5
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.25,
+          0,
+          -0.25
+        ],
+        "max": [
+          0.25,
+          2.4000000953674316,
+          0.25
+        ]
+      },
+      "triangles": 38,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "building_detail-pipe",
+      "path": "assets/campaign/models/building_detail-pipe.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.43416,
+        0.42768,
+        0.43416
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.2170799821615219,
+          0,
+          -0.2170799821615219
+        ],
+        "max": [
+          0.2170799821615219,
+          0.42767998576164246,
+          0.2170799821615219
+        ]
+      },
+      "triangles": 60,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "building_door-rotate-square-a",
+      "path": "assets/campaign/models/building_door-rotate-square-a.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.25,
+        2.1,
+        0.925
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.125,
+          -6.203926062552632e-17,
+          -0.0249999538064003
+        ],
+        "max": [
+          0.125,
+          2.0999999046325684,
+          0.8999999761581421
+        ]
+      },
+      "triangles": 188,
+      "drawables": 2,
+      "animations": [
+        "open",
+        "close",
+        "open-and-close"
+      ],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "building_floor",
+      "path": "assets/campaign/models/building_floor.glb",
+      "nativeScale": true,
+      "targetSize": [
+        2,
+        0.1,
+        2
+      ],
+      "sourceBounds": {
+        "min": [
+          -1,
+          0,
+          -1
+        ],
+        "max": [
+          1,
+          0.10000000149011612,
+          1
+        ]
+      },
+      "triangles": 12,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "building_roof-flat-square",
+      "path": "assets/campaign/models/building_roof-flat-square.glb",
+      "nativeScale": true,
+      "targetSize": [
+        2.39452,
+        0.4,
+        2.39452
+      ],
+      "sourceBounds": {
+        "min": [
+          -1.1972576379776,
+          0,
+          -1.1972576379776
+        ],
+        "max": [
+          1.1972576379776,
+          0.4000000059604645,
+          1.1972576379776
+        ]
+      },
+      "triangles": 84,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "building_stairs-open-short",
+      "path": "assets/campaign/models/building_stairs-open-short.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.3,
+        1.3,
+        2
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.6499999761581421,
+          0,
+          -2
+        ],
+        "max": [
+          0.6499999761581421,
+          1.3000000715255737,
+          0
+        ]
+      },
+      "triangles": 84,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "building_wall-doorway-square",
+      "path": "assets/campaign/models/building_wall-doorway-square.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.2,
+        2.4,
+        2
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.10000006854534149,
+          -7.21911442571558e-15,
+          -1.0000001192092896
+        ],
+        "max": [
+          0.10000009834766388,
+          2.4000000953674316,
+          1.0000001192092896
+        ]
+      },
+      "triangles": 64,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "building_wall",
+      "path": "assets/campaign/models/building_wall.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.1,
+        2.4,
+        2
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.05000001937150955,
+          0,
+          -1
+        ],
+        "max": [
+          0.05000001937150955,
+          2.4000000953674316,
+          1
+        ]
+      },
+      "triangles": 10,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/building-kit"
+    },
+    {
+      "id": "campaign_antenna",
+      "path": "assets/campaign/models/campaign_antenna.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.8,
+        6.175,
+        1.75
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.8999999761581421,
+          -0.02500009536743164,
+          -1.0000001192092896
+        ],
+        "max": [
+          0.9000000357627869,
+          6.150000095367432,
+          0.75
+        ]
+      },
+      "triangles": 760,
+      "drawables": 4,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_battery",
+      "path": "assets/campaign/models/campaign_battery.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.19563,
+        0.3,
+        0.19563
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.09781266748905182,
+          0,
+          -0.09781299531459808
+        ],
+        "max": [
+          0.09781266748905182,
+          0.30000001192092896,
+          0.09781299531459808
+        ]
+      },
+      "triangles": 100,
+      "drawables": 3,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "assets/survival-pack/SurvivalPack/License.txt"
+    },
+    {
+      "id": "campaign_compass",
+      "path": "assets/campaign/models/campaign_compass.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.13528,
+        0.12,
+        0.1047
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.06764109432697296,
+          0,
+          -0.05235219746828079
+        ],
+        "max": [
+          0.06764109432697296,
+          0.11999998986721039,
+          0.05235219746828079
+        ]
+      },
+      "triangles": 656,
+      "drawables": 5,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "assets/survival-pack/SurvivalPack/License.txt"
+    },
+    {
+      "id": "campaign_crop_carrot_1",
+      "path": "assets/campaign/models/campaign_crop_carrot_1.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.28388,
+        0.28,
+        0.05487
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.14194120466709137,
+          9.307560833171635e-10,
+          -0.027434103190898895
+        ],
+        "max": [
+          0.14194120466709137,
+          0.2800000011920929,
+          0.027434099465608597
+        ]
+      },
+      "triangles": 88,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://quaternius.com/packs/ultimatecrops.html"
+    },
+    {
+      "id": "campaign_crop_carrot_2",
+      "path": "assets/campaign/models/campaign_crop_carrot_2.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.2116,
+        0.41,
+        0.08588
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.10579989105463028,
+          0,
+          -0.04293963313102722
+        ],
+        "max": [
+          0.10579989105463028,
+          0.4099999964237213,
+          0.04293961077928543
+        ]
+      },
+      "triangles": 262,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://quaternius.com/packs/ultimatecrops.html"
+    },
+    {
+      "id": "campaign_crop_carrot_3",
+      "path": "assets/campaign/models/campaign_crop_carrot_3.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.34544,
+        0.54,
+        0.26738
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.1727224737405777,
+          1.54298334109626e-8,
+          -0.13369065523147583
+        ],
+        "max": [
+          0.1727224737405777,
+          0.5400000214576721,
+          0.13369062542915344
+        ]
+      },
+      "triangles": 408,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://quaternius.com/packs/ultimatecrops.html"
+    },
+    {
+      "id": "campaign_crop_carrot_4",
+      "path": "assets/campaign/models/campaign_crop_carrot_4.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.35435,
+        0.67,
+        0.26271
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.1771746575832367,
+          0,
+          -0.13135473430156708
+        ],
+        "max": [
+          0.1771746575832367,
+          0.6699999570846558,
+          0.1313547044992447
+        ]
+      },
+      "triangles": 514,
+      "drawables": 3,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://quaternius.com/packs/ultimatecrops.html"
+    },
+    {
+      "id": "campaign_dive_kit",
+      "path": "assets/campaign/models/campaign_dive_kit.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.68,
+        0.82,
+        0.46329
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.3400000035762787,
+          0.03999999165534973,
+          -0.30000001192092896
+        ],
+        "max": [
+          0.3400000333786011,
+          0.8600000143051147,
+          0.1632869839668274
+        ]
+      },
+      "triangles": 432,
+      "drawables": 4,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_door",
+      "path": "assets/campaign/models/campaign_door.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.99,
+        2.04,
+        0.265
+      ],
+      "sourceBounds": {
+        "min": [
+          0.005000002682209015,
+          0,
+          -0.11999999731779099
+        ],
+        "max": [
+          0.9950000047683716,
+          2.0399999618530273,
+          0.14500001072883606
+        ]
+      },
+      "triangles": 108,
+      "drawables": 3,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_doorway",
+      "path": "assets/campaign/models/campaign_doorway.glb",
+      "nativeScale": true,
+      "targetSize": [
+        2,
+        2.4,
+        0.14
+      ],
+      "sourceBounds": {
+        "min": [
+          -1,
+          0,
+          -0.07000000029802322
+        ],
+        "max": [
+          1,
+          2.4000000953674316,
+          0.07000000029802322
+        ]
+      },
+      "triangles": 36,
+      "drawables": 1,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_fish_trap",
+      "path": "assets/campaign/models/campaign_fish_trap.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.636,
+        0.81424,
+        0.636
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.31800001859664917,
+          0.032880984246730804,
+          -0.31800001859664917
+        ],
+        "max": [
+          0.31800001859664917,
+          0.8471189737319946,
+          0.31800001859664917
+        ]
+      },
+      "triangles": 760,
+      "drawables": 2,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_floor",
+      "path": "assets/campaign/models/campaign_floor.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.99,
+        0.2,
+        2
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.9950000047683716,
+          0,
+          -1
+        ],
+        "max": [
+          0.9950000047683716,
+          0.20000000298023224,
+          1
+        ]
+      },
+      "triangles": 120,
+      "drawables": 2,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_foundation",
+      "path": "assets/campaign/models/campaign_foundation.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.99,
+        0.2,
+        2
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.9950000047683716,
+          0,
+          -1
+        ],
+        "max": [
+          0.9950000047683716,
+          0.20000000298023224,
+          1
+        ]
+      },
+      "triangles": 120,
+      "drawables": 2,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_herb_1",
+      "path": "assets/campaign/models/campaign_herb_1.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.28386,
+        0.27294,
+        0.27636
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.12722741067409515,
+          0,
+          -0.11880745738744736
+        ],
+        "max": [
+          0.1566324383020401,
+          0.2729361057281494,
+          0.15755513310432434
+        ]
+      },
+      "triangles": 116,
+      "drawables": 1,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_herb_2",
+      "path": "assets/campaign/models/campaign_herb_2.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.60733,
+        0.42,
+        0.5565
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.3029298782348633,
+          0,
+          -0.251723051071167
+        ],
+        "max": [
+          0.3043992519378662,
+          0.41999998688697815,
+          0.3047807812690735
+        ]
+      },
+      "triangles": 212,
+      "drawables": 1,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_herb_3",
+      "path": "assets/campaign/models/campaign_herb_3.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.9007,
+        0.57,
+        0.89379
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.4485359787940979,
+          0,
+          -0.4417800307273865
+        ],
+        "max": [
+          0.4521661102771759,
+          0.5699999928474426,
+          0.452006459236145
+        ]
+      },
+      "triangles": 308,
+      "drawables": 1,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_hook",
+      "path": "assets/campaign/models/campaign_hook.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.3917,
+        0.581,
+        0.43939
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.13934017717838287,
+          0.07999998331069946,
+          -0.2196936309337616
+        ],
+        "max": [
+          0.2523607015609741,
+          0.6610000133514404,
+          0.2196936309337616
+        ]
+      },
+      "triangles": 320,
+      "drawables": 1,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_planter",
+      "path": "assets/campaign/models/campaign_planter.glb",
+      "nativeScale": true,
+      "targetSize": [
+        2.1,
+        0.42,
+        1.1
+      ],
+      "sourceBounds": {
+        "min": [
+          -1.0499999523162842,
+          0,
+          -0.550000011920929
+        ],
+        "max": [
+          1.0499999523162842,
+          0.41999998688697815,
+          0.550000011920929
+        ]
+      },
+      "triangles": 60,
+      "drawables": 2,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_radio",
+      "path": "assets/campaign/models/campaign_radio.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.25658,
+        0.32,
+        0.08678
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.1282922774553299,
+          0,
+          -0.043391209095716476
+        ],
+        "max": [
+          0.1282922774553299,
+          0.3199999928474426,
+          0.043391209095716476
+        ]
+      },
+      "triangles": 481,
+      "drawables": 4,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "assets/survival-pack/SurvivalPack/License.txt"
+    },
+    {
+      "id": "campaign_raft",
+      "path": "assets/campaign/models/campaign_raft.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.11241,
+        0.4,
+        2.1985
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.5562049150466919,
+          7.75877211367515e-8,
+          -1.0992487668991089
+        ],
+        "max": [
+          0.5562049150466919,
+          0.4000000059604645,
+          1.0992487668991089
+        ]
+      },
+      "triangles": 1036,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "assets/survival-pack/SurvivalPack/License.txt"
+    },
+    {
+      "id": "campaign_raft_floats",
+      "path": "assets/campaign/models/campaign_raft_floats.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.68381,
+        0.668,
+        1.96
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.841907262802124,
+          -0.3060000240802765,
+          -0.9800000786781311
+        ],
+        "max": [
+          0.8419073224067688,
+          0.3619999885559082,
+          0.9800000190734863
+        ]
+      },
+      "triangles": 1080,
+      "drawables": 3,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-raft-equipment.py"
+    },
+    {
+      "id": "campaign_raft_frame",
+      "path": "assets/campaign/models/campaign_raft_frame.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.42,
+        0.249,
+        2.2
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.7099999785423279,
+          0.10499992221593857,
+          -1.100000023841858
+        ],
+        "max": [
+          0.7099999785423279,
+          0.3540000021457672,
+          1.100000023841858
+        ]
+      },
+      "triangles": 428,
+      "drawables": 2,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-raft-equipment.py"
+    },
+    {
+      "id": "campaign_raft_motor",
+      "path": "assets/campaign/models/campaign_raft_motor.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.5,
+        1.39397,
+        0.8325
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.25,
+          -0.5239710807800293,
+          -1.3125
+        ],
+        "max": [
+          0.2499999850988388,
+          0.8700000047683716,
+          -0.47999995946884155
+        ]
+      },
+      "triangles": 272,
+      "drawables": 2,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-raft-equipment.py"
+    },
+    {
+      "id": "campaign_raft_paddle",
+      "path": "assets/campaign/models/campaign_raft_paddle.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.3,
+        0.054,
+        2.127
+      ],
+      "sourceBounds": {
+        "min": [
+          0.6499999761581421,
+          0.40299999713897705,
+          -0.9470000267028809
+        ],
+        "max": [
+          0.9500000476837158,
+          0.4570000171661377,
+          1.1800000667572021
+        ]
+      },
+      "triangles": 68,
+      "drawables": 1,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-raft-equipment.py"
+    },
+    {
+      "id": "campaign_raft_sail",
+      "path": "assets/campaign/models/campaign_raft_sail.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.72,
+        2.56,
+        1.71473
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.8600000143051147,
+          0.2900000810623169,
+          -0.8573629856109619
+        ],
+        "max": [
+          0.8600000143051147,
+          2.8499999046325684,
+          0.857363224029541
+        ]
+      },
+      "triangles": 384,
+      "drawables": 4,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-raft-equipment.py"
+    },
+    {
+      "id": "campaign_roof",
+      "path": "assets/campaign/models/campaign_roof.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.99,
+        0.11,
+        2.15
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.9950000047683716,
+          0,
+          -1.0750000476837158
+        ],
+        "max": [
+          0.9950000047683716,
+          0.10999999940395355,
+          1.0750000476837158
+        ]
+      },
+      "triangles": 96,
+      "drawables": 1,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_smelter",
+      "path": "assets/campaign/models/campaign_smelter.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.2,
+        1.87,
+        1.107
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.6000000238418579,
+          0,
+          -0.6050000190734863
+        ],
+        "max": [
+          0.6000000238418579,
+          1.8700001239776611,
+          0.5020000338554382
+        ]
+      },
+      "triangles": 300,
+      "drawables": 3,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_smoker",
+      "path": "assets/campaign/models/campaign_smoker.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.2,
+        1.73,
+        0.81
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.6000000238418579,
+          0,
+          -0.4050000011920929
+        ],
+        "max": [
+          0.6000000834465027,
+          1.7300000190734863,
+          0.4050000011920929
+        ]
+      },
+      "triangles": 268,
+      "drawables": 4,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_tent",
+      "path": "assets/campaign/models/campaign_tent.glb",
+      "nativeScale": true,
+      "targetSize": [
+        2.33018,
+        1.65,
+        3.97431
+      ],
+      "sourceBounds": {
+        "min": [
+          -1.1650898456573486,
+          7.620567998856131e-8,
+          -1.9871537685394287
+        ],
+        "max": [
+          1.1650898456573486,
+          1.6499998569488525,
+          1.9871538877487183
+        ]
+      },
+      "triangles": 788,
+      "drawables": 4,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "assets/survival-pack/SurvivalPack/License.txt"
+    },
+    {
+      "id": "campaign_torch",
+      "path": "assets/campaign/models/campaign_torch.glb",
+      "nativeScale": true,
+      "targetSize": [
+        0.18847,
+        0.7,
+        0.18561
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.09423509240150452,
+          0,
+          -0.09280356019735336
+        ],
+        "max": [
+          0.09423509240150452,
+          0.7000000476837158,
+          0.09280351549386978
+        ]
+      },
+      "triangles": 610,
+      "drawables": 4,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "assets/survival-pack/SurvivalPack/License.txt"
+    },
+    {
+      "id": "campaign_wall",
+      "path": "assets/campaign/models/campaign_wall.glb",
+      "nativeScale": true,
+      "targetSize": [
+        2,
+        2.4,
+        0.19
+      ],
+      "sourceBounds": {
+        "min": [
+          -1,
+          0,
+          -0.12999999523162842
+        ],
+        "max": [
+          1,
+          2.4000000953674316,
+          0.05999999865889549
+        ]
+      },
+      "triangles": 120,
+      "drawables": 2,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "campaign_water_tank",
+      "path": "assets/campaign/models/campaign_water_tank.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.34232,
+        1.73716,
+        1.133
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.671157956123352,
+          0,
+          -0.5249999761581421
+        ],
+        "max": [
+          0.671157956123352,
+          1.737156629562378,
+          0.6079999804496765
+        ]
+      },
+      "triangles": 496,
+      "drawables": 3,
+      "animations": [],
+      "license": "Project-owned",
+      "source": "scripts/build-campaign-models.py"
+    },
+    {
+      "id": "cave_corridor-corner",
+      "path": "assets/campaign/models/cave_corridor-corner.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4,
+        4.40054,
+        4
+      ],
+      "sourceBounds": {
+        "min": [
+          -2,
+          -1.7077717346281225e-14,
+          -2
+        ],
+        "max": [
+          2,
+          4.4005351066589355,
+          2
+        ]
+      },
+      "triangles": 624,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_corridor-end",
+      "path": "assets/campaign/models/cave_corridor-end.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4,
+        4.05,
+        4
+      ],
+      "sourceBounds": {
+        "min": [
+          -2,
+          -3.2793871581498525e-15,
+          -2.000000476837158
+        ],
+        "max": [
+          2,
+          4.050000190734863,
+          2.000000476837158
+        ]
+      },
+      "triangles": 1324,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_corridor-junction",
+      "path": "assets/campaign/models/cave_corridor-junction.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4.00577,
+        4.05,
+        4
+      ],
+      "sourceBounds": {
+        "min": [
+          -2,
+          -1.85215409090507e-14,
+          -2
+        ],
+        "max": [
+          2.0057735443115234,
+          4.050000190734863,
+          2.000000476837158
+        ]
+      },
+      "triangles": 564,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_corridor",
+      "path": "assets/campaign/models/cave_corridor.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4,
+        4.05,
+        4
+      ],
+      "sourceBounds": {
+        "min": [
+          -2,
+          -3.2793871581498525e-15,
+          -2.000000476837158
+        ],
+        "max": [
+          2,
+          4.050000190734863,
+          2.000000476837158
+        ]
+      },
+      "triangles": 884,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_gate",
+      "path": "assets/campaign/models/cave_gate.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4.4,
+        4.4,
+        1.4
+      ],
+      "sourceBounds": {
+        "min": [
+          -2.200000047683716,
+          0,
+          -0.7000001072883606
+        ],
+        "max": [
+          2.200000047683716,
+          4.399999618530273,
+          0.7000001072883606
+        ]
+      },
+      "triangles": 592,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_ladder",
+      "path": "assets/campaign/models/cave_ladder.glb",
+      "nativeScale": true,
+      "targetSize": [
+        1.14595,
+        2.9,
+        0.284
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.5729755759239197,
+          0,
+          -0.1420000046491623
+        ],
+        "max": [
+          0.5729755759239197,
+          2.8999998569488525,
+          0.1420000046491623
+        ]
+      },
+      "triangles": 160,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_room-large",
+      "path": "assets/campaign/models/cave_room-large.glb",
+      "nativeScale": true,
+      "targetSize": [
+        20.001,
+        4.40054,
+        20.23448
+      ],
+      "sourceBounds": {
+        "min": [
+          -10.000999450683594,
+          -1.7077717346281225e-14,
+          -10.11723804473877
+        ],
+        "max": [
+          10,
+          4.4005351066589355,
+          10.11723804473877
+        ]
+      },
+      "triangles": 8080,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_room-small",
+      "path": "assets/campaign/models/cave_room-small.glb",
+      "nativeScale": true,
+      "targetSize": [
+        12,
+        4.40054,
+        12
+      ],
+      "sourceBounds": {
+        "min": [
+          -6,
+          -1.7077717346281225e-14,
+          -5.999999046325684
+        ],
+        "max": [
+          6.000000476837158,
+          4.4005351066589355,
+          6.000000953674316
+        ]
+      },
+      "triangles": 3356,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_stairs",
+      "path": "assets/campaign/models/cave_stairs.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4,
+        8.55,
+        8
+      ],
+      "sourceBounds": {
+        "min": [
+          -2.0000007152557373,
+          -3.2793871581498525e-15,
+          -6
+        ],
+        "max": [
+          2.0000007152557373,
+          8.550000190734863,
+          2.000000238418579
+        ]
+      },
+      "triangles": 2386,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_template-floor",
+      "path": "assets/campaign/models/cave_template-floor.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4,
+        0.0001,
+        4
+      ],
+      "sourceBounds": {
+        "min": [
+          -2,
+          0,
+          -2
+        ],
+        "max": [
+          2,
+          0,
+          2
+        ]
+      },
+      "triangles": 4,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "cave_template-wall",
+      "path": "assets/campaign/models/cave_template-wall.glb",
+      "nativeScale": true,
+      "targetSize": [
+        4,
+        4.05,
+        2.16201
+      ],
+      "sourceBounds": {
+        "min": [
+          -2,
+          -3.2793871581498525e-15,
+          -2.1620066165924072
+        ],
+        "max": [
+          2,
+          4.050000190734863,
+          -5.960464477539063e-8
+        ]
+      },
+      "triangles": 440,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/modular-cave-kit"
+    },
+    {
+      "id": "food_bag",
+      "path": "assets/campaign/models/food_bag.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.09175,
+        0.25,
+        0.17165
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.11005000084638596,
+          0,
+          -0.2058999940752983
+        ],
+        "max": [
+          0.11005000084638596,
+          0.5997589910030364,
+          0.2058999940752983
+        ]
+      },
+      "triangles": 46,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_bowl-soup",
+      "path": "assets/campaign/models/food_bowl-soup.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.58711,
+        0.25,
+        0.67793
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.25107651948928833,
+          0,
+          -0.2899182140827179
+        ],
+        "max": [
+          0.25107651948928833,
+          0.2138247787952423,
+          0.2899182140827179
+        ]
+      },
+      "triangles": 132,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_carrot",
+      "path": "assets/campaign/models/food_carrot.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.11976,
+        0.25,
+        0.11976
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.17157098650932312,
+          0,
+          -0.17157098650932312
+        ],
+        "max": [
+          0.17157098650932312,
+          0.7163037061691284,
+          0.17157098650932312
+        ]
+      },
+      "triangles": 148,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_coconut-half",
+      "path": "assets/campaign/models/food_coconut-half.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.5,
+        0.25,
+        0.5
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.1241999939084053,
+          0,
+          -0.1241999939084053
+        ],
+        "max": [
+          0.1241999939084053,
+          0.1242000088095665,
+          0.1241999939084053
+        ]
+      },
+      "triangles": 92,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_coconut",
+      "path": "assets/campaign/models/food_coconut.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.25,
+        0.25,
+        0.25
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.12419999418575109,
+          0,
+          -0.12419999418575109
+        ],
+        "max": [
+          0.12419999418575109,
+          0.24840001786930963,
+          0.12419999418575109
+        ]
+      },
+      "triangles": 76,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_fish",
+      "path": "assets/campaign/models/food_fish.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.1535,
+        0.25,
+        0.48167
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.09891591221094131,
+          0,
+          -0.3103913366794586
+        ],
+        "max": [
+          0.09891591221094131,
+          0.322201132774353,
+          0.3103913366794586
+        ]
+      },
+      "triangles": 233,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_meat-cooked",
+      "path": "assets/campaign/models/food_meat-cooked.glb",
+      "nativeScale": false,
+      "targetSize": [
+        1.85463,
+        0.25,
+        2.23013
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.23924711346626282,
+          0,
+          -0.28768664598464966
+        ],
+        "max": [
+          0.23924711346626282,
+          0.06449999660253525,
+          0.28768664598464966
+        ]
+      },
+      "triangles": 116,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_meat-raw",
+      "path": "assets/campaign/models/food_meat-raw.glb",
+      "nativeScale": false,
+      "targetSize": [
+        1.85463,
+        0.25,
+        2.23013
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.23924711346626282,
+          0,
+          -0.28768664598464966
+        ],
+        "max": [
+          0.23924711346626282,
+          0.06449999660253525,
+          0.28768664598464966
+        ]
+      },
+      "triangles": 110,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_mushroom",
+      "path": "assets/campaign/models/food_mushroom.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.22426,
+        0.25,
+        0.25896
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.06243523210287094,
+          0,
+          -0.07209400087594986
+        ],
+        "max": [
+          0.06243523210287094,
+          0.13919998705387115,
+          0.07209400087594986
+        ]
+      },
+      "triangles": 80,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "food_pot",
+      "path": "assets/campaign/models/food_pot.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.45555,
+        0.25,
+        0.56962
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.3287247121334076,
+          0,
+          -0.41103580594062805
+        ],
+        "max": [
+          0.3287247121334076,
+          0.36079999804496765,
+          0.41103580594062805
+        ]
+      },
+      "triangles": 228,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/food-kit"
+    },
+    {
+      "id": "pirate_boat-row-small",
+      "path": "assets/campaign/models/pirate_boat-row-small.glb",
+      "nativeScale": false,
+      "targetSize": [
+        2.26966,
+        0.7,
+        1.95884
+      ],
+      "sourceBounds": {
+        "min": [
+          -1.3742690086364342,
+          -6.767919641759458e-17,
+          -1.1860731840133667
+        ],
+        "max": [
+          1.374269008636515,
+          0.8476955137593079,
+          1.1860731840133667
+        ]
+      },
+      "triangles": 168,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_crate",
+      "path": "assets/campaign/models/pirate_crate.glb",
+      "nativeScale": false,
+      "targetSize": [
+        1.12,
+        0.8,
+        1.36
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.5389999747276306,
+          0,
+          -0.6545000076293945
+        ],
+        "max": [
+          0.5389999747276306,
+          0.7699999809265137,
+          0.6545000076293945
+        ]
+      },
+      "triangles": 76,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_mast-ropes",
+      "path": "assets/campaign/models/pirate_mast-ropes.glb",
+      "nativeScale": false,
+      "targetSize": [
+        2.22396,
+        4,
+        1.19109
+      ],
+      "sourceBounds": {
+        "min": [
+          -2.1928341388702393,
+          -0.02449793741106987,
+          -1.1788901090622064
+        ],
+        "max": [
+          2.1928329467773438,
+          7.86352014541626,
+          1.1699492931365967
+        ]
+      },
+      "triangles": 350,
+      "drawables": 3,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_mast",
+      "path": "assets/campaign/models/pirate_mast.glb",
+      "nativeScale": false,
+      "targetSize": [
+        2.23089,
+        4,
+        0.88504
+      ],
+      "sourceBounds": {
+        "min": [
+          -2.1928341388702393,
+          0,
+          -1.1788901090622064
+        ],
+        "max": [
+          2.1928329467773438,
+          7.86352014541626,
+          0.5609999895095825
+        ]
+      },
+      "triangles": 302,
+      "drawables": 3,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_platform-planks",
+      "path": "assets/campaign/models/pirate_platform-planks.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.70799,
+        0.16,
+        1.01023
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.9469393491744995,
+          0,
+          -1.3511857986450195
+        ],
+        "max": [
+          0.9469393491744995,
+          0.42799997329711914,
+          1.35118567943573
+        ]
+      },
+      "triangles": 48,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_ship-wreck",
+      "path": "assets/campaign/models/pirate_ship-wreck.glb",
+      "nativeScale": false,
+      "targetSize": [
+        2.40879,
+        5,
+        5.31941
+      ],
+      "sourceBounds": {
+        "min": [
+          -2.4000000953674316,
+          0,
+          -5.300000190734863
+        ],
+        "max": [
+          2.4000000953674316,
+          9.963520050048828,
+          5.299999713897705
+        ]
+      },
+      "triangles": 2282,
+      "drawables": 16,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_structure-platform-dock-small",
+      "path": "assets/campaign/models/pirate_structure-platform-dock-small.glb",
+      "nativeScale": false,
+      "targetSize": [
+        1.01349,
+        0.7,
+        1.33985
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.949999988079071,
+          0,
+          -1.2559173107147217
+        ],
+        "max": [
+          0.949999988079071,
+          1.3123000860214233,
+          1.2559173107147217
+        ]
+      },
+      "triangles": 312,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_structure-platform-dock",
+      "path": "assets/campaign/models/pirate_structure-platform-dock.glb",
+      "nativeScale": false,
+      "targetSize": [
+        1.33354,
+        0.7,
+        1.34031
+      ],
+      "sourceBounds": {
+        "min": [
+          -1.25,
+          0,
+          -1.2563457489013672
+        ],
+        "max": [
+          1.25,
+          1.3123000860214233,
+          1.2563457489013672
+        ]
+      },
+      "triangles": 324,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "pirate_tower-watch",
+      "path": "assets/campaign/models/pirate_tower-watch.glb",
+      "nativeScale": false,
+      "targetSize": [
+        5.47361,
+        5,
+        5.47361
+      ],
+      "sourceBounds": {
+        "min": [
+          -1.5244011878967285,
+          0,
+          -1.5244011878967285
+        ],
+        "max": [
+          1.5244011878967285,
+          2.7850000858306885,
+          1.5244011878967285
+        ]
+      },
+      "triangles": 248,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/pirate-kit"
+    },
+    {
+      "id": "quaternius_fishing_rod",
+      "path": "assets/campaign/models/quaternius_fishing_rod.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.04627,
+        1.4,
+        0.1281
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.10418674210086465,
+          -1.3878179050867678,
+          -0.37715294806791627
+        ],
+        "max": [
+          0.10418674210086465,
+          4.916983653178772,
+          0.19972235787207518
+        ]
+      },
+      "triangles": 308,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://poly.pizza/m/skqPvEIpve"
+    },
+    {
+      "id": "survival_barrel",
+      "path": "assets/campaign/models/survival_barrel.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.6875,
+        1,
+        0.6875
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.11824999749660492,
+          0,
+          -0.11824999749660492
+        ],
+        "max": [
+          0.11824999749660492,
+          0.3440000116825104,
+          0.11824999749660492
+        ]
+      },
+      "triangles": 412,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_bedroll-frame",
+      "path": "assets/campaign/models/survival_bedroll-frame.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.82939,
+        0.45,
+        1.85098
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.13612370193004608,
+          0,
+          -0.30379098653793335
+        ],
+        "max": [
+          0.13612370193004608,
+          0.14771193265914917,
+          0.30379098653793335
+        ]
+      },
+      "triangles": 100,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_bedroll",
+      "path": "assets/campaign/models/survival_bedroll.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.29837,
+        0.12,
+        0.58403
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.15519998967647552,
+          -0.04999999749042363,
+          -0.30379098653793335
+        ],
+        "max": [
+          0.15519998967647552,
+          0.0748400017619133,
+          0.30379098653793335
+        ]
+      },
+      "triangles": 144,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_box-large",
+      "path": "assets/campaign/models/survival_box-large.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.8,
+        0.8,
+        1.6
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.125,
+          0,
+          -0.25
+        ],
+        "max": [
+          0.125,
+          0.25,
+          0.25
+        ]
+      },
+      "triangles": 124,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_chest",
+      "path": "assets/campaign/models/survival_chest.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.70873,
+        0.7,
+        0.74037
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.13019999861717224,
+          0,
+          -0.14182500541210175
+        ],
+        "max": [
+          0.13019999861717224,
+          0.2571914936702881,
+          0.13019999861717224
+        ]
+      },
+      "triangles": 322,
+      "drawables": 2,
+      "animations": [
+        "open",
+        "close",
+        "open-close"
+      ],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_fish-large",
+      "path": "assets/campaign/models/survival_fish-large.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.30729,
+        0.15949,
+        0.09793
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.15364372730255127,
+          -0.000020913683329126798,
+          -0.04896337538957596
+        ],
+        "max": [
+          0.15364372730255127,
+          0.1594686508178711,
+          0.04896337538957596
+        ]
+      },
+      "triangles": 233,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_fish",
+      "path": "assets/campaign/models/survival_fish.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.20486,
+        0.10633,
+        0.06528
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.10242915153503418,
+          0,
+          -0.03264224901795387
+        ],
+        "max": [
+          0.10242915153503418,
+          0.1063263788819313,
+          0.03264224901795387
+        ]
+      },
+      "triangles": 233,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_resource-planks",
+      "path": "assets/campaign/models/survival_resource-planks.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.37294,
+        0.0936,
+        0.62595
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.18647050857543945,
+          0,
+          -0.31297701597213745
+        ],
+        "max": [
+          0.18647050857543945,
+          0.09359999746084213,
+          0.31297704577445984
+        ]
+      },
+      "triangles": 72,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_resource-stone",
+      "path": "assets/campaign/models/survival_resource-stone.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.16534,
+        0.1068,
+        0.14222
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.08267033100128174,
+          0,
+          -0.07110821455717087
+        ],
+        "max": [
+          0.08267033100128174,
+          0.10679999738931656,
+          0.07110821455717087
+        ]
+      },
+      "triangles": 44,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_signpost",
+      "path": "assets/campaign/models/survival_signpost.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.21412,
+        0.46008,
+        0.04298
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.1122773289680481,
+          0,
+          -0.018000001087784767
+        ],
+        "max": [
+          0.10184463113546371,
+          0.46007999777793884,
+          0.024977799504995346
+        ]
+      },
+      "triangles": 44,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_structure-floor",
+      "path": "assets/campaign/models/survival_structure-floor.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.5,
+        0.54867,
+        0.5
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.2500000596046448,
+          0,
+          -0.2500000298023224
+        ],
+        "max": [
+          0.2500000298023224,
+          0.5486668795347214,
+          0.2499999850988388
+        ]
+      },
+      "triangles": 164,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_structure-metal-doorway",
+      "path": "assets/campaign/models/survival_structure-metal-doorway.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.53543,
+        0.51747,
+        0.0889
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.26771488785743713,
+          -9.02389263509778e-17,
+          -0.26771488785743713
+        ],
+        "max": [
+          0.26771488785743713,
+          0.5174669011920929,
+          -0.17881013453006744
+        ]
+      },
+      "triangles": 160,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_structure-metal-roof",
+      "path": "assets/campaign/models/survival_structure-metal-roof.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.5442,
+        0.5,
+        0.55
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.27048248052597046,
+          -9.02389263509778e-17,
+          -0.27500003576278687
+        ],
+        "max": [
+          0.2737177014350891,
+          0.5,
+          0.2750000059604645
+        ]
+      },
+      "triangles": 456,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_structure-metal-wall",
+      "path": "assets/campaign/models/survival_structure-metal-wall.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.53543,
+        0.5,
+        0.0889
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.26771488785743713,
+          -9.02389263509778e-17,
+          -0.26771488785743713
+        ],
+        "max": [
+          0.26771488785743713,
+          0.5,
+          -0.17881013453006744
+        ]
+      },
+      "triangles": 92,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_structure-roof",
+      "path": "assets/campaign/models/survival_structure-roof.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.53547,
+        0.65718,
+        0.55185
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.27225536449279786,
+          0,
+          -0.2759273052215576
+        ],
+        "max": [
+          0.2632153596130371,
+          0.6571829319000244,
+          0.2759273052215576
+        ]
+      },
+      "triangles": 188,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_structure",
+      "path": "assets/campaign/models/survival_structure.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.2499999850988388,
+          0,
+          -0.25
+        ],
+        "max": [
+          0.25,
+          0.5,
+          0.2499999850988388
+        ]
+      },
+      "triangles": 80,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_tool-axe-upgraded",
+      "path": "assets/campaign/models/survival_tool-axe-upgraded.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.40095,
+        0.7,
+        0.10938
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.07331643998622894,
+          0,
+          -0.019999999552965164
+        ],
+        "max": [
+          0.07331643998622894,
+          0.25599998235702515,
+          0.019999999552965164
+        ]
+      },
+      "triangles": 140,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_tool-hammer",
+      "path": "assets/campaign/models/survival_tool-hammer.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.41048,
+        0.7,
+        0.18243
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.044999998062849045,
+          0,
+          -0.019999999552965164
+        ],
+        "max": [
+          0.044999998062849045,
+          0.15347999334335327,
+          0.019999999552965164
+        ]
+      },
+      "triangles": 52,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_tool-hoe",
+      "path": "assets/campaign/models/survival_tool-hoe.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.24724,
+        0.7,
+        0.20687
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.06930414587259293,
+          0,
+          -0.035463497042655945
+        ],
+        "max": [
+          0.015463501214981079,
+          0.24000000953674316,
+          0.03546350449323654
+        ]
+      },
+      "triangles": 58,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_tool-pickaxe-upgraded",
+      "path": "assets/campaign/models/survival_tool-pickaxe-upgraded.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.52094,
+        0.7,
+        0.11667
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.08930414170026779,
+          0,
+          -0.019999999552965164
+        ],
+        "max": [
+          0.08930414170026779,
+          0.24000000953674316,
+          0.019999999552965164
+        ]
+      },
+      "triangles": 110,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_tool-pickaxe",
+      "path": "assets/campaign/models/survival_tool-pickaxe.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.52094,
+        0.7,
+        0.11287
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.08930414170026779,
+          0,
+          -0.019349999725818634
+        ],
+        "max": [
+          0.08930414170026779,
+          0.24000000953674316,
+          0.019349999725818634
+        ]
+      },
+      "triangles": 74,
+      "drawables": 1,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_workbench-anvil",
+      "path": "assets/campaign/models/survival_workbench-anvil.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.96105,
+        1,
+        0.88057
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.14782623946666718,
+          0,
+          -0.14782623946666718
+        ],
+        "max": [
+          0.17484764754772186,
+          0.33574999910593034,
+          0.14782623946666718
+        ]
+      },
+      "triangles": 298,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_workbench-grind",
+      "path": "assets/campaign/models/survival_workbench-grind.glb",
+      "nativeScale": false,
+      "targetSize": [
+        0.97048,
+        1.05,
+        1.22624
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.13019999861717224,
+          0,
+          -0.164512500166893
+        ],
+        "max": [
+          0.13019999861717224,
+          0.28173561816215514,
+          0.164512500166893
+        ]
+      },
+      "triangles": 232,
+      "drawables": 2,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "survival_workbench",
+      "path": "assets/campaign/models/survival_workbench.glb",
+      "nativeScale": false,
+      "targetSize": [
+        1.19311,
+        1.05,
+        1.0832
+      ],
+      "sourceBounds": {
+        "min": [
+          -0.14782623946666718,
+          0,
+          -0.14782623946666718
+        ],
+        "max": [
+          0.1778262541669356,
+          0.2865906809151173,
+          0.14782623946666718
+        ]
+      },
+      "triangles": 236,
+      "drawables": 3,
+      "animations": [],
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/survival-kit"
+    }
+  ],
+  "licenses": [
+    "assets/campaign/licenses/survival.txt",
+    "assets/campaign/licenses/building.txt",
+    "assets/campaign/licenses/pirate.txt",
+    "assets/campaign/licenses/cave.txt",
+    "assets/campaign/licenses/food.txt",
+    "assets/campaign/licenses/crops.txt",
+    "assets/campaign/licenses/fishing-rod.txt",
+    "assets/survival-pack/SurvivalPack/License.txt"
+  ]
+}

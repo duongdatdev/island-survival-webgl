@@ -180,6 +180,22 @@ export class AssetManager {
         return this.modelPromises[name];
     }
 
+    async loadCampaignModels(manifestUrl = 'assets/campaign/manifest.json') {
+        const response = await fetch(manifestUrl);
+        if (!response.ok) throw new Error(`Campaign assets: HTTP ${response.status}`);
+        const manifest = await response.json();
+        this.campaignMetadata = Object.fromEntries(manifest.models.map(model => [model.id, model]));
+        const results = await Promise.all(manifest.models.map(model => this.loadGLTFModel(
+            `campaign:${model.id}`, model.path, {
+                targetSize: model.targetSize, preserveAspect: true,
+                nativeScale: model.nativeScale, grounded: true, retainGeometry: true,
+            }
+        )));
+        const failed = manifest.models.filter((_, index) => !results[index]);
+        if (failed.length) throw new Error(`Campaign models could not load: ${failed.map(model => model.id).join(', ')}`);
+        return results;
+    }
+
     async compileUniqueModels(uniqueObjPaths) {
         this.totalAssets += uniqueObjPaths.filter(path => !this.models[path]).length;
 

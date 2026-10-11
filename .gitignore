@@ -4,3 +4,7 @@ dist/
 .DS_Store
 .claude/
 _autostart.html
+.cache/
+playwright-report/
+test-results/
+*.blend1
