@@ -72,6 +72,7 @@ export class InteractionController {
                 scene.inventory.removeItem(food, 1);
                 scene.inventory.addItem('cooked_meal', 1);
                 scene.stats.mealsCooked++;
+                scene.firstPersonViewModel?.playAction('cook');
                 scene._showNotification('🔥 Đã nấu: 🍖 Thức Ăn Chín!');
                 scene.engine.audio.playCraft();
                 scene.particleSystem.emit(
@@ -106,6 +107,7 @@ export class InteractionController {
         if (stored > 0 && scene.engine.input.isKeyPressed('interact')) {
             scene.engine.input.consumeAction('interact');
             if (scene.waterCollector.collectWater()) {
+                scene.firstPersonViewModel?.playAction('pickup');
                 scene.inventory.addItem('fresh_water', 1);
                 scene._showNotification('💧 Đã lấy: Nước Ngọt!');
                 scene.engine.audio.playDrink();
@@ -136,6 +138,7 @@ export class InteractionController {
             scene.engine.input.consumeAction('interact');
             scene.inventory.removeItem(itemId, 1);
             scene.raftAssembly[flag] = true;
+            scene.firstPersonViewModel?.playAction('build');
             const messages = {
                 raft_frame: '🧱 Lắp Khung Bè thành công!',
                 barrel_floats: '🛢️ Lắp Phao Thùng thành công!',
@@ -159,6 +162,7 @@ export class InteractionController {
         if (scene.engine.input.isKeyPressed('interact')) {
             scene.engine.input.consumeAction('interact');
             scene.vitals.drink(100);
+            scene.firstPersonViewModel?.playAction('drink');
             scene._showNotification('💧 Đã uống nước thác! Khôi phục hết Thối Khát.');
             scene.engine.audio.playDrink();
             scene.engine.audio.playSplash(scene.player.position);
@@ -191,6 +195,7 @@ export class InteractionController {
         if (scene.engine.input.isKeyPressed('interact')) {
             scene.engine.input.consumeAction('interact');
             scene._openTreasureChest(chest);
+            scene.firstPersonViewModel?.playAction('pickup');
         }
         return true;
     }
@@ -219,6 +224,7 @@ export class InteractionController {
         const scene = this.scene;
         if (scene._getTotalInventoryCount() <= previousCount) return;
         scene.stats.resourcesPicked++;
+        scene.firstPersonViewModel?.playAction('pickup');
         scene.engine.audio.playPickup();
         scene.particleSystem.emit(scene.player.position, ParticleSystem.PRESET.PICKUP);
         scene.tutorial.notifyPickup();

@@ -114,9 +114,11 @@ export class CampaignController {
             const radius = scene.world.terrainGenerator.island.radius + 3 + Math.random() * 14;
             return [Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius];
         };
-        this.events.on('collected', () => scene.tutorial?.notifyPickup());
-        this.events.on('crafted', event => { scene.stats.itemsCrafted += event.count; scene.tutorial?.notifyCrafted(); this.saveMilestone(); });
-        this.events.on('cooked', () => { scene.stats.mealsCooked++; this.saveMilestone(); });
+        this.events.on('collected', () => { scene.tutorial?.notifyPickup(); scene.firstPersonViewModel?.playAction('pickup'); });
+        this.events.on('drank', () => scene.firstPersonViewModel?.playAction('drink'));
+        this.events.on('deviceRepaired', () => scene.firstPersonViewModel?.playAction('repair'));
+        this.events.on('crafted', event => { scene.firstPersonViewModel?.playAction('craft'); scene.stats.itemsCrafted += event.count; scene.tutorial?.notifyCrafted(); this.saveMilestone(); });
+        this.events.on('cooked', () => { scene.firstPersonViewModel?.playAction('cook'); scene.stats.mealsCooked++; this.saveMilestone(); });
         this.events.on('chapterCompleted', event => {
             this.pinnedObjective = null;
             scene._showNotification(`Chương ${event.id} hoàn thành · ${event.title}`);
@@ -381,13 +383,13 @@ export class CampaignController {
             const result = this.registry.place(this.placement.type, point, this.placement.yaw, this.scene.inventory, { parentId: parent?.id, fromItem: this.placement.fromItem });
             this.scene._showNotification(result.ok ? 'Đã xây ' + STRUCTURE_DEFINITIONS[this.placement.type].name : result.error);
             input.consumeAction('interact');
-            if (result.ok) { this.saveMilestone(); if (this.placement.fromItem) this.placement = null; }
+            if (result.ok) { this.scene.firstPersonViewModel?.playAction('build'); this.saveMilestone(); if (this.placement.fromItem) this.placement = null; }
         }
     }
 
     craft(id) {
         const result = this.production.craft(id, this.scene.inventory, this.scene.player.position);
-        if (result.ok) { this.scene.engine.audio.playCraft(); this.saveMilestone(); }
+        if (result.ok) { this.scene.firstPersonViewModel?.playAction('craft'); this.scene.engine.audio.playCraft(); this.saveMilestone(); }
         return result;
     }
 
@@ -644,6 +646,7 @@ export class CampaignController {
 
     onDeath() {
         this.deaths++;
+        this.scene.firstPersonViewModel?.cancelActivity();
         this.placement = null;
         this.wreckSalvage?.pause();
         this.mineExtraction?.pause();
@@ -745,7 +748,7 @@ export class CampaignController {
             Mat4.scale(this.matrix, this.matrix, [0.018, 0.018, Math.hypot(...delta)]);
             shader.setUniformMatrix4fv('uModelMatrix', this.matrix); this.ropeMesh.draw(mode);
             if (this.hook.state) draw('campaign:campaign_hook', lineTarget, yaw);
-            else draw('campaign:quaternius_fishing_rod', lineOrigin, yaw);
+            // The held rod is rendered with the animated hands in camera space.
         }
         if (this.placement?.preview?.record) {
             const record = this.placement.preview.record;

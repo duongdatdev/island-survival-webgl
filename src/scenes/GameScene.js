@@ -12,6 +12,7 @@ import { Player } from '../entities/Player.js';
 import { CharacterRenderer } from '../characters/CharacterRenderer.js';
 import { CharacterRegistry } from '../characters/CharacterRegistry.js';
 import { FirstPersonViewModel } from '../characters/FirstPersonViewModel.js';
+import { getWorkActivity } from '../characters/ActionAnimation.js';
 import { Terrain } from '../entities/Terrain.js';
 import { Water } from '../entities/Water.js';
 import { Mat4 } from '../math/Mat4.js';
@@ -923,6 +924,9 @@ export class GameScene extends Scene {
         this.firstPersonViewModel.setWeapon(
             activeViewDef?.weaponType ? activeViewItem.id : 'fist'
         );
+        const workActivity = getWorkActivity(this);
+        if (workActivity && workActivity.kind !== 'swim') this._cancelPendingCombat();
+        this.firstPersonViewModel.setActivity(workActivity);
         const weaponEvent = this.firstPersonViewModel.update(
             deltaTime,
             this.player.currentSpeed > 0.1
@@ -934,7 +938,7 @@ export class GameScene extends Scene {
         const attackPressed = this.engine.input.isMousePressed(0);
         const attackReleased = this.engine.input.isMouseReleased(0);
         const combatMenuOpen = !!(this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden'));
-        const combatUnavailable = !!this.campaign?.placement || !!this.campaign?.hook.state || this.isFishing || this.isEscaping || combatMenuOpen
+        const combatUnavailable = !!this.campaign?.mineExtraction?.active || !!this.campaign?.wreckSalvage?.active || !!this.campaign?.placement || !!this.campaign?.hook.state || this.isFishing || this.isEscaping || combatMenuOpen
             || this.isPaused || this._isGameOver;
         const equippedCombatItem = this.inventory.getEquippedItem();
         const bowEquipped = equippedCombatItem?.id === 'bow';
@@ -1575,7 +1579,7 @@ export class GameScene extends Scene {
             );
         }
 
-        if (!this.isEscaping && !this.isFishing && !this.campaign?.ending.state) {
+        if (!this.isEscaping && !this.campaign?.ending.state) {
             this.firstPersonViewModel.draw(this.basicShader, this.camera.projectionMatrix, drawMode);
         }
 
@@ -1959,7 +1963,7 @@ export class GameScene extends Scene {
             if (!pendingAttack) return;
 
             this._pendingMeleeImpact = { pendingAttack, equippedItem };
-            const weaponId = equippedItem?.id || 'fist';
+            const weaponId = pendingAttack.weaponData.id;
             this.firstPersonViewModel.beginAttack(weaponId);
             this._playWeaponStartFeedback(weaponId);
             return;

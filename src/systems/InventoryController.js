@@ -271,6 +271,7 @@ export class InventoryController {
 
         scene.inventory.removeItemAt(index, 1);
         scene.vitals[action.method](effect.amount);
+        scene.firstPersonViewModel?.playAction(effect.type === 'thirst' ? 'drink' : effect.type === 'hunger' ? 'eat' : 'repair');
         if (effect.type === 'thirst') scene.campaign?.events.emit('drank', { id: 'fresh_water' });
         scene.campaign?.saveMilestone();
         scene._showNotification(`${definition.icon} ${action.verb} ${definition.name}! ${action.label} +${effect.amount}`);
@@ -373,6 +374,7 @@ export class InventoryController {
             return false;
         }
 
+        scene.firstPersonViewModel?.playAction('build');
         scene.engine.audio.playRaftBuild(buildPosition);
         scene.particleSystem.emit(buildPosition, ParticleSystem.PRESET.BUILD);
         return true;
@@ -508,6 +510,7 @@ export class InventoryController {
             return false;
         }
         scene.stats.itemsCrafted++;
+        scene.firstPersonViewModel?.playAction('craft');
         scene._showNotification(`🔨 Đã chế tạo: ${recipe.icon} ${recipe.name}!`);
         scene.engine.audio.playCraft();
         scene.particleSystem.emit(

@@ -1,5 +1,7 @@
 import { Mat4 } from '../math/Mat4.js';
 import { Mesh } from '../renderer/Mesh.js';
+import { createViewHandData } from './ViewHandGeometry.js';
+import { strikePose, workPose, WORK_DURATIONS } from './ActionAnimation.js';
 import {
     AXE_IMPACT_TIME,
     AXE_SWING_DURATION,
@@ -7,8 +9,8 @@ import {
 } from '../systems/CombatConfig.js';
 
 const DEG_TO_RAD = Math.PI / 180;
-const SKIN_COLOR = [0.82, 0.62, 0.48, 1.0];
-const SLEEVE_COLOR = [0.07, 0.12, 0.22, 1.0];
+const SKIN_COLOR = [0.68, 0.46, 0.32, 1.0];
+const SLEEVE_COLOR = [0.18, 0.24, 0.18, 1.0];
 const WOOD_COLOR = [0.42, 0.24, 0.10, 1.0];
 const STONE_COLOR = [0.36, 0.40, 0.43, 1.0];
 const STRING_COLOR = [0.82, 0.78, 0.62, 1.0];
@@ -19,10 +21,6 @@ function smoothStep(value) {
     return t * t * (3 - 2 * t);
 }
 
-function lerp(a, b, t) {
-    return a + (b - a) * t;
-}
-
 export class FirstPersonViewModel {
     constructor(gl) {
         this.gl = gl;
@@ -31,7 +29,8 @@ export class FirstPersonViewModel {
 
         this.sleeve = new Mesh(gl, this._createTaperedCylinderData(SLEEVE_COLOR, 8, 1.08, 0.88));
         this.forearm = new Mesh(gl, this._createTaperedCylinderData(SKIN_COLOR, 8, 1.0, 0.76));
-        this.hand = new Mesh(gl, this._createLowPolySphereData(SKIN_COLOR, 8, 5));
+        this.hand = new Mesh(gl, createViewHandData(1));
+        this.leftHand = new Mesh(gl, createViewHandData(-1));
         this.spearShaft = new Mesh(gl, this._createTaperedCylinderData(WOOD_COLOR, 6, 1, 0.92));
         this.spearTip = new Mesh(gl, this._createTaperedCylinderData(STONE_COLOR, 6, 0.9, 0.05));
         this.bowLimb = new Mesh(gl, this._createTaperedCylinderData(WOOD_COLOR, 6, 0.8, 0.65));
@@ -41,13 +40,16 @@ export class FirstPersonViewModel {
         this._sleeveMatrix = Mat4.create();
         this._forearmMatrix = Mat4.create();
         this._handMatrix = Mat4.create();
-        this._thumbMatrix = Mat4.create();
         this._axeMatrix = Mat4.create();
         this._weaponMatrix = Mat4.create();
         this._weaponMatrix2 = Mat4.create();
         this._weaponMatrix3 = Mat4.create();
         this._identityView = Mat4.create();
 
+        this._work = null;
+        this._workElapsed = 0;
+        this._workBlend = 0;
+        this._armMatrix = Mat4.create();
         this._time = 0;
         this._moveAmount = 0;
         this._swingElapsed = Infinity;
@@ -64,6 +66,7 @@ export class FirstPersonViewModel {
     load(assetManager) {
         this.axe = assetManager.models['survival:axe'] || null;
         this.tools = {
+            hammer: assetManager.models['campaign:survival_tool-hammer'],
             iron_axe: assetManager.models['campaign:survival_tool-axe-upgraded'],
             stone_pickaxe: assetManager.models['campaign:survival_tool-pickaxe'],
             iron_pickaxe: assetManager.models['campaign:survival_tool-pickaxe-upgraded'],
@@ -72,6 +75,12 @@ export class FirstPersonViewModel {
 
     update(deltaTime, isMoving) {
         this._time += deltaTime;
+        this._workElapsed = (this._workElapsed || 0) + deltaTime;
+        if (this._work?.once && this._workElapsed >= WORK_DURATIONS[this._work.kind]) {
+            this._lastWorkPose = this._getWorkPose();
+            this._work = null;
+        }
+        this._workBlend = Math.max(0, Math.min(1, (this._workBlend || 0) + (this._work ? 1 : -1) * deltaTime * 8));
         const targetMove = isMoving ? 1 : 0;
         this._moveAmount += (targetMove - this._moveAmount) * Math.min(1, deltaTime * 9);
         const previousSwingElapsed = this._swingElapsed;
@@ -86,6 +95,47 @@ export class FirstPersonViewModel {
             return { type: 'impact', weaponId: this.weaponId };
         }
         return null;
+    }
+
+    setActivity(activity) {
+        if (activity) {
+            if (this._work?.kind !== activity.kind) this._workElapsed = 0;
+            this._work = { ...activity, once: false };
+        } else if (this._work && !this._work.once) {
+            // Keep the final pose while blending back to the equipped weapon.
+            this._lastWorkPose = this._getWorkPose();
+            this._work = null;
+        }
+    }
+
+    playAction(kind) {
+        if (!WORK_DURATIONS[kind] || this._work && !this._work.once) return;
+        if (this._bowCharging || this._swingElapsed < this._swingDuration) return;
+        this._work = { kind, once: true };
+        this._workElapsed = 0;
+    }
+
+    cancelActivity() {
+        this._work = null;
+        this._lastWorkPose = null;
+        this._workElapsed = 0;
+        this._workBlend = 0;
+    }
+
+    get visualWeaponId() {
+        if (this._work?.weapon) return this._work.weapon;
+        if (this._work?.kind === 'build') return 'hammer';
+        if (this._work?.kind === 'fish') return 'fishing_rod';
+        if (this._work) return 'fist';
+        return this.weaponId;
+    }
+
+    _getWorkPose() {
+        if (this._work?.kind === 'mine') {
+            const profile = getWeaponProfile(this._work.weapon);
+            return { ...strikePose(this._workElapsed % profile.duration, profile), work: 'mine' };
+        }
+        return this._work ? workPose(this._work.kind, this._workElapsed, this._work.phase) : this._lastWorkPose;
     }
 
     triggerSwing() {
@@ -103,6 +153,8 @@ export class FirstPersonViewModel {
         this.setWeapon(weaponId);
         const profile = getWeaponProfile(this.weaponId) || getWeaponProfile('fist');
         if (profile.type !== 'melee') return false;
+        this._work = null;
+        this._workBlend = 0;
         this._activeSwingDirection = this._nextSwingDirection;
         this._nextSwingDirection *= -1;
         this._swingElapsed = 0;
@@ -113,6 +165,8 @@ export class FirstPersonViewModel {
 
     beginBowCharge() {
         this.setWeapon('bow');
+        this._work = null;
+        this._workBlend = 0;
         this._bowCharging = true;
         this._bowChargeElapsed = 0;
     }
@@ -162,146 +216,98 @@ export class FirstPersonViewModel {
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
 
-        this._buildSegmentMatrix(
-            this._sleeveMatrix,
-            [0.60, -0.82, -0.62],
-            24,
-            -12,
-            [0.105, 0.38, 0.105],
-            bobX,
-            bobY,
-            pose
-        );
-        shader.setUniformMatrix4fv('uModelMatrix', this._sleeveMatrix);
-        this.sleeve.draw(drawMode);
-
-        this._buildSegmentMatrix(
-            this._forearmMatrix,
-            [0.46, -0.64, -0.70],
-            24,
-            -22,
-            [0.082, 0.34, 0.082],
-            bobX,
-            bobY,
-            pose
-        );
-        shader.setUniformMatrix4fv('uModelMatrix', this._forearmMatrix);
-        this.forearm.draw(drawMode);
-
-        this._buildHandMatrix(this._handMatrix, bobX, bobY, pose);
-        shader.setUniformMatrix4fv('uModelMatrix', this._handMatrix);
-        this.hand.draw(drawMode);
-
-        this._buildThumbMatrix(this._thumbMatrix, bobX, bobY, pose);
-        shader.setUniformMatrix4fv('uModelMatrix', this._thumbMatrix);
-        this.hand.draw(drawMode);
+        this._drawArm(shader, drawMode, bobX, bobY, pose);
+        // A second hand braces tools, grips the bow, reels and alternates punches.
+        const support = { ...pose, shoulderSide: -(pose.shoulderSide || 1) };
+        if (this.visualWeaponId === 'fist' && !pose.work) {
+            support.z = 0;
+            support.pitch = 0;
+            support.roll = 0;
+        } else if (pose.work === 'swim') {
+            support.z *= -1;
+            support.roll *= -1;
+            support.pitch *= -1;
+        }
+        this._drawArm(shader, drawMode, bobX, bobY, support, true);
 
         this._drawEquippedWeapon(shader, drawMode, bobX, bobY, pose);
     }
 
     _getWeaponPose() {
+        const work = this._getWorkPose();
+        if (work && this._workBlend > 0) {
+            const weight = smoothStep(this._workBlend);
+            return { ...work, roll: work.roll * weight, pitch: work.pitch * weight,
+                x: (work.x || 0) * weight, y: (work.y || 0) * weight, z: work.z * weight };
+        }
         if (this.weaponId === 'bow') {
             const charge = this._bowCharging ? this.getBowCharge() : 0;
-            const releaseKick = this._bowReleaseElapsed < 0.18
-                ? Math.sin(this._bowReleaseElapsed / 0.18 * Math.PI) * 0.04
-                : 0;
-            return { roll: 0, pitch: 0, z: charge * 0.08 + releaseKick, charge };
+            const releaseKick = this._bowReleaseElapsed < 0.22
+                ? Math.sin(this._bowReleaseElapsed / 0.22 * Math.PI) : 0;
+            return { roll: -charge * 5 * DEG_TO_RAD, pitch: -charge * 4 * DEG_TO_RAD,
+                z: charge * 0.08 - releaseKick * 0.045, charge };
         }
-
-        const profile = getWeaponProfile(this.weaponId) || getWeaponProfile('fist');
-        const progress = Math.min(1, this._swingElapsed / (profile.duration || 1));
-        if (this.weaponId === 'stone_axe' || profile.toolKind) return this._getSwingPose();
-        if (progress >= 1) return { roll: 0, pitch: 0, z: 0, charge: 0 };
-        const strike = Math.sin(progress * Math.PI);
-        if (this.weaponId === 'spear') {
-            return { roll: 0, pitch: -4 * DEG_TO_RAD, z: -0.42 * strike, charge: 0 };
-        }
-        return {
-            roll: this._activeSwingDirection * 8 * DEG_TO_RAD * strike,
-            pitch: -10 * DEG_TO_RAD * strike,
-            z: -0.30 * strike,
-            charge: 0,
-            shoulderSide: this._activeSwingDirection,
-        };
+        return strikePose(this._swingElapsed, getWeaponProfile(this.weaponId) || getWeaponProfile('fist'), this._activeSwingDirection);
     }
 
     _getSwingPose() {
-        const progress = Math.min(1, this._swingElapsed / this._swingDuration);
-        if (progress >= 1) {
-            return { roll: 0, pitch: 0, z: 0, charge: 0 };
+        return strikePose(this._swingElapsed, getWeaponProfile(this.weaponId) || getWeaponProfile('stone_axe'), this._activeSwingDirection);
+    }
+
+    _drawArm(shader, mode, bobX, bobY, pose, support = false) {
+        const side = pose.shoulderSide || 1;
+        // Connected shoulder/elbow/wrist segments keep the grip attached throughout a stroke.
+        const weapon = this.visualWeaponId;
+        const unarmed = weapon === 'fist' && !pose.work;
+        // Low relaxed guard: hands rise into the strike, rather than filling the view at rest.
+        const extension = unarmed ? Math.min(1, Math.abs(pose.z || 0) / 0.30) : 1;
+        let hand = [0.325 * side, -0.345 - (1 - extension) * 0.20, -0.84];
+        if (weapon === 'bow') hand = support ? [-0.22, -0.25, -1.04] : [-0.12, -0.24, -0.82 + (pose.charge || 0) * 0.28];
+        else if (support && weapon !== 'fist') hand = weapon === 'spear' ? [0.30, -0.39, -1.18] : [0.27, -0.16, -0.88];
+        // Bend the elbow during anticipation and extend it on the strike.
+        const elbow = [0.46 * side, -0.64 - Math.min(0.04, Math.abs(pose.pitch) * 0.1), -0.70 + (pose.z || 0) * 0.2];
+        const shoulder = [0.60 * side, -0.9, -0.48];
+        const wrist = [hand[0], hand[1] - 0.052, hand[2] + 0.012];
+        const cuff = elbow.map((value, axis) => value + (wrist[axis] - value) * 0.70);
+        for (const [mesh, start, end, radius] of [
+            [this.sleeve, shoulder, elbow, 0.077], [this.sleeve, elbow, cuff, 0.062],
+            [this.forearm, cuff, wrist, 0.044],
+        ]) {
+            this._applyRootTransform(this._armMatrix, bobX, bobY, { ...pose, shoulderSide: weapon === 'fist' && !pose.work ? side : 1 });
+            this._segmentBetween(this._armMatrix, start, end, radius);
+            shader.setUniformMatrix4fv('uModelMatrix', this._armMatrix);
+            mesh.draw(mode);
         }
+        this._applyRootTransform(this._handMatrix, bobX, bobY, { ...pose, shoulderSide: weapon === 'fist' && !pose.work ? side : 1 });
+        Mat4.translate(this._handMatrix, this._handMatrix, hand);
+        Mat4.rotateZ(this._handMatrix, this._handMatrix, -14 * DEG_TO_RAD * side);
+        Mat4.rotateX(this._handMatrix, this._handMatrix, -0.12);
+        shader.setUniformMatrix4fv('uModelMatrix', this._handMatrix);
+        (side > 0 ? this.hand : this.leftHand).draw(mode);
+    }
 
-        const direction = this._activeSwingDirection;
-        const outsideAngle = direction * 31 * DEG_TO_RAD;
-        const followThroughAngle = -direction * 40 * DEG_TO_RAD;
-
-        if (progress < 0.18) {
-            const t = smoothStep(progress / 0.18);
-            return {
-                roll: lerp(0, outsideAngle, t),
-                pitch: 0,
-                z: 0,
-                charge: 0,
-            };
-        }
-
-        if (progress < 0.70) {
-            const t = smoothStep((progress - 0.18) / 0.52);
-            const strike = Math.sin(t * Math.PI);
-            return {
-                roll: lerp(outsideAngle, followThroughAngle, t),
-                pitch: 9 * DEG_TO_RAD * strike,
-                z: 0,
-                charge: 0,
-            };
-        }
-
-        const t = smoothStep((progress - 0.70) / 0.30);
-        return {
-            roll: lerp(followThroughAngle, 0, t),
-            pitch: 0,
-            z: 0,
-            charge: 0,
-        };
+    _segmentBetween(out, start, end, radius) {
+        const dx = end[0] - start[0], dy = end[1] - start[1], dz = end[2] - start[2];
+        const length = Math.hypot(dx, dy, dz);
+        Mat4.translate(out, out, start);
+        Mat4.rotateY(out, out, Math.atan2(dx, dz));
+        Mat4.rotateX(out, out, Math.atan2(Math.hypot(dx, dz), dy));
+        Mat4.scale(out, out, [radius, length, radius]);
     }
 
     _applyRootTransform(out, bobX, bobY, pose) {
         Mat4.identity(out);
         Mat4.translate(out, out, [bobX, bobY, 0]);
-        Mat4.translate(out, out, [0, 0, pose.z || 0]);
+        Mat4.translate(out, out, [pose.x || 0, pose.y || 0, pose.z || 0]);
         const shoulderSide = pose.shoulderSide || 1;
         Mat4.translate(out, out, [SHOULDER_PIVOT[0] * shoulderSide, SHOULDER_PIVOT[1], SHOULDER_PIVOT[2]]);
         Mat4.rotateZ(out, out, pose.roll);
         Mat4.rotateX(out, out, pose.pitch);
         Mat4.translate(out, out, [
-            -SHOULDER_PIVOT[0],
+            -SHOULDER_PIVOT[0] * shoulderSide,
             -SHOULDER_PIVOT[1],
             -SHOULDER_PIVOT[2],
         ]);
-    }
-
-    _buildSegmentMatrix(out, position, rotationZ, rotationX, scale, bobX, bobY, pose) {
-        this._applyRootTransform(out, bobX, bobY, pose);
-        Mat4.translate(out, out, position);
-        Mat4.rotateZ(out, out, rotationZ * DEG_TO_RAD);
-        Mat4.rotateX(out, out, rotationX * DEG_TO_RAD);
-        Mat4.scale(out, out, scale);
-    }
-
-    _buildHandMatrix(out, bobX, bobY, pose) {
-        this._applyRootTransform(out, bobX, bobY, pose);
-        Mat4.translate(out, out, [0.325, -0.345, -0.84]);
-        Mat4.rotateZ(out, out, -14 * DEG_TO_RAD);
-        Mat4.rotateX(out, out, -10 * DEG_TO_RAD);
-        Mat4.scale(out, out, [0.064, 0.088, 0.058]);
-    }
-
-    _buildThumbMatrix(out, bobX, bobY, pose) {
-        this._applyRootTransform(out, bobX, bobY, pose);
-        Mat4.translate(out, out, [0.292, -0.345, -0.805]);
-        Mat4.rotateZ(out, out, 48 * DEG_TO_RAD);
-        Mat4.rotateX(out, out, -8 * DEG_TO_RAD);
-        Mat4.scale(out, out, [0.034, 0.058, 0.032]);
     }
 
     _buildAxeMatrix(out, bobX, bobY, pose) {
@@ -312,20 +318,21 @@ export class FirstPersonViewModel {
     }
 
     _drawEquippedWeapon(shader, drawMode, bobX, bobY, pose) {
-        const tool = this.tools?.[this.weaponId];
+        const weaponId = this.visualWeaponId;
+        const tool = this.tools?.[weaponId];
         if (tool) {
             this._buildAxeMatrix(this._axeMatrix, bobX, bobY, pose);
             tool.draw(shader, this._axeMatrix, drawMode);
             return;
         }
-        if (this.weaponId === 'stone_axe') {
+        if (weaponId === 'stone_axe') {
             if (!this.axe) return;
             this._buildAxeMatrix(this._axeMatrix, bobX, bobY, pose);
             shader.setUniformMatrix4fv('uModelMatrix', this._axeMatrix);
             this.axe.draw(drawMode);
             return;
         }
-        if (this.weaponId === 'spear') {
+        if (weaponId === 'spear') {
             this._buildSpearMatrices(bobX, bobY, pose);
             shader.setUniformMatrix4fv('uModelMatrix', this._weaponMatrix);
             this.spearShaft.draw(drawMode);
@@ -333,46 +340,58 @@ export class FirstPersonViewModel {
             this.spearTip.draw(drawMode);
             return;
         }
-        if (this.weaponId === 'bow') {
+        if (weaponId === 'fishing_rod') {
+            this._applyRootTransform(this._weaponMatrix, bobX, bobY, pose);
+            Mat4.translate(this._weaponMatrix, this._weaponMatrix, [0.325, -0.40, -0.84]);
+            Mat4.rotateX(this._weaponMatrix, this._weaponMatrix, -0.85);
+            Mat4.scale(this._weaponMatrix, this._weaponMatrix, [0.018, 1.35, 0.018]);
+            shader.setUniformMatrix4fv('uModelMatrix', this._weaponMatrix);
+            this.spearShaft.draw(drawMode);
+            return;
+        }
+        if (weaponId === 'bow') {
             this._drawBow(shader, drawMode, bobX, bobY, pose);
         }
     }
 
     _buildSpearMatrices(bobX, bobY, pose) {
         this._applyRootTransform(this._weaponMatrix, bobX, bobY, pose);
-        Mat4.translate(this._weaponMatrix, this._weaponMatrix, [0.30, -0.39, -1.28]);
-        Mat4.rotateX(this._weaponMatrix, this._weaponMatrix, Math.PI * 0.5);
+        Mat4.translate(this._weaponMatrix, this._weaponMatrix, [0.30, -0.39, -0.84]);
+        Mat4.rotateX(this._weaponMatrix, this._weaponMatrix, -Math.PI * 0.5);
         Mat4.scale(this._weaponMatrix, this._weaponMatrix, [0.035, 1.35, 0.035]);
 
         this._applyRootTransform(this._weaponMatrix2, bobX, bobY, pose);
-        Mat4.translate(this._weaponMatrix2, this._weaponMatrix2, [0.30, -0.39, -2.68]);
-        Mat4.rotateX(this._weaponMatrix2, this._weaponMatrix2, Math.PI * 0.5);
+        Mat4.translate(this._weaponMatrix2, this._weaponMatrix2, [0.30, -0.39, -2.19]);
+        Mat4.rotateX(this._weaponMatrix2, this._weaponMatrix2, -Math.PI * 0.5);
         Mat4.scale(this._weaponMatrix2, this._weaponMatrix2, [0.075, 0.22, 0.075]);
     }
 
     _drawBow(shader, drawMode, bobX, bobY, pose) {
         const charge = pose.charge || 0;
-        for (const [matrix, y, angle] of [
-            [this._weaponMatrix, -0.48, -12],
-            [this._weaponMatrix2, -0.02, 192],
-        ]) {
-            this._applyRootTransform(matrix, bobX, bobY, pose);
-            Mat4.translate(matrix, matrix, [0.34, y, -0.95]);
-            Mat4.rotateZ(matrix, matrix, angle * DEG_TO_RAD);
-            Mat4.scale(matrix, matrix, [0.025, 0.50, 0.025]);
-            shader.setUniformMatrix4fv('uModelMatrix', matrix);
+        const bend = charge * 0.035;
+        const curve = [
+            [-0.22, -0.72, -0.82 + bend], [-0.22, -0.52, -0.98],
+            [-0.22, -0.25, -1.04], [-0.22, 0.02, -0.98], [-0.22, 0.22, -0.82 + bend],
+        ];
+        for (let index = 0; index < curve.length - 1; index++) {
+            this._applyRootTransform(this._weaponMatrix, bobX, bobY, pose);
+            this._segmentBetween(this._weaponMatrix, curve[index], curve[index + 1], 0.025);
+            shader.setUniformMatrix4fv('uModelMatrix', this._weaponMatrix);
             this.bowLimb.draw(drawMode);
         }
 
+        // Two string halves meet at the drawing hand; a straight translated string cannot draw a bow.
+        const nock = [-0.12, -0.24, -0.82 + charge * 0.28];
+        for (const end of [curve[0], curve[curve.length - 1]]) {
+            this._applyRootTransform(this._weaponMatrix3, bobX, bobY, pose);
+            this._segmentBetween(this._weaponMatrix3, end, nock, 0.009);
+            shader.setUniformMatrix4fv('uModelMatrix', this._weaponMatrix3);
+            this.bowString.draw(drawMode);
+        }
+        if (this._bowReleaseElapsed < 0.30) return;
         this._applyRootTransform(this._weaponMatrix3, bobX, bobY, pose);
-        Mat4.translate(this._weaponMatrix3, this._weaponMatrix3, [0.34, -0.25, -0.93 + charge * 0.10]);
-        Mat4.scale(this._weaponMatrix3, this._weaponMatrix3, [0.008, 0.92, 0.008]);
-        shader.setUniformMatrix4fv('uModelMatrix', this._weaponMatrix3);
-        this.bowString.draw(drawMode);
-
-        this._applyRootTransform(this._weaponMatrix3, bobX, bobY, pose);
-        Mat4.translate(this._weaponMatrix3, this._weaponMatrix3, [0.34, -0.24, -1.15 + charge * 0.18]);
-        Mat4.rotateX(this._weaponMatrix3, this._weaponMatrix3, Math.PI * 0.5);
+        Mat4.translate(this._weaponMatrix3, this._weaponMatrix3, nock);
+        Mat4.rotateX(this._weaponMatrix3, this._weaponMatrix3, -Math.PI * 0.5);
         Mat4.scale(this._weaponMatrix3, this._weaponMatrix3, [0.016, 0.72, 0.016]);
         shader.setUniformMatrix4fv('uModelMatrix', this._weaponMatrix3);
         this.arrow.draw(drawMode);
@@ -424,55 +443,11 @@ export class FirstPersonViewModel {
         };
     }
 
-    _createLowPolySphereData(color, segments, rings) {
-        const positions = [];
-        const normals = [];
-        const colors = [];
-        const texCoords = [];
-        const indices = [];
-
-        for (let ring = 0; ring <= rings; ring++) {
-            const v = ring / rings;
-            const latitude = -Math.PI * 0.5 + v * Math.PI;
-            const y = Math.sin(latitude);
-            const radius = Math.cos(latitude);
-
-            for (let segment = 0; segment <= segments; segment++) {
-                const u = segment / segments;
-                const angle = u * Math.PI * 2;
-                const x = Math.cos(angle) * radius;
-                const z = Math.sin(angle) * radius;
-                positions.push(x, y, z);
-                normals.push(x, y, z);
-                colors.push(...color);
-                texCoords.push(u, v);
-            }
-        }
-
-        for (let ring = 0; ring < rings; ring++) {
-            for (let segment = 0; segment < segments; segment++) {
-                const row = segments + 1;
-                const i0 = ring * row + segment;
-                const i1 = i0 + 1;
-                const i2 = i0 + row;
-                const i3 = i2 + 1;
-                indices.push(i0, i2, i1, i1, i2, i3);
-            }
-        }
-
-        return {
-            positions: new Float32Array(positions),
-            normals: new Float32Array(normals),
-            colors: new Float32Array(colors),
-            texCoords: new Float32Array(texCoords),
-            indices: new Uint32Array(indices),
-        };
-    }
-
     delete() {
         if (this.sleeve) this.sleeve.delete();
         if (this.forearm) this.forearm.delete();
         if (this.hand) this.hand.delete();
+        if (this.leftHand) this.leftHand.delete();
         if (this.spearShaft) this.spearShaft.delete();
         if (this.spearTip) this.spearTip.delete();
         if (this.bowLimb) this.bowLimb.delete();
@@ -481,6 +456,7 @@ export class FirstPersonViewModel {
         this.sleeve = null;
         this.forearm = null;
         this.hand = null;
+        this.leftHand = null;
         this.spearShaft = null;
         this.spearTip = null;
         this.bowLimb = null;
