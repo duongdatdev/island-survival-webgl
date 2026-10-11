@@ -91,6 +91,7 @@ export class CollisionSystem {
             if (dy >= selfHalfH + CollisionSystem._halfHeight(collider)) continue;
 
             const dist = Math.sqrt(distSq);
+            const previous = Array.from(selfPos);
             if (dist > 0.001) {
                 const nx = dx / dist;
                 const nz = dz / dist;
@@ -101,7 +102,9 @@ export class CollisionSystem {
                 selfPos[0] += 0.01;
             }
 
-            if (terrain && snapToTerrain) {
+            if (terrain && entity.constrainTerrainMovement) {
+                entity.constrainTerrainMovement(previous, terrain);
+            } else if (terrain && snapToTerrain) {
                 const h = terrain.getHeight(selfPos[0], selfPos[2]);
                 selfPos[1] = h + (entity.collider.height ? entity.collider.height * 0.5 : 0.9);
             }

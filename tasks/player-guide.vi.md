@@ -6,7 +6,7 @@ Bản Campaign đang được hoàn thiện. Mục tiêu là nhiều phiên chơ
 
 Chọn Chơi, tạo thế giới Campaign và độ khó phù hợp. Tiêu chuẩn là mức dùng để đánh giá cân bằng; Thư giãn giảm hao hụt và giữ đồ khi chết. Thế giới cũ giữ chế độ Classic và cách chơi cũ.
 
-Nhấp vào khung game để điều khiển góc nhìn. WASD di chuyển, Shift chạy khi còn thể lực, E tương tác, Q dùng đồ đang chọn, 1–8 hoặc con lăn đổi ô nhanh, C/Tab mở túi. Có thể đổi các phím này trong Cài đặt → Điều khiển. B mở xây dựng, J nhật ký, M bản đồ; Esc đóng bảng hoặc tạm dừng. Khi lặn, Ctrl đi xuống và Space đi lên.
+Nhấp vào khung game để điều khiển góc nhìn. WASD di chuyển, Shift chạy khi còn thể lực, Space nhảy khi đang đứng trên mặt đất, E tương tác, Q dùng đồ đang chọn, 1–8 hoặc con lăn đổi ô nhanh, C/Tab mở túi. Có thể đổi các phím này trong Cài đặt → Điều khiển. B mở xây dựng, J nhật ký, M bản đồ; Esc đóng bảng hoặc tạm dừng. Khi lặn, Ctrl đi xuống và Space đi lên.
 
 Nếu dễ khó chịu khi góc nhìn lắc, bật **Giảm chuyển động** trong Điều khiển. Game cũng áp dụng lựa chọn này của hệ điều hành. Có thể chỉnh độ nhạy chuột, góc nhìn và âm lượng riêng.
 

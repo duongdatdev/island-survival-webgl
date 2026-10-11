@@ -7,6 +7,7 @@ test('InputManager initializes with default action key bindings', () => {
     const input = new InputManager(null);
     assert.deepEqual(input.getBindings(), DEFAULT_KEY_BINDINGS);
     assert.equal(input.getBindingKey('moveForward'), 'KeyW');
+    assert.equal(input.getBindingKey('jump'), 'Space');
     assert.equal(input.getBindingKey('interact'), 'KeyE');
     assert.equal(input.getBindingKey('inventory'), 'KeyC');
     assert.equal(input.getBindingKey('useItem'), 'KeyQ');

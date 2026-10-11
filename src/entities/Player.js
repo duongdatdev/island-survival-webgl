@@ -9,6 +9,7 @@ export class Player extends Entity {
         this.speed = PLAYER_BALANCE.walkSpeed;
         this.currentSpeed = 0.0;
         this.velocity = Vec3.create();
+        this.grounded = true;
 
         const PLAYER_SCALE = 0.32;
         this.scaleFactor = PLAYER_SCALE;
@@ -22,10 +23,70 @@ export class Player extends Entity {
             layer: CollisionLayers.Player,
             radius: 0.45 * PLAYER_SCALE,
             height: 1.8 * PLAYER_SCALE,
+            snapToTerrain: false,
         };
     }
 
-    update(deltaTime, inputManager, camera, terrain) {
+    // Sweep in small increments so sprinting/slow frames cannot skip a cliff face.
+    constrainTerrainMovement(previous, terrain) {
+        if (!terrain) return;
+        const radius = this.collider.radius, half = this.collider.height / 2;
+        const stepHeight = PLAYER_BALANCE.maxStepHeight * this.scaleFactor;
+        const slopeLimit = Math.tan(PLAYER_BALANCE.maxSlopeDegrees * Math.PI / 180);
+        const distance = Math.hypot(this.position[0] - previous[0], this.position[2] - previous[2]);
+        const steps = Math.max(1, Math.ceil(distance / (radius * 0.5)));
+        const dx = (this.position[0] - previous[0]) / steps, dz = (this.position[2] - previous[2]) / steps;
+        let x = previous[0], z = previous[2], feet = previous[1] - half;
+        const probe = Math.max(0.005, 0.03 * this.scaleFactor);
+        const contact = (nx, nz, sx, sz) => {
+            const ground = terrain.getHeight(nx, nz), length = Math.hypot(sx, sz);
+            if (length < 1e-9) return null;
+            let gx = (terrain.getHeight(nx + probe, nz) - terrain.getHeight(nx - probe, nz)) / (2 * probe);
+            let gz = (terrain.getHeight(nx, nz + probe) - terrain.getHeight(nx, nz - probe)) / (2 * probe);
+            const localSlope = Math.hypot(gx, gz);
+            if (localSlope < 1e-6) {
+                gx = (terrain.getHeight(nx + radius, nz) - terrain.getHeight(nx - radius, nz)) / (2 * radius);
+                gz = (terrain.getHeight(nx, nz + radius) - terrain.getHeight(nx, nz - radius)) / (2 * radius);
+            }
+            const ahead = terrain.getHeight(nx + sx / length * radius, nz + sz / length * radius);
+            const beyond = terrain.getHeight(nx + sx / length * (radius + probe), nz + sz / length * (radius + probe));
+            const canStep = ahead > feet && ahead <= feet + stepHeight + 1e-5 && Math.abs(beyond - ahead) / probe <= slopeLimit;
+            const uphill = ground > terrain.getHeight(x, z) + 1e-6;
+            if (Math.max(ground, ahead) > feet + stepHeight + 1e-5 ||
+                (uphill && ground >= feet - PLAYER_BALANCE.groundSnapDistance * this.scaleFactor &&
+                    !canStep && localSlope > slopeLimit && gx * sx + gz * sz > 1e-6)) {
+                const gradient = Math.hypot(gx, gz);
+                return gradient > 1e-6 && gx * sx + gz * sz > 0
+                    ? [gx / gradient, gz / gradient] : [sx / length, sz / length];
+            }
+            return null;
+        };
+        for (let i = 0; i < steps; i++) {
+            let sx = dx, sz = dz;
+            const normal = contact(x + sx, z + sz, sx, sz);
+            if (normal) {
+                const into = sx * normal[0] + sz * normal[1];
+                sx -= normal[0] * into; sz -= normal[1] * into;
+                const speedInto = this.velocity[0] * normal[0] + this.velocity[2] * normal[1];
+                if (speedInto > 0) {
+                    this.velocity[0] -= normal[0] * speedInto;
+                    this.velocity[2] -= normal[1] * speedInto;
+                }
+                if (contact(x + sx, z + sz, sx, sz)) { sx = 0; sz = 0; }
+            }
+            x += sx; z += sz;
+            // Only reachable support may raise the sweep's feet; drops never teleport them down.
+            feet = Math.max(feet, terrain.getHeight(x, z));
+        }
+        this.position[0] = x; this.position[2] = z;
+    }
+
+    update(deltaTime, inputManager, camera, terrain, modelCollision = null) {
+        const previous = Array.from(this.position);
+        if (this.grounded && this.speed > 0 && inputManager.isKeyPressed?.('jump')) {
+            this.velocity[1] = Math.sqrt(2 * PLAYER_BALANCE.gravity * PLAYER_BALANCE.jumpHeight * this.scaleFactor);
+            this.grounded = false;
+        }
         const forward = Vec3.create();
         const right = Vec3.create();
 
@@ -81,6 +142,7 @@ export class Player extends Entity {
 
         this.position[0] += this.velocity[0] * deltaTime;
         this.position[2] += this.velocity[2] * deltaTime;
+        this.constrainTerrainMovement(previous, terrain);
         this.currentSpeed = Math.hypot(this.velocity[0], this.velocity[2]);
 
         let boundaryLimit = 46.0;
@@ -106,12 +168,31 @@ export class Player extends Entity {
             }
         }
         
-        const PLAYER_SCALE = this.scaleFactor;
-        if (terrain) {
-            const terrainHeight = terrain.getHeight(this.position[0], this.position[2]);
-            this.position[1] = terrainHeight + 0.9 * PLAYER_SCALE;
+        const terrainHeight = terrain?.getHeight(this.position[0], this.position[2]) ?? 0;
+        const half = this.collider.height / 2;
+        const snap = PLAYER_BALANCE.groundSnapDistance * this.scaleFactor;
+        const support = modelCollision && terrainHeight >= -0.4
+            ? modelCollision.groundHeight(this.position, terrainHeight, snap, half, this.collider.radius)
+            : terrainHeight;
+        const floor = support + half;
+        const step = PLAYER_BALANCE.maxStepHeight * this.scaleFactor;
+        if (this.velocity[1] <= 0 && floor >= this.position[1] - snap && floor <= this.position[1] + step + 1e-5) {
+            this.position[1] = floor;
+            this.velocity[1] = 0;
+            this.grounded = true;
         } else {
-            this.position[1] = 0.9 * PLAYER_SCALE;
+            this.grounded = false;
+            // Integrate falling in bounded time steps for stable landings after a slow frame.
+            let remaining = deltaTime;
+            while (remaining > 1e-8) {
+                const dt = Math.min(remaining, 1 / 60);
+                this.velocity[1] = Math.max(-PLAYER_BALANCE.terminalFallSpeed, this.velocity[1] - PLAYER_BALANCE.gravity * dt);
+                this.position[1] += this.velocity[1] * dt;
+                remaining -= dt;
+                if (this.velocity[1] <= 0 && this.position[1] <= floor) {
+                    this.position[1] = floor; this.velocity[1] = 0; this.grounded = true; break;
+                }
+            }
         }
 
         this.updateModelMatrix();

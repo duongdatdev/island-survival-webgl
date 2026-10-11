@@ -15,6 +15,7 @@ import { DebrisHook } from './DebrisHook.js';
 import { Mesh } from '../renderer/Mesh.js';
 import { createCubeData } from '../renderer/CubeGeometry.js';
 import { TriangleCollision } from './TriangleCollision.js';
+import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
 import { buildCampaignLandmarks } from '../gameplay/world/CampaignLandmarks.js';
 import { journalSearchLayout } from '../gameplay/world/JournalSearch.js';
 import { CampaignEndings, raftCoursePosition } from './CampaignEndings.js';
@@ -265,6 +266,8 @@ export class CampaignController {
         const maximum = this.scene.inventory.hasItem('dive_kit') ? 120 : 45;
         this.refreshCollision();
         if (ground < -0.4) {
+            player.velocity[1] = 0;
+            player.grounded = false;
             if (this.swimY === undefined) this.swimY = -0.25;
             const input = this.scene.engine.input;
             if (input.isKeyDown('Space')) this.swimY += seconds * 1.7;
@@ -275,11 +278,23 @@ export class CampaignController {
             this.swimY = undefined;
             this.oxygen = Math.min(maximum, (this.oxygen ?? maximum) + seconds * 15);
         }
-        const collisionStart = ground >= -0.4 ? this.collision.stepUp(position, previous, this.scene.terrain, player.collider.radius, player.collider.height) : previous;
-        this.collision.resolve(position, collisionStart, player.collider.radius, player.collider.height, { vertical: ground < -0.4, grounded: ground >= -0.4,
+        const collisionStart = ground >= -0.4 && player.grounded !== false ? this.collision.stepUp(position, previous, this.scene.terrain, player.collider.radius, player.collider.height) : previous;
+        const requestedY = position[1];
+        this.collision.resolve(position, collisionStart, player.collider.radius, player.collider.height, { vertical: ground < -0.4 || player.grounded === false, grounded: ground >= -0.4 && player.grounded !== false,
             floorHeight: (x, z) => this.scene.terrain.getHeight(x, z) + player.collider.height / 2 });
+        if (player.velocity[1] > 0 && position[1] < requestedY - 0.0001) player.velocity[1] = 0;
+        const resolvedX = position[0], resolvedZ = position[2];
+        player.constrainTerrainMovement?.(previous, this.scene.terrain);
+        if (Math.hypot(position[0] - resolvedX, position[2] - resolvedZ) > 0.001) position.set(previous);
         if (ground >= -0.4) {
-            position[1] = this.collision.groundHeight(position, ground, 0.55, player.collider.height / 2, player.collider.radius) + player.collider.height / 2;
+            const half = player.collider.height / 2;
+            const floor = this.scene.terrain.getHeight(position[0], position[2]);
+            const support = this.collision.groundHeight(position, floor, PLAYER_BALANCE.maxStepHeight, half, player.collider.radius) + half;
+            // Preserve a fall from a ledge; only nearby support can ground the actor.
+            if (player.velocity[1] <= 0 && support >= position[1] - PLAYER_BALANCE.groundSnapDistance &&
+                support <= previous[1] + PLAYER_BALANCE.maxStepHeight + 0.001) {
+                position[1] = support; player.velocity[1] = 0; player.grounded = true;
+            }
             // A floor edge can support the feet while the raised head intersects a low roof.
             if (!this.collision.capsuleClear(position, player.collider.radius, player.collider.height)) position.set(previous);
         }

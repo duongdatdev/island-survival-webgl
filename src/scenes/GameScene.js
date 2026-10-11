@@ -830,7 +830,7 @@ export class GameScene extends Scene {
         const movementInput = (this.isFishing || inventoryOpen)
             ? { isKeyDown: () => false, isKeyPressed: () => false, isActionDown: () => false, isActionPressed: () => false, keys: {} } 
             : this.engine.input;
-        this.player.update(deltaTime, movementInput, this.camera, this.terrain);
+        this.player.update(deltaTime, movementInput, this.camera, this.terrain, this.campaign?.collision);
 
         if (this.collisionSystem) {
             this.collisionSystem.resolvePlayerCollisions(this.player, this.terrain, CollisionLayers.Creature);
@@ -841,6 +841,7 @@ export class GameScene extends Scene {
             this.player.position[0] - prevPlayerPos[0],
             this.player.position[2] - prevPlayerPos[2]
         );
+        this.player.currentSpeed = deltaTime > 0 ? distanceMoved / deltaTime : 0;
         const movementFeel = this.movementFeedback.update(
             deltaTime,
             distanceMoved,
@@ -850,7 +851,7 @@ export class GameScene extends Scene {
         this.camera.setMotionOffset(movementFeel.horizontalOffset, movementFeel.verticalOffset);
         this.camera.setGameplayFov(this.engine.settings.get('fov'), movementFeel.fovBoostDegrees);
 
-        if (movementFeel.stepCount > 0) {
+        if (movementFeel.stepCount > 0 && this.player.grounded) {
             const px = this.player.position[0];
             const pz = this.player.position[2];
             const h = this.terrain ? this.terrain.getHeight(px, pz) : 0;
