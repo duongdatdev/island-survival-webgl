@@ -19,7 +19,8 @@ test('loading fetches independent models concurrently and cannot announce 100 pe
         await expect.poll(() => requests.size, { timeout: 30000 }).toBe(items.length);
         await page.waitForFunction(() => window.__GAME_ENGINE__?.scenes.activeScene._progress > 0.94);
         await expect(page.locator('#main-menu')).toBeHidden();
-        await expect(page.locator('#loader-text')).toContainText('95%');
+        await expect(page.locator('#loader-percent')).toHaveText('95%');
+        await expect(page.locator('#loader-progress')).toHaveAttribute('aria-valuenow', '95');
         expect(await page.evaluate(() => window.__GAME_ENGINE__.scenes.activeScene._assetsReady)).toBe(false);
     } finally { release(); }
     await expect(page.locator('#main-menu')).toBeVisible({ timeout: 30000 });

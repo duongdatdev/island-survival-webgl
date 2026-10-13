@@ -4,6 +4,7 @@ import { parseMtl } from '../characters/CharacterLoader.js';
 import { ObjParser } from '../core/ObjParser.js';
 import { Mesh } from '../renderer/Mesh.js';
 import { DebrisDatabase } from '../systems/DebrisDatabase.js';
+import { setLoadingProgress } from '../systems/LoadingUI.js';
 
 export class LoadingScene extends Scene {
     init() {
@@ -23,14 +24,14 @@ export class LoadingScene extends Scene {
         if (resourceHud) resourceHud.style.display = 'none';
 
         this._tips = [
-            '💡 Thu thập Gỗ, Đá, Dây Thừng và Thùng Gỗ để chế tạo bè.',
-            '🌊 Tài nguyên cũng trôi trên biển — hãy ra bờ biển để nhặt!',
-            '🔨 Bấm C để mở bảng chế tạo và xem công thức.',
-            '⛵ Mục tiêu: Xây bè thoát khỏi đảo hoang!',
-            '🖱️ Di chuột để nhìn xung quanh ở góc nhìn thứ nhất.',
-            '📦 Bấm E khi đứng gần tài nguyên để nhặt.',
-            '🎮 Dùng phím W A S D để di chuyển nhân vật.',
-            '🔊 Lắng nghe tiếng sóng, thời tiết và bước chân trên đảo!',
+            'Thu thập gỗ và đá để chế tạo những công cụ đầu tiên.',
+            'Tài nguyên cũng trôi trên biển. Hãy ra bờ biển để tìm thêm.',
+            'Mở bảng chế tạo để xem nguyên liệu cần cho từng công thức.',
+            'Chuẩn bị thức ăn và nước uống trước khi đi thám hiểm.',
+            'Di chuột để nhìn xung quanh ở góc nhìn thứ nhất.',
+            'Đứng gần tài nguyên để thu thập và kiểm tra túi đồ thường xuyên.',
+            'Bạn có thể thay đổi phím điều khiển trong phần Cài đặt.',
+            'Lắng nghe tiếng sóng, thời tiết và bước chân trên đảo.',
         ];
         this._tipIndex = Math.floor(Math.random() * this._tips.length);
         this._tipTimer = 0;
@@ -57,10 +58,10 @@ export class LoadingScene extends Scene {
         this._targetProgress = 0;
         this._assetsReady = false;
         this._stages = [
-            { at: 0.3, delay: 400, label: 'Đang tạo thế giới...' },
+            { at: 0.3, delay: 400, label: 'Đang khởi tạo trò chơi...' },
             { at: 0.6, delay: 800, label: 'Đang tải tài nguyên...' },
             { at: 0.85, delay: 1200, label: 'Đang chuẩn bị âm thanh...' },
-            { at: 0.95, delay: 1800, label: 'Đang chuẩn bị model...' },
+            { at: 0.95, delay: 1800, label: 'Đang hoàn thiện tài nguyên...' },
         ];
         this._stageIndex = 0;
         this._stageTimer = 0;
@@ -107,16 +108,8 @@ export class LoadingScene extends Scene {
         this._progress += (this._targetProgress - this._progress) * deltaTime * 3.0;
         const percent = Math.round(Math.min(this._progress, 1.0) * 100);
 
-        const barEl = document.getElementById('loader-bar');
-        if (barEl) {
-            barEl.style.width = `${percent}%`;
-        }
-
-        const textEl = document.getElementById('loader-text');
-        if (textEl) {
-            const currentStage = this._stages[Math.min(this._stageIndex, this._stages.length - 1)];
-            textEl.textContent = currentStage ? `${currentStage.label} (${percent}%)` : `Đang tải tài nguyên (${percent}%)...`;
-        }
+        const currentStage = this._stages[Math.max(0, this._stageIndex - 1)];
+        setLoadingProgress(currentStage?.label || 'Đang tải tài nguyên...', percent);
 
         this._tipTimer += deltaTime;
         if (this._tipTimer >= this._tipInterval) {
@@ -137,7 +130,7 @@ export class LoadingScene extends Scene {
         const tipEl = document.getElementById('loader-tip');
         if (tipEl) {
             tipEl.style.opacity = '0';
-            setTimeout(() => {
+            this._tipTimeout = setTimeout(() => {
                 tipEl.textContent = this._tips[this._tipIndex];
                 tipEl.style.opacity = '1';
             }, 200);
@@ -156,6 +149,7 @@ export class LoadingScene extends Scene {
     }
 
     destroy() {
+        clearTimeout(this._tipTimeout);
         console.log('LoadingScene destroyed.');
     }
 

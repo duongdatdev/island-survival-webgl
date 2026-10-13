@@ -1629,6 +1629,8 @@ export class GameScene extends Scene {
 
         const pauseMenu = document.getElementById('pause-menu');
         if (pauseMenu) pauseMenu.classList.remove('hidden');
+        const worldName = document.getElementById('pause-world-name');
+        if (worldName) worldName.textContent = this.engine.activeWorld?.name || '';
 
         this._updatePauseSoundButton(this.engine.audio.isMuted);
 
@@ -1637,6 +1639,7 @@ export class GameScene extends Scene {
 
         this.engine.audio.playClick();
         this.engine.audio.setDucked(true);
+        this._pauseResumeBtn?.focus({ preventScroll: true });
     }
 
     _resumeGame() {

@@ -193,6 +193,7 @@ export class CampaignController {
         }
         if (this.scene.isPaused) return false;
         if (this.ending.state) return false;
+        if (this.scene.inventoryMenu && !this.scene.inventoryMenu.classList.contains('hidden')) return false;
         if (input.isKeyPressed('Escape') && (this.fishing.state || this.hook.state)) {
             this.fishing.cancel(); this.hook.cancel();
             this.scene.isFishing = false;
@@ -557,7 +558,7 @@ export class CampaignController {
             } });
         }
         const nearest = candidates.sort((a, b) => distance(player, a.position) - (a.preference || 0) - distance(player, b.position) + (b.preference || 0))[0];
-        if (this.swimY === undefined || this.swimY > -0.8) this.ui.hint(nearest ? `${input.getBindingDisplayName('interact')} · ${nearest.label}` : 'B xây căn cứ · J nhật ký · M bản đồ · Q dùng vật phẩm');
+        if (this.swimY === undefined || this.swimY > -0.8) this.ui.hint(nearest ? `${input.getBindingDisplayName('interact')} · ${nearest.label}` : '');
         else if (nearest) this.ui.hint(`${input.getBindingDisplayName('interact')} · ${nearest.label} · Space nổi lên · Ctrl lặn xuống`);
         if (nearest && input.isActionPressed('interact')) { input.consumeAction('interact', { keepHeld: !!nearest.keepHeld }); nearest.action(); }
     }

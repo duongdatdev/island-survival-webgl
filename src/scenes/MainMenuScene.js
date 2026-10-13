@@ -10,6 +10,7 @@ import { Vec3 } from '../math/Vec3.js';
 import { WorldGenerator } from '../gameplay/world/WorldGenerator.js';
 import { CampaignWorldGenerator } from '../gameplay/world/CampaignWorldGenerator.js';
 import { MenuUI } from '../systems/MenuUI.js';
+import { setLoadingProgress } from '../systems/LoadingUI.js';
 
 const SUN_DIRECTION = Vec3.create(0.50, 0.049, 1.0);
 const KEY_LIGHT_DIRECTION = [0.50, 0.55, 1.0];
@@ -84,6 +85,7 @@ export class MainMenuScene extends Scene {
         this._worldImportFile = document.getElementById('world-import-file');
         this._worldList = document.getElementById('world-list');
         this._worldSummary = document.getElementById('world-menu-summary');
+        this._worldSelectionSummary = document.getElementById('world-selection-summary');
         this._worldError = document.getElementById('world-menu-error');
         this._worldPlayBtn = document.getElementById('world-play-btn');
         this._worldFormModal = document.getElementById('world-form-modal');
@@ -101,8 +103,6 @@ export class MainMenuScene extends Scene {
         this._worldDeleteCancelBtn = document.getElementById('world-delete-cancel-btn');
         this._worldDeleteConfirmBtn = document.getElementById('world-delete-confirm-btn');
         this._loaderScreen = document.getElementById('loading-screen');
-        this._loaderText = document.getElementById('loader-text');
-        this._loaderBar = document.getElementById('loader-bar');
     }
 
     _bindEvents() {
@@ -310,6 +310,10 @@ export class MainMenuScene extends Scene {
             for (const world of worlds) this._worldList.append(this._createWorldCard(world));
         }
         if (this._worldPlayBtn) this._worldPlayBtn.disabled = !this.selectedWorldId || this.isLaunching;
+        if (this._worldSelectionSummary) {
+            const selected = worlds.find(world => world.id === this.selectedWorldId);
+            this._worldSelectionSummary.textContent = selected ? `Đã chọn: ${selected.name}` : 'Chưa chọn thế giới';
+        }
     }
 
     _createWorldCard(world) {
@@ -318,10 +322,12 @@ export class MainMenuScene extends Scene {
         card.tabIndex = 0;
         card.setAttribute('role', 'option');
         card.setAttribute('aria-selected', world.id === this.selectedWorldId ? 'true' : 'false');
-        const select = () => {
+        const select = async () => {
+            const keyboardFocused = document.activeElement === card;
             this.selectedWorldId = world.id;
             this._setWorldError('');
-            this._renderWorlds();
+            await this._renderWorlds();
+            if (keyboardFocused) this._worldList?.querySelector('.world-card.selected')?.focus();
         };
         card.addEventListener('click', select);
         card.addEventListener('keydown', event => {
@@ -338,6 +344,7 @@ export class MainMenuScene extends Scene {
         const name = document.createElement('span');
         name.className = 'world-card-name';
         name.textContent = world.name;
+        name.title = world.name;
         const status = document.createElement('span');
         status.className = `world-status ${world.recoveryProblem ? 'dead' : world.status || 'new'}`;
         status.textContent = world.recoveryProblem ? 'Cần khôi phục' : STATUS_LABELS[world.status] || STATUS_LABELS.new;
@@ -345,18 +352,30 @@ export class MainMenuScene extends Scene {
 
         const meta = document.createElement('div');
         meta.className = 'world-card-meta';
-        for (const text of [
-            world.mode === 'campaign' ? `Chiến dịch · Chương ${world.chapter || 1}` : 'Classic',
-            `seed: ${world.seed}`,
-            `sinh tồn: ${this._formatDuration(world.survivalSeconds)}`,
-            world.lastPlayedAt ? `chơi: ${this._formatDate(world.lastPlayedAt)}` : 'chưa chơi',
-            ...(world.recoveryProblem ? [world.recoveryProblem] : []),
+        for (const [label, value] of [
+            ['Chế độ', world.mode === 'campaign' ? `Chiến dịch · Chương ${world.chapter || 1}` : 'Classic'],
+            ['Thời gian sinh tồn', this._formatDuration(world.survivalSeconds)],
+            ['Chơi gần nhất', world.lastPlayedAt ? this._formatDate(world.lastPlayedAt) : 'Chưa chơi'],
         ]) {
             const item = document.createElement('span');
-            item.textContent = text;
+            item.className = 'world-stat';
+            const caption = document.createElement('span');
+            caption.textContent = label;
+            const content = document.createElement('strong');
+            content.textContent = value;
+            item.append(caption, content);
             meta.append(item);
         }
-        main.append(top, meta);
+        const seed = document.createElement('p');
+        seed.className = 'world-card-seed';
+        seed.textContent = `Seed: ${world.seed}`;
+        main.append(top, meta, seed);
+        if (world.recoveryProblem) {
+            const warning = document.createElement('p');
+            warning.className = 'world-card-warning';
+            warning.textContent = world.recoveryProblem;
+            main.append(warning);
+        }
 
         const actions = document.createElement('div');
         actions.className = 'world-card-actions';
@@ -511,8 +530,7 @@ export class MainMenuScene extends Scene {
     _setLoader(visible, text = '', progress = 0) {
         if (!this._loaderScreen) return;
         this._loaderScreen.classList.toggle('hidden', !visible);
-        if (visible && this._loaderText) this._loaderText.textContent = text;
-        if (visible && this._loaderBar) this._loaderBar.style.width = `${progress}%`;
+        if (visible) setLoadingProgress(text, progress);
     }
 
     _enterGame() {
@@ -544,7 +562,7 @@ export class MainMenuScene extends Scene {
         if (!this._soundBtn) return;
         this._soundBtn.innerHTML =
             `<svg class="ui-icon" aria-hidden="true"><use href="#i-volume${isMuted ? '-off' : ''}"/></svg>` +
-            '<span class="tile-label">ÂM THANH</span>';
+            `<span class="tile-label">ÂM THANH: ${isMuted ? 'TẮT' : 'BẬT'}</span>`;
         this._soundBtn.classList.toggle('is-off', isMuted);
         this._soundBtn.setAttribute('aria-pressed', isMuted ? 'true' : 'false');
         this._soundBtn.setAttribute('aria-label', isMuted ? 'Bật âm thanh' : 'Tắt âm thanh');

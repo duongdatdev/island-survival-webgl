@@ -1,4 +1,5 @@
-import { STRUCTURE_DEFINITIONS, CAMPAIGN_RECIPES, CAMPAIGN_BALANCE, getCampaignRecipes } from '../gameplay/CampaignDatabase.js';
+import { CampaignCraftingPanel } from './CampaignCraftingPanel.js';
+import { STRUCTURE_DEFINITIONS, CAMPAIGN_RECIPES, CAMPAIGN_BALANCE } from '../gameplay/CampaignDatabase.js';
 import { CAMPAIGN_JOURNALS } from '../gameplay/CampaignStory.js';
 import { getResourceDef } from './ResourceDatabase.js';
 import { ENDING_SUPPLIES } from './CampaignEndings.js';
@@ -9,6 +10,7 @@ import { SURVEY_STATIONS, SURVEY_CAPACITIES, pressureReadings, pourSurveyWater }
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const button = (action, label, argument = '', disabled = false, { ariaLabel, pressed } = {}) => `<button type="button" data-action="${action}" data-arg="${escape(argument)}"${disabled ? ' disabled' : ''}${ariaLabel ? ` aria-label="${escape(ariaLabel)}"` : ''}${pressed === undefined ? '' : ` aria-pressed="${!!pressed}"`}>${escape(label)}</button>`;
+const toolbarButton = (key, label, argument, icon) => `<button type="button" class="campaign-tool" data-action="panel" data-arg="${escape(argument)}" aria-label="${escape(`${key} · ${label}`)}" title="${escape(`${key} · ${label}`)}"><svg class="ui-icon campaign-tool-icon" aria-hidden="true"><use href="#${icon}"/></svg><span class="campaign-tool-key">${escape(key)}</span><span class="campaign-tool-label">${escape(label)}</span></button>`;
 const countLabel = item => `${getResourceDef(item.id)?.name || item.id} ×${item.count}`;
 
 /** Campaign panels use gameplay APIs; DOM code never owns simulation state. */
@@ -19,8 +21,8 @@ export class CampaignUI {
         this.root = document.createElement('div');
         this.root.id = 'campaign-ui';
         this.root.innerHTML = `<div class="campaign-toolbar" aria-label="Công cụ chiến dịch">
-            ${button('panel', 'B · Xây căn cứ', 'build')}${button('panel', 'J · Nhật ký', 'journal')}
-            ${button('panel', 'M · Bản đồ', 'map')}${button('panel', 'Công nghệ', 'craft')}
+            ${toolbarButton('B', 'Xây căn cứ', 'build', 'i-hammer')}${toolbarButton('J', 'Nhật ký', 'journal', 'i-book')}
+            ${toolbarButton('M', 'Bản đồ', 'map', 'i-island')}${toolbarButton(this.scene.engine.input.getBindingDisplayName('inventory'), 'Kho đồ', 'craft', 'i-backpack')}
             </div><div id="campaign-action-hint" role="status"></div>
             <div id="campaign-activity" class="campaign-activity hidden"><p id="campaign-activity-label"></p>
             <label id="campaign-reel-label">Kéo cá <progress id="campaign-reel" max="1" value="0"></progress></label>
@@ -65,7 +67,7 @@ export class CampaignUI {
         this.root.addEventListener('click', this.onClick);
         this.root.addEventListener('input', this.onInput);
         document.addEventListener('keydown', this.onKey);
-        this.selectedRecipe = 'shelter';
+        this.craftingPanel = new CampaignCraftingPanel(controller);
         this.refreshHUD();
     }
 
@@ -74,9 +76,14 @@ export class CampaignUI {
         return [...this.panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),canvas[tabindex]')]
             .filter(element => element.tabIndex >= 0 && element.getClientRects().length);
     }
-    recipes() { return getCampaignRecipes(); }
 
     open(kind, argument = '') {
+        if (kind === 'craft') {
+            if (this.controller.ending?.state) return;
+            if (this.isOpen) this.close();
+            this.scene.inventoryController.openMenu();
+            return;
+        }
         if (this.controller.ending?.state && !['ending-result', 'ending-abandon'].includes(kind)) return;
         if (this.controller.wreckSalvage?.active) {
             this.controller.wreckSalvage.pause();
@@ -90,13 +97,13 @@ export class CampaignUI {
         this.argument = argument;
         if (!this.isOpen) {
             this.returnFocus = document.activeElement;
+            if (this.scene.inventoryMenu && !this.scene.inventoryMenu.classList.contains('hidden')) this.scene.inventoryController.closeMenu();
             this.wasPaused = this.scene.isPaused;
             this.wasPointerLockEnabled = this.scene.engine.input.pointerLockEnabled;
             this.scene.isPaused = true;
             this.scene._pointerUnlockPauseGuard = 0.5;
             this.scene.engine.input.setPointerLockEnabled(false);
             this.scene.engine.input.releasePointerLock();
-            this.scene.inventoryMenu?.classList.add('hidden');
         }
         this.panel.classList.remove('hidden');
         this.scene.tutorial?.notifyPanel(kind);
@@ -134,9 +141,7 @@ export class CampaignUI {
         if (action === 'retry-save') { if (await this.scene.saveController.save(false)) this.close(); else this.report('Vẫn chưa lưu được. Tiến trình đang giữ trong phiên này.'); return; }
         if (action === 'build') { this.close(); c.beginPlacement(argument); return; }
         if (action === 'inspect-structure') { this.open('structure', argument); return; }
-        if (action === 'recipe') { this.selectedRecipe = argument; this.render(); return; }
         if (action === 'craft') result = c.craft(argument);
-        if (action === 'pin') { c.pinnedRecipe = c.pinnedRecipe === argument ? null : argument; result = { ok: true, message: c.pinnedRecipe ? 'Đã ghim nguyên liệu.' : 'Đã bỏ ghim nguyên liệu.' }; }
         if (action === 'pin-objective') result = c.pinObjective(Number(argument));
         if (action === 'repair-install') result = c.installStationCircuit();
         if (action === 'repair-test') result = c.testStationCircuit();
@@ -199,7 +204,7 @@ export class CampaignUI {
                 + Object.values(STRUCTURE_DEFINITIONS).map(def => button('build', `${def.name} · cấp ${def.tier}`, def.id, def.tier > c.progress.tier)).join('') + '</div>';
             this.body.innerHTML += '<h3>Quản lý công trình đã xây</h3><div class="campaign-grid">'
                 + [...c.registry.structures.values()].map(r => button('inspect-structure', `${STRUCTURE_DEFINITIONS[r.type].name} ${r.id.replace('structure-', '')}`, r.id)).join('') + '</div>';
-        } else if (this.kind === 'craft') this.body.innerHTML = this.recipeHTML();
+        }
         else if (this.kind === 'repair-circuit') { this.root.querySelector('#campaign-panel-title').textContent = 'Khôi phục bảng điều khiển'; this.body.innerHTML = this.circuitHTML(); }
         else if (this.kind === 'survey-report') { this.root.querySelector('#campaign-panel-title').textContent = 'Đối chiếu thiết bị ngoài hiện trường'; this.body.innerHTML = this.surveyReportHTML(); }
         else if (this.kind === 'field-survey') {
@@ -290,19 +295,6 @@ export class CampaignUI {
                 : focusIdentity.action && element.dataset.action === focusIdentity.action && element.dataset.arg === focusIdentity.argument);
             (replacement || controls[0])?.focus();
         }
-    }
-
-    recipeHTML() {
-        const c = this.controller;
-        const recipe = this.recipes().find(recipe => recipe.id === this.selectedRecipe) || this.recipes()[0];
-        const available = c.production.checkCraft(recipe.id, this.scene.inventory, this.scene.player.position);
-        const ingredients = Object.entries(recipe.ingredients).map(([id, count]) => `<li>${escape(getResourceDef(id)?.name || id)} ${c.registry.craftingSources(this.scene.player.position, this.scene.inventory).reduce((n, container) => n + container.getCount(id), 0)}/${count}</li>`).join('');
-        return `<div class="campaign-crafting"><div class="campaign-recipe-list">${this.recipes().map(def => button('recipe', `${def.icon} ${def.name} · cấp ${def.tier || 1}`, def.id)).join('')}</div><div><h3>${escape(recipe.name)}</h3><p>${escape(recipe.description || 'Chế tạo để phát triển căn cứ và mở khả năng khám phá.')}</p><ul>${ingredients}</ul><p>${recipe.station ? `Trạm: ${escape(recipe.station === 'workbench' ? 'Bàn chế tạo' : recipe.station === 'smelter' ? 'Lò nung' : recipe.station === 'smoker' ? 'Giàn hun khói' : 'Bàn sửa chữa')}` : 'Chế tạo bằng tay'}${recipe.duration ? ` · ${recipe.duration} giây mỗi lượt` : ''}</p>`
-            + `<p class="recipe-output">Thành phẩm: ${escape(getResourceDef(recipe.outputId)?.name || recipe.outputId)} ×${recipe.yield}</p>`
-            + (recipe.fuel ? `<p class="recipe-fuel">Cần nhiên liệu tại trạm: tối thiểu ${recipe.fuel.minimumSeconds} giây mỗi lượt, dùng gỗ hoặc than củi. Mưa làm tốn thêm nhiên liệu nếu trạm không có mái.</p>` : '')
-            + button('craft', recipe.duration ? 'Đưa vào hàng đợi' : 'Chế tạo', recipe.id, !available.ok) + ' '
-            + button('pin', c.pinnedRecipe === recipe.id ? 'Bỏ ghim nguyên liệu' : 'Ghim nguyên liệu', recipe.id, false, { pressed: c.pinnedRecipe === recipe.id })
-            + `<p>${escape(available.error || '')}</p></div></div>`;
     }
 
     endingControlHint(route) {
@@ -454,16 +446,7 @@ export class CampaignUI {
         return html + '<hr>' + button('dismantle', 'Tháo công trình · hoàn 75% vật liệu');
     }
 
-    renderCraftingPanel() {
-        this.craftButton?.removeEventListener('click', this.onOpenCraft);
-        const list = document.getElementById('crafting-recipes-list');
-        const details = document.getElementById('recipe-details-panel');
-        if (list) list.innerHTML = `<p>Chiến dịch · Công nghệ cấp ${this.controller.progress.tier}</p><button type="button" id="campaign-open-craft">Mở công nghệ và chế tạo</button>`;
-        if (details) details.innerHTML = '<p>Danh sách chiến dịch hiển thị trạm, công nghệ và nguyên liệu trong rương được cho phép.</p>';
-        this.onOpenCraft ||= () => this.open('craft');
-        this.craftButton = document.getElementById('campaign-open-craft');
-        this.craftButton?.addEventListener('click', this.onOpenCraft);
-    }
+    renderCraftingPanel() { this.craftingPanel.render(); }
 
     refreshHUD() {
         const c = this.controller;
@@ -508,5 +491,5 @@ export class CampaignUI {
             reel.value = mining.progress;
         } else if (hookReward) label.textContent = `Đồ vừa kéo: ${getResourceDef(hookReward.id)?.name || hookReward.id} ×${hookReward.count} · cần chỗ trong túi.`;
     }
-    dispose() { document.body.classList.remove('campaign-ending'); this.craftButton?.removeEventListener('click', this.onOpenCraft); this.craftButton = null; this.root.removeEventListener('click', this.onClick); this.root.removeEventListener('input', this.onInput); document.removeEventListener('keydown', this.onKey); this.root.remove(); }
+    dispose() { document.body.classList.remove('campaign-ending'); this.craftingPanel.dispose(); this.root.removeEventListener('click', this.onClick); this.root.removeEventListener('input', this.onInput); document.removeEventListener('keydown', this.onKey); this.root.remove(); }
 }

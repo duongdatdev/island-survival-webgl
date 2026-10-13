@@ -9,6 +9,13 @@
     <link rel="stylesheet" href="assets/fonts/fonts.css">
     <link rel="stylesheet" href="/index.css">
     <link rel="stylesheet" href="/campaign.css">
+    <link rel="stylesheet" href="/main-menu.css">
+    <link rel="stylesheet" href="/world-menu.css">
+    <link rel="stylesheet" href="/loading-screen.css">
+    <link rel="stylesheet" href="/settings-menu.css">
+    <link rel="stylesheet" href="/pause-menu.css">
+    <link rel="stylesheet" href="/game-ui.css">
+    <link rel="stylesheet" href="/raft-layout.css">
 </head>
 <body>
     <!--
@@ -129,37 +136,53 @@
             <rect x="5.4" y="10.6" width="13.2" height="9.4" rx="1.6"/>
             <path d="M8.4 10.6V8a3.6 3.6 0 0 1 7.2 0v2.6"/>
         </symbol>
+        <symbol id="i-leaf" viewBox="0 0 24 24">
+            <path d="M19.7 4.3c-8.5-.6-14.1 2.8-14.1 9.1a5.2 5.2 0 0 0 5.2 5.2c6.3 0 9.7-5.7 8.9-14.3z"/>
+            <path d="M4.3 20.2c3.2-4.7 6.8-7.9 12-10.7"/>
+        </symbol>
+        <symbol id="i-apple" viewBox="0 0 24 24">
+            <path d="M12 8c-2.2-2-6.4-1.2-7.5 2.2-1.2 3.8 1.2 9.7 4.1 10.1 1.2.2 2.1-.7 3.4-.7s2.2.9 3.4.7c2.9-.4 5.3-6.3 4.1-10.1C18.4 6.8 14.2 6 12 8z"/>
+            <path d="M12.1 7.4c-.2-2.1.8-3.6 2.8-4.7M12.1 7.2c1.5-1.7 3.4-1.9 5.2-1.2"/>
+        </symbol>
     </defs></svg>
 
     <!-- Game Canvas -->
     <canvas id="game-canvas"></canvas>
 
     <!-- UI Overlay: Loading Screen -->
-    <div id="loading-screen" class="overlay">
+    <div id="loading-screen" class="overlay" aria-label="Đang tải trò chơi">
         <div class="loader-content">
-            <div class="loader-emblem"><svg class="ui-icon" aria-hidden="true"><use href="#i-anchor"/></svg></div>
-            <div class="loader-logo">ISLAND SURVIVAL</div>
-            <div class="loader-subtitle"><span>ESCAPE</span></div>
-            <div class="loader-bar-container">
-                <div id="loader-bar" class="loader-bar"></div>
+            <div class="loader-brand">
+                <div class="loader-logo"><span>ISLAND</span><span>SURVIVAL</span></div>
+                <div class="loader-subtitle">ESCAPE</div>
             </div>
-            <div id="loader-text" class="loader-text">Đang tải tài nguyên (0%)...</div>
-            <div id="loader-tip" class="loader-tip"></div>
+            <div class="loader-details">
+                <div class="loader-status">
+                    <div id="loader-text" class="loader-text">Đang tải tài nguyên...</div>
+                    <span id="loader-percent" class="loader-percent" aria-hidden="true">0%</span>
+                </div>
+                <div id="loader-progress" class="loader-bar-container" role="progressbar" aria-label="Tiến trình tải" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="loader-bar" class="loader-bar"></div>
+                </div>
+                <div class="loader-tip-label">MẸO SINH TỒN</div>
+                <p id="loader-tip" class="loader-tip"></p>
+            </div>
         </div>
     </div>
 
     <!-- UI Overlay: Main Menu -->
-    <div id="main-menu" class="overlay hidden">
+    <div id="main-menu" class="overlay hidden" aria-labelledby="main-menu-title">
         <div class="menu-content">
-            <div class="menu-logo-wrapper">
-                <div class="menu-emblem"><svg class="ui-icon" aria-hidden="true"><use href="#i-island"/></svg></div>
-                <h1 class="menu-logo"><span>ISLAND</span><span>SURVIVAL</span></h1>
-                <div class="menu-subtitle"><span>ESCAPE</span></div>
+            <div class="menu-brand">
+                <div class="menu-logo-wrapper">
+                    <h1 id="main-menu-title" class="menu-logo"><span>ISLAND</span><span>SURVIVAL</span></h1>
+                    <div class="menu-subtitle"><span>ESCAPE</span></div>
+                </div>
+                <p class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Sinh tồn.<br>Thoát khỏi đảo hoang.</p>
             </div>
-            <p class="menu-tagline">Thu thập tài nguyên. Chế tạo bè. Sinh tồn.<br>Thoát khỏi đảo hoang.</p>
 
-            <!-- Primary actions: one filled CTA per intent, icons in a shared column -->
-            <div class="menu-buttons">
+            <!-- Right-aligned navigation, matching the survival game reference. -->
+            <nav class="menu-buttons" aria-label="Menu chính">
                 <button id="menu-play-btn" class="menu-btn primary hero" aria-label="Chọn map để chơi">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-sail"/></svg>
                     <span class="btn-text">CHƠI</span>
@@ -172,29 +195,24 @@
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg>
                     <span class="btn-text">CÀI ĐẶT</span>
                 </button>
-            </div>
 
-            <div class="menu-divider"></div>
-
-            <!-- Secondary actions compress into tiles so the menu stays short -->
-            <div class="menu-tiles">
-                <button id="menu-achievements-btn" class="menu-tile" aria-label="Xem thành tựu">
+                <button id="menu-achievements-btn" class="menu-btn secondary" aria-label="Xem thành tựu">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-trophy"/></svg>
                     <span class="tile-label">THÀNH TỰU</span>
                     <span id="menu-achievements-meta" class="tile-badge"></span>
                 </button>
-                <button id="menu-credits-btn" class="menu-tile" aria-label="Xem giới thiệu">
+                <button id="menu-credits-btn" class="menu-btn secondary" aria-label="Xem giới thiệu">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-scroll"/></svg>
                     <span class="tile-label">GIỚI THIỆU</span>
                 </button>
-                <button id="menu-sound-btn" class="menu-tile" aria-label="Bật hoặc tắt âm thanh" aria-pressed="false">
+                <button id="menu-sound-btn" class="menu-btn secondary" aria-label="Bật hoặc tắt âm thanh" aria-pressed="false">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg>
                     <span class="tile-label">ÂM THANH</span>
                 </button>
-            </div>
+            </nav>
 
-            <div class="menu-footer">WebGL 2.0 • Vanilla JavaScript • v1.1</div>
         </div>
+        <footer class="menu-footer"><span>ISLAND SURVIVAL: ESCAPE</span><span>v1.1</span></footer>
     </div>
 
     <div id="world-menu" class="overlay panel-overlay hidden" aria-hidden="true">
@@ -218,6 +236,7 @@
             <div id="world-list" class="world-list" role="listbox" aria-label="Danh sách map"></div>
             <div id="world-menu-error" class="world-menu-error" role="alert"></div>
             <footer class="world-menu-footer">
+                <p id="world-selection-summary" class="world-selection-summary" aria-live="polite"></p>
                 <button id="world-import-btn" class="menu-btn secondary small" type="button"><span class="btn-text">NHẬP THẾ GIỚI</span></button>
                 <input id="world-import-file" type="file" accept=".json,application/json" hidden>
                 <button id="world-play-btn" class="menu-btn primary hero world-play-btn" type="button" disabled>
@@ -229,7 +248,7 @@
     </div>
 
     <div id="world-form-modal" class="world-modal hidden" aria-hidden="true">
-        <form id="world-form" class="world-dialog" novalidate>
+        <form id="world-form" class="world-dialog" role="dialog" aria-modal="true" aria-labelledby="world-form-title" novalidate>
             <div class="world-dialog-header">
                 <h2 id="world-form-title">TẠO MAP MỚI</h2>
                 <button id="world-form-close-btn" class="panel-close" type="button" aria-label="Đóng">
@@ -278,26 +297,27 @@
 
     <!-- UI Overlay: Settings Menu (v1.0) -->
     <div id="settings-menu" class="overlay panel-overlay hidden">
-        <div class="panel-content settings-content">
+        <div class="panel-content settings-content" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div class="panel-header">
-                <div class="panel-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg> CÀI ĐẶT</div>
+                <div id="settings-title" class="panel-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg> CÀI ĐẶT</div>
                 <button id="settings-close-btn" class="panel-close" aria-label="Đóng">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
                 </button>
             </div>
 
+            <div class="settings-tab-bar" role="tablist" aria-label="Cài đặt">
+                <button class="settings-tab active" role="tab" data-tab="audio" aria-selected="true">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg> Âm thanh
+                </button>
+                <button class="settings-tab" role="tab" data-tab="controls" aria-selected="false">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-mouse"/></svg> Điều khiển
+                </button>
+                <button class="settings-tab" role="tab" data-tab="graphics" aria-selected="false">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#i-palette"/></svg> Đồ họa
+                </button>
+            </div>
+
             <div class="panel-body">
-                <div class="settings-tab-bar" role="tablist" aria-label="Cài đặt">
-                    <button class="settings-tab active" role="tab" data-tab="audio" aria-selected="true">
-                        <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg> Âm thanh
-                    </button>
-                    <button class="settings-tab" role="tab" data-tab="controls" aria-selected="false">
-                        <svg class="ui-icon" aria-hidden="true"><use href="#i-mouse"/></svg> Điều khiển
-                    </button>
-                    <button class="settings-tab" role="tab" data-tab="graphics" aria-selected="false">
-                        <svg class="ui-icon" aria-hidden="true"><use href="#i-palette"/></svg> Đồ họa
-                    </button>
-                </div>
                 <div class="settings-section tab-section active" data-tab="audio">
                     <div class="settings-section-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg> ÂM THANH</div>
                     <div class="setting-row">
@@ -449,8 +469,8 @@
                 <div class="settings-section tab-section" data-tab="graphics">
                     <div class="settings-section-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-palette"/></svg> ĐỒ HỌA</div>
                     <div class="setting-row">
-                        <label>Chất lượng</label>
-                        <div class="quality-buttons">
+                        <label id="quality-label">Chất lượng</label>
+                        <div class="quality-buttons" role="group" aria-labelledby="quality-label">
                             <button class="quality-btn" data-quality="low">Thấp</button>
                             <button class="quality-btn" data-quality="medium">Trung Bình</button>
                             <button class="quality-btn" data-quality="high">Cao</button>
@@ -507,6 +527,7 @@
             </div>
 
             <div class="panel-footer">
+                <span class="settings-save-note">Tự động lưu khi thay đổi</span>
                 <button id="settings-reset-btn" class="menu-btn danger small">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-undo"/></svg>
                     <span class="btn-text">KHÔI PHỤC MẶC ĐỊNH</span>
@@ -687,40 +708,47 @@
 
     <!-- UI Overlay: Pause Menu -->
     <div id="pause-menu" class="overlay hidden">
-        <div class="pause-content">
-            <div class="pause-title"><svg class="ui-icon" aria-hidden="true"><use href="#i-pause"/></svg> TẠM DỪNG</div>
+        <section class="pause-content" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+            <header class="pause-header">
+                <div class="pause-brand"><svg class="ui-icon" aria-hidden="true"><use href="#i-island"/></svg><span>ISLAND SURVIVAL</span></div>
+                <h2 id="pause-title" class="pause-title">TẠM DỪNG</h2>
+                <p id="pause-world-name" class="pause-world-name"></p>
+            </header>
             <div class="pause-buttons">
                 <button id="pause-resume-btn" class="menu-btn primary">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-play"/></svg>
                     <span class="btn-text">TIẾP TỤC</span>
+                    <span class="pause-resume-arrow" aria-hidden="true">&#8594;</span>
                 </button>
                 <button id="pause-save-btn" class="menu-btn secondary">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-save"/></svg>
                     <span class="btn-text">LƯU GAME</span>
                 </button>
-                <button id="pause-settings-btn" class="menu-btn secondary">
-                    <svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg>
-                    <span class="btn-text">CÀI ĐẶT</span>
-                </button>
-                <button id="pause-guide-btn" class="menu-btn secondary">
-                    <svg class="ui-icon" aria-hidden="true"><use href="#i-book"/></svg>
-                    <span class="btn-text">HƯỚNG DẪN</span>
-                </button>
-                <button id="pause-achievements-btn" class="menu-btn tertiary">
-                    <svg class="ui-icon" aria-hidden="true"><use href="#i-trophy"/></svg>
-                    <span class="btn-text">THÀNH TỰU</span>
-                </button>
-                <button id="pause-sound-btn" class="menu-btn tertiary" aria-pressed="false">
-                    <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg>
-                    <span class="btn-text">ÂM THANH: BẬT</span>
-                </button>
+                <div class="pause-utility-grid">
+                    <button id="pause-settings-btn" class="menu-btn secondary">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#i-gear"/></svg>
+                        <span class="btn-text">CÀI ĐẶT</span>
+                    </button>
+                    <button id="pause-guide-btn" class="menu-btn secondary">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#i-book"/></svg>
+                        <span class="btn-text">HƯỚNG DẪN</span>
+                    </button>
+                    <button id="pause-achievements-btn" class="menu-btn tertiary">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#i-trophy"/></svg>
+                        <span class="btn-text">THÀNH TỰU</span>
+                    </button>
+                    <button id="pause-sound-btn" class="menu-btn tertiary" aria-pressed="false">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#i-volume"/></svg>
+                        <span class="btn-text">ÂM THANH: BẬT</span>
+                    </button>
+                </div>
                 <button id="pause-menu-btn" class="menu-btn danger">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-home"/></svg>
                     <span class="btn-text">VỀ MENU CHÍNH</span>
                 </button>
             </div>
-            <div id="pause-save-status" class="pause-save-status"></div>
-        </div>
+            <div id="pause-save-status" class="pause-save-status" role="status" aria-live="polite"></div>
+        </section>
     </div>
 
     <!-- Tutorial Overlay - Bottom Center -->
@@ -779,7 +807,7 @@
     <div id="survival-hud-stack" class="survival-hud-stack">
     <div id="vitals-hud" class="vitals-hud hidden">
         <div class="vital-row" id="vital-health">
-            <span class="vital-icon">❤️</span>
+            <span class="vital-icon"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg></span>
             <span class="vital-label">HP</span>
             <div class="vital-bar-track">
                 <div class="vital-bar-fill health-fill" id="bar-health" style="width: 100%"></div>
@@ -787,7 +815,7 @@
             <span class="vital-value" id="val-health">100</span>
         </div>
         <div class="vital-row" id="vital-hunger">
-            <span class="vital-icon">🍖</span>
+            <span class="vital-icon"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-apple"/></svg></span>
             <span class="vital-label">Đói</span>
             <div class="vital-bar-track">
                 <div class="vital-bar-fill hunger-fill" id="bar-hunger" style="width: 100%"></div>
@@ -795,7 +823,7 @@
             <span class="vital-value" id="val-hunger">100</span>
         </div>
         <div class="vital-row" id="vital-thirst">
-            <span class="vital-icon">💧</span>
+            <span class="vital-icon"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2S5 10 5 15a7 7 0 0 0 14 0C19 10 12 2 12 2Z"/></svg></span>
             <span class="vital-label">Khát</span>
             <div class="vital-bar-track">
                 <div class="vital-bar-fill thirst-fill" id="bar-thirst" style="width: 100%"></div>
@@ -803,7 +831,7 @@
             <span class="vital-value" id="val-thirst">100</span>
         </div>
         <div class="vital-row" id="vital-stamina">
-            <span class="vital-icon">⚡</span>
+            <span class="vital-icon"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 10-13h-8Z"/></svg></span>
             <span class="vital-label">Thể lực</span>
             <div class="vital-bar-track">
                 <div class="vital-bar-fill stamina-fill" id="bar-stamina" style="width: 100%"></div>
@@ -811,7 +839,7 @@
             <span class="vital-value" id="val-stamina">100</span>
         </div>
         <div class="vital-row" id="vital-warmth">
-            <span class="vital-icon">🌡️</span>
+            <span class="vital-icon"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z"/><path d="M12 8v10"/></svg></span>
             <span class="vital-label">Nhiệt</span>
             <div class="vital-bar-track">
                 <div class="vital-bar-fill warmth-fill" id="bar-warmth" style="width: 100%"></div>
@@ -961,12 +989,10 @@
 
     <!-- Unified Inventory & Crafting Menu Overlay (Tab/C toggles it) -->
     <div id="inventory-menu" class="inventory-menu-overlay hidden">
-        <div class="inventory-menu-content">
+        <div class="inventory-menu-content" role="dialog" aria-modal="true" aria-labelledby="inventory-title">
             <div class="inventory-menu-header">
-                <div class="inventory-menu-title">
-                    <svg class="ui-icon" aria-hidden="true"><use href="#i-anchor"/></svg>
-                    Sinh Tồn: Kho Đồ &amp; Chế Tạo
-                </div>
+                <div><div class="inventory-kicker">HÀNH TRANG SINH TỒN</div>
+                <h2 id="inventory-title" class="inventory-menu-title">KHO ĐỒ &amp; CHẾ TẠO</h2></div>
                 <button id="inventory-menu-close" class="inventory-menu-close" aria-label="Đóng">
                     <svg class="ui-icon" aria-hidden="true"><use href="#i-close"/></svg>
                 </button>
@@ -974,15 +1000,25 @@
             <div class="inventory-menu-body">
                 <!-- Left Column: Crafting Panel -->
                 <div class="crafting-column">
+                    <div id="crafting-context" class="crafting-context"></div>
                     <div class="crafting-categories">
-                        <button class="cat-btn active" data-category="tool">
+                        <button class="cat-btn" data-category="all" data-campaign-only hidden title="Tất cả" aria-label="Tất cả" aria-pressed="false">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#i-backpack"/></svg> TẤT CẢ
+                        </button>
+                        <button class="cat-btn active" data-category="tool" title="Công cụ" aria-label="Công cụ" aria-pressed="true">
                             <svg class="ui-icon" aria-hidden="true"><use href="#i-hammer"/></svg> CÔNG CỤ
                         </button>
-                        <button class="cat-btn" data-category="structure">
+                        <button class="cat-btn" data-category="structure" title="Sinh tồn" aria-label="Sinh tồn" aria-pressed="false">
                             <svg class="ui-icon" aria-hidden="true"><use href="#i-fire"/></svg> SINH TỒN
                         </button>
-                        <button class="cat-btn" data-category="raft">
+                        <button class="cat-btn" data-category="raft" title="Chiếc bè" aria-label="Chiếc bè" aria-pressed="false">
                             <svg class="ui-icon" aria-hidden="true"><use href="#i-sail"/></svg> CHIẾC BÈ
+                        </button>
+                        <button class="cat-btn" data-category="material" data-campaign-only hidden title="Vật liệu" aria-label="Vật liệu" aria-pressed="false">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#i-leaf"/></svg> VẬT LIỆU
+                        </button>
+                        <button class="cat-btn" data-category="food" data-campaign-only hidden title="Thực phẩm" aria-label="Thực phẩm" aria-pressed="false">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#i-apple"/></svg> THỰC PHẨM
                         </button>
                     </div>
                     <div id="crafting-recipes-list" class="crafting-recipes-list">
@@ -1003,6 +1039,8 @@
                     <div class="inventory-grid" id="inventory-grid">
                         <!-- Dynamically populated by JS: 20 slots (indices 0 to 19) -->
                     </div>
+                    <div id="inventory-item-info" class="inventory-item-info" role="status">Chọn vật phẩm để xem. Chọn tiếp một ô khác để chuyển đồ.</div>
+                    <p class="inventory-help">Kéo vật phẩm xuống thanh nhanh bên dưới để gán vào phím 1–8.</p>
                     <div class="trash-slot-container">
                         <div id="trash-slot" class="trash-slot" title="Kéo vật phẩm vào đây để vứt bỏ">
                             <svg class="ui-icon trash-icon" aria-hidden="true"><use href="#i-trash"/></svg>
@@ -1011,6 +1049,7 @@
                     </div>
                 </div>
             </div>
+            <div id="inventory-feedback" class="inventory-feedback" role="status" aria-live="polite"></div>
         </div>
     </div>
 

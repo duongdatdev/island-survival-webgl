@@ -49,7 +49,7 @@ export class GameSaveController {
         const report = ok => {
             if (ok) this.lastSavedAt = Date.now();
             if (ok && completedRoute) scene.campaign?.ending?.onCommitted(completedRoute);
-            if (!silent || !ok) this.setStatus(ok ? '💾 Đã lưu tiến trình!' : '❌ Lưu thất bại — hãy xuất bản sao hoặc thử lưu lại.', !ok);
+            if (!silent || !ok) this.setStatus(ok ? 'Đã lưu tiến trình.' : 'Lưu thất bại. Hãy xuất bản sao hoặc thử lưu lại.', !ok);
             return !!ok;
         };
         try {

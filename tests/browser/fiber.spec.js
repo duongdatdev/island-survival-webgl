@@ -17,7 +17,7 @@ test('rope can be separated through crafting controls and the fiber survives rel
     });
     await page.locator('[data-action="panel"][data-arg="craft"]').click();
     await page.locator('[data-action="recipe"][data-arg="unravel_rope"]').click();
-    await expect(page.locator('#campaign-panel')).toContainText('3 sợi thực vật');
+    await expect(page.locator('#inventory-menu')).toContainText('3 sợi thực vật');
     await page.locator('[data-action="craft"][data-arg="unravel_rope"]').click();
     const counts = () => page.evaluate(() => {
         const i = window.__GAME_ENGINE__.scenes.activeScene.inventory;

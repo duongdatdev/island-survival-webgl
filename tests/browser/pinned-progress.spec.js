@@ -26,7 +26,7 @@ test('chosen objectives and recipes persist; pinned counts follow consenting nea
         }
         throw new Error('No chest site');
     });
-    const close = async () => { await page.keyboard.press('Escape'); await expect(page.locator('#campaign-panel')).toBeHidden(); };
+    const close = async () => { await page.keyboard.press('Escape'); await expect(page.locator('#campaign-panel')).toBeHidden(); await expect(page.locator('#inventory-menu')).toBeHidden(); };
     const inspect = async () => {
         await page.locator('[data-action="panel"][data-arg="build"]').click();
         await page.locator(`[data-action="inspect-structure"][data-arg="${chest.id}"]`).click();

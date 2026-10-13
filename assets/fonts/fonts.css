@@ -60,3 +60,19 @@
     font-style: normal;
     font-display: swap;
 }
+
+/* Main menu: Barlow Condensed, SIL Open Font License. */
+@font-face {
+    font-family: 'Barlow Condensed';
+    src: url('barlowcondensed-600.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Barlow Condensed';
+    src: url('barlowcondensed-800.ttf') format('truetype');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}

@@ -25,7 +25,7 @@ test('chapters one to five connect from a new world through timed smelting, fiel
     });
     const state = () => page.evaluate(() => { const c = window.__GAME_ENGINE__.scenes.activeScene.campaign; return { chapter: c.progress.chapter, tier: c.progress.tier, completed: [...c.progress.completedChapters] }; });
     expect(await state()).toEqual({ chapter: 1, tier: 1, completed: [] });
-    const close = async () => { await page.keyboard.press('Escape'); await expect(page.locator('#campaign-panel')).toBeHidden(); };
+    const close = async () => { await page.keyboard.press('Escape'); await expect(page.locator('#campaign-panel')).toBeHidden(); await expect(page.locator('#inventory-menu')).toBeHidden(); };
     const craft = async (id, count = 1) => {
         await page.locator('[data-action="panel"][data-arg="craft"]').click();
         await page.locator(`[data-action="recipe"][data-arg="${id}"]`).click();

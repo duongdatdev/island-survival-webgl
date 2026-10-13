@@ -80,7 +80,7 @@ export class TutorialSystem {
                 { id: 'pickup', text: () => `Tới gần tài nguyên rồi bấm <b>${key('interact', 'E')}</b> để nhặt. Đọc nhắc tương tác để biết vật đang chọn.`, autoDismiss: 15, triggerCheck: () => this._hasPickedUp },
                 { id: 'journal', text: '<b>J · Nhật ký</b> ghi mục tiêu chương và ghi chép đã tìm. Bắt đầu với nước ngọt, mái trú, lửa trại và nhật ký ở bãi đắm tàu.', autoDismiss: 15, triggerCheck: () => this._panelsSeen.has('journal') },
                 { id: 'build', text: () => `<b>B · Xây căn cứ</b>: chọn công trình, tìm vị trí hợp lệ, <b>R</b> xoay, <b>${key('interact', 'E')}</b> đặt, <b>Esc</b> hủy.`, autoDismiss: 15, triggerCheck: () => this._hasBuilt },
-                { id: 'crafting', text: 'Chọn <b>Công nghệ</b> ở góc màn hình để xem công thức và ghim nguyên liệu. Đứng gần trạm phù hợp khi chế tạo đồ cần trạm.', autoDismiss: 15, triggerCheck: () => this._hasOpenedCrafting },
+                { id: 'crafting', text: () => `Nhấn <b>${key('inventory', 'C')} · Kho đồ / Chế tạo</b> để xem công thức và ghim nguyên liệu ngay trong hành trang. Công nghệ tự mở theo chương; đồ cần trạm phải chế tạo gần trạm phù hợp.`, autoDismiss: 15, triggerCheck: () => this._hasOpenedCrafting },
                 { id: 'craft_item', text: 'Lò nung và giàn hun khói cần nhiên liệu. Đồ đang sản xuất và nguyên liệu đã đặt vào hàng đợi được lưu để bạn quay lại phiên sau.', autoDismiss: 12, triggerCheck: () => this._hasCrafted },
                 { id: 'save', text: 'Game tự lưu mỗi 30 giây và sau mốc quan trọng. Kiểm tra thông báo lưu trước khi đóng game. Bạn có thể tiếp tục bất cứ lúc nào; đóng game không làm cạn thức ăn hoặc nước.', autoDismiss: 12, triggerCheck: () => false },
             ];

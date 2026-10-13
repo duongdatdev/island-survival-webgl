@@ -88,6 +88,7 @@ async function collectRuntimeAssets() {
   for (const model of campaignManifest.models || []) addRuntimeAsset(files, model.path);
   for (const license of campaignManifest.licenses || []) addRuntimeAsset(files, license);
   addRuntimeAsset(files, 'assets/fonts/OFL-Cinzel.txt');
+  addRuntimeAsset(files, 'assets/fonts/OFL-BarlowCondensed.txt');
 
   // The current player renderer uses one fixed character. Keep this explicit so
   // adding character selection also requires updating the production payload.

@@ -219,22 +219,41 @@ export class MenuUI {
     }
 
     _bindSettingsTabs() {
-        const tabs = document.querySelectorAll('.settings-tab');
+        const tabs = [...document.querySelectorAll('.settings-tab')];
         const sections = document.querySelectorAll('.settings-section.tab-section');
-
+        const activate = tab => {
+            for (const item of tabs) {
+                const selected = item === tab;
+                item.classList.toggle('active', selected);
+                item.setAttribute('aria-selected', String(selected));
+                item.tabIndex = selected ? 0 : -1;
+            }
+            for (const section of sections) {
+                section.classList.toggle('active', section.dataset.tab === tab.dataset.tab);
+            }
+            const body = this._settingsEl?.querySelector('.panel-body');
+            if (body) body.scrollTop = 0;
+        };
         for (const tab of tabs) {
-            this._on(tab, 'click', () => {
-                const target = tab.getAttribute('data-tab');
-                for (const t of tabs) {
-                    t.classList.toggle('active', t === tab);
-                    t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
-                }
-                for (const s of sections) {
-                    s.classList.toggle('active', s.getAttribute('data-tab') === target);
-                }
-                this.engine.audio.playClick();
+            tab.id = `settings-tab-${tab.dataset.tab}`;
+            tab.setAttribute('aria-controls', `settings-panel-${tab.dataset.tab}`);
+            this._on(tab, 'click', () => { activate(tab); this.engine.audio.playClick(); });
+            this._on(tab, 'keydown', event => {
+                const index = tabs.indexOf(tab);
+                const targets = { ArrowRight: (index + 1) % tabs.length, ArrowLeft: (index + tabs.length - 1) % tabs.length, Home: 0, End: tabs.length - 1 };
+                if (!(event.key in targets)) return;
+                event.preventDefault();
+                const next = tabs[targets[event.key]];
+                activate(next);
+                next.focus();
             });
         }
+        for (const section of sections) {
+            section.id = `settings-panel-${section.dataset.tab}`;
+            section.setAttribute('role', 'tabpanel');
+            section.setAttribute('aria-labelledby', `settings-tab-${section.dataset.tab}`);
+        }
+        if (tabs.length) activate(tabs.find(tab => tab.classList.contains('active')) || tabs[0]);
     }
 
     syncSettingsUI() {
@@ -277,7 +296,9 @@ export class MenuUI {
     _syncQualityButtons() {
         const active = this.settings.get('quality');
         document.querySelectorAll('.quality-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-quality') === active);
+            const selected = btn.getAttribute('data-quality') === active;
+            btn.classList.toggle('active', selected);
+            btn.setAttribute('aria-pressed', String(selected));
         });
 
         const label = document.getElementById('val-quality');
@@ -346,5 +367,11 @@ export class MenuUI {
         const id = labelId || controlId.replace(/^set-/, 'val-');
         const el = document.getElementById(id);
         if (el) el.textContent = text;
+        const control = document.getElementById(controlId);
+        if (control?.type === 'range') {
+            const percent = (Number(control.value) - Number(control.min)) / (Number(control.max) - Number(control.min)) * 100;
+            control.style.setProperty('--range-progress', `${percent}%`);
+            control.setAttribute('aria-valuetext', text);
+        }
     }
 }

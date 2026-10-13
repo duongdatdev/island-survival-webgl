@@ -14,10 +14,14 @@ export class InventoryController {
         this.scene = scene;
         this.document = options.document || globalThis.document;
         this.menu = null;
+        this.hotbarEl = null;
+        this.hotbarHomeParent = null;
+        this.hotbarHomeNextSibling = null;
         this.closeButton = null;
         this.categoryButtons = [];
-        this.selectedCategory = 'tool';
+        this.selectedCategory = scene.engine?.activeWorld?.mode === 'campaign' || scene.campaign ? 'all' : 'tool';
         this.selectedRecipeId = null;
+        this.selectedSlotIndex = null;
         this._initialized = false;
         this._categoryListeners = new Map();
         this._trashElement = null;
@@ -32,6 +36,9 @@ export class InventoryController {
         const scene = this.scene;
 
         this.menu = this.document.getElementById('inventory-menu');
+        this.hotbarEl = this.document.getElementById('hotbar-hud');
+        this.hotbarHomeParent = this.hotbarEl?.parentNode || null;
+        this.hotbarHomeNextSibling = this.hotbarEl?.nextSibling || null;
         this.closeButton = this.document.getElementById('inventory-menu-close');
         this.categoryButtons = Array.from(this.document.querySelectorAll('.cat-btn'));
         scene.inventoryMenu = this.menu;
@@ -44,13 +51,29 @@ export class InventoryController {
 
         this._onClose = () => this.closeMenu();
         this.closeButton?.addEventListener('click', this._onClose);
+        this._onKey = event => {
+            if (!this.menu || this.menu.classList.contains('hidden') || scene.campaign?.ui.isOpen || event.key !== 'Tab') return;
+            scene.engine.input.consumeKey('Tab');
+            const controls = [...this.menu.querySelectorAll('button:not(:disabled)')].filter(el => !el.hidden && el.getClientRects().length);
+            const first = controls[0], last = controls.at(-1);
+            if (!controls.includes(this.document.activeElement)) { event.preventDefault(); (event.shiftKey ? last : first)?.focus(); }
+            else if (event.shiftKey && this.document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && this.document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        };
+        this.document.addEventListener?.('keydown', this._onKey);
 
         for (const button of this.categoryButtons) {
             const listener = () => {
-                this.categoryButtons.forEach(item => item.classList.remove('active'));
+                this.categoryButtons.forEach(item => {
+                    item.classList.remove('active');
+                    item.setAttribute('aria-pressed', 'false');
+                });
                 button.classList.add('active');
+                button.setAttribute('aria-pressed', 'true');
                 this.selectedCategory = button.getAttribute('data-category');
                 this.selectedRecipeId = null;
+                const feedback = this.document.getElementById('inventory-feedback');
+                if (feedback) feedback.textContent = '';
                 this.renderCraftingPanel();
                 scene.engine.audio.playClick();
             };
@@ -69,6 +92,9 @@ export class InventoryController {
             button.removeEventListener('click', listener);
         }
         this._categoryListeners.clear();
+        this.document.removeEventListener?.('keydown', this._onKey);
+        this.document.body?.classList.remove('game-inventory-open');
+        this._restoreHotbarHome();
         this._unbindTrashEvents();
         if (this.scene.inventory?.onChange === this._onInventoryChange) {
             this.scene.inventory.onChange = null;
@@ -82,6 +108,9 @@ export class InventoryController {
         const gridEl = this.document?.getElementById('inventory-grid');
         const hotbarEl = this.document?.getElementById('hotbar-hud');
         const counterEl = this.document?.getElementById('slot-counter');
+        const focusedSlot = this.document?.activeElement?.closest?.('[data-index]');
+        const focusIndex = focusedSlot?.getAttribute('data-index');
+        const focusContainer = focusedSlot?.parentElement?.id;
 
         if (counterEl) counterEl.textContent = `${inventory.getUsedSlots()}/${inventory.maxSlots}`;
 
@@ -95,17 +124,17 @@ export class InventoryController {
                     const name = definition ? definition.name : slot.id;
                     const consumableClass = definition?.consumable ? ' consumable' : '';
                     html += `
-                        <div class="inv-slot${consumableClass}" data-index="${index}" draggable="true" title="${name}">
+                        <button type="button" class="inv-slot${consumableClass}" data-index="${index}" draggable="true" title="${name}" aria-label="${name}, ${slot.count}">
                             <span class="slot-icon">${icon}</span>
                             <span class="slot-count">${slot.count}</span>
                             <div class="slot-tooltip">${name}</div>
-                        </div>
+                        </button>
                     `;
                 } else {
                     html += `
-                        <div class="inv-slot empty" data-index="${index}">
+                        <button type="button" class="inv-slot empty" data-index="${index}" aria-label="Ô kho đồ ${index + 1} trống">
                             <span class="slot-icon">·</span>
-                        </div>
+                        </button>
                     `;
                 }
             }
@@ -124,19 +153,19 @@ export class InventoryController {
                     const name = definition ? definition.name : slot.id;
                     const consumableClass = definition?.consumable ? ' consumable' : '';
                     html += `
-                        <div class="hotbar-slot${activeClass}${consumableClass}" data-index="${slotIndex}" draggable="true" title="${name}">
+                        <button type="button" class="hotbar-slot${activeClass}${consumableClass}" data-index="${slotIndex}" draggable="true" title="${name}" aria-label="Trang bị ${index + 1}: ${name}, ${slot.count}">
                             <span class="hotbar-key">${index + 1}</span>
                             <span class="slot-icon">${icon}</span>
                             <span class="slot-count">${slot.count}</span>
                             <div class="slot-tooltip">${name}</div>
-                        </div>
+                        </button>
                     `;
                 } else {
                     html += `
-                        <div class="hotbar-slot empty${activeClass}" data-index="${slotIndex}">
+                        <button type="button" class="hotbar-slot empty${activeClass}" data-index="${slotIndex}" aria-label="Ô trang bị ${index + 1} trống">
                             <span class="hotbar-key">${index + 1}</span>
                             <span class="slot-icon">·</span>
-                        </div>
+                        </button>
                     `;
                 }
             }
@@ -145,6 +174,8 @@ export class InventoryController {
         }
 
         this._bindSlotEvents();
+        this._renderSelectedSlot();
+        if (focusIndex !== undefined) this.document.getElementById(focusContainer)?.querySelector(`[data-index="${focusIndex}"]`)?.focus({ preventScroll: true });
     }
 
     _renderAmmoCounter(hotbarEl) {
@@ -168,6 +199,18 @@ export class InventoryController {
     _bindSlotEvents() {
         const slots = this.document?.querySelectorAll('.inv-slot, .hotbar-slot') || [];
         for (const slot of slots) {
+            slot.addEventListener('click', () => {
+                if (!this.menu || this.menu.classList.contains('hidden')) return;
+                const index = Number(slot.getAttribute('data-index'));
+                if (this.selectedSlotIndex !== null && this.selectedSlotIndex !== index) {
+                    this.scene.inventory.moveOrMerge(this.selectedSlotIndex, index);
+                    this.selectedSlotIndex = null;
+                    this.scene.engine.audio.playClick();
+                } else {
+                    this.selectedSlotIndex = this.selectedSlotIndex === index || !this.scene.inventory.slots[index] ? null : index;
+                }
+                this._renderSelectedSlot();
+            });
             slot.addEventListener('dragstart', event => {
                 const index = slot.getAttribute('data-index');
                 if (index === null) return;
@@ -217,6 +260,18 @@ export class InventoryController {
                 this.consumeItemAt(index);
             });
         }
+    }
+
+    _renderSelectedSlot() {
+        const slot = this.scene.inventory.slots[this.selectedSlotIndex];
+        if (!slot) this.selectedSlotIndex = null;
+        for (const element of this.document?.querySelectorAll('[data-index]') || []) {
+            const selected = this.selectedSlotIndex !== null && Number(element.getAttribute('data-index')) === this.selectedSlotIndex;
+            element.classList.toggle?.('item-selected', selected);
+            element.setAttribute?.('aria-pressed', String(selected));
+        }
+        const info = this.document?.getElementById('inventory-item-info');
+        if (info) info.textContent = slot ? `${getResourceDef(slot.id)?.name || slot.id} ×${slot.count} · Chọn ô đích để chuyển đồ; chọn lại để bỏ chọn.` : 'Chọn vật phẩm để xem. Chọn tiếp một ô khác để chuyển đồ.';
     }
 
     _bindTrashEvents() {
@@ -383,33 +438,78 @@ export class InventoryController {
     toggleMenu() {
         if (!this.menu) return;
         if (this.menu.classList.contains('hidden')) {
-            if (this.scene.campaign?.wreckSalvage?.active) {
-                this.scene.campaign.wreckSalvage.pause();
-                this.scene.campaign.saveMilestone();
-            }
-            this.menu.classList.remove('hidden');
-            this.scene.engine.input.releasePointerLock();
-            this.renderCraftingPanel();
-            this.renderInventory();
-            this.scene.tutorial.notifyCraftingOpened();
-            this.scene.engine.audio.playOpenPanel();
-            this.scene.engine.audio.setDucked(true);
+            this.openMenu();
         } else {
             this.closeMenu();
         }
     }
 
+    openMenu() {
+        if (!this.menu || !this.menu.classList.contains('hidden')) return;
+        this.returnFocus = this.document.activeElement;
+        this.selectedSlotIndex = null;
+        this.wasPointerLockEnabled = this.scene.engine.input.pointerLockEnabled;
+        for (const activity of [this.scene.campaign?.wreckSalvage, this.scene.campaign?.mineExtraction]) {
+            if (activity?.active) { activity.pause(); this.scene.campaign.saveMilestone(); }
+        }
+        this.menu.classList.remove('hidden');
+        this._moveHotbarIntoMenu();
+        this.document.body?.classList.add('game-inventory-open');
+        const feedback = this.document.getElementById('inventory-feedback');
+        if (feedback) feedback.textContent = '';
+        this.scene.engine.input.setPointerLockEnabled(false);
+        this.scene.engine.input.releasePointerLock();
+        this.scene._syncPointerLockHint?.();
+        this.renderCraftingPanel();
+        this.renderInventory();
+        this.scene.tutorial.notifyCraftingOpened();
+        this.scene.engine.audio.playOpenPanel();
+        this.scene.engine.audio.setDucked(true);
+        this.closeButton?.focus({ preventScroll: true });
+    }
+
     closeMenu() {
-        if (!this.menu) return;
+        if (!this.menu || this.menu.classList.contains('hidden')) return;
         this.menu.classList.add('hidden');
+        this.document.body?.classList.remove('game-inventory-open');
+        this._restoreHotbarHome();
+        if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
+        this.returnFocus = null;
         this.scene.engine.audio.playClosePanel();
         this.scene.engine.audio.setDucked(false);
+        this.scene.engine.input.setPointerLockEnabled(!!this.wasPointerLockEnabled);
         this.scene.engine.input.requestPointerLock();
         this.scene._syncPointerLockHint?.();
     }
 
+    _moveHotbarIntoMenu() {
+        const content = this.menu?.querySelector('.inventory-menu-content');
+        if (!content || !this.hotbarEl || this.hotbarEl.parentNode === content) return;
+        content.appendChild(this.hotbarEl);
+        const ammoCounter = this.document.getElementById('ammo-counter');
+        if (ammoCounter?.parentNode === this.hotbarHomeParent) content.appendChild(ammoCounter);
+    }
+
+    _restoreHotbarHome() {
+        const parent = this.hotbarHomeParent;
+        if (!parent || !this.hotbarEl) return;
+        const nextSibling = this.hotbarHomeNextSibling?.parentNode === parent ? this.hotbarHomeNextSibling : null;
+        if (this.hotbarEl.parentNode !== parent) parent.insertBefore(this.hotbarEl, nextSibling);
+        const ammoCounter = this.document.getElementById('ammo-counter');
+        if (ammoCounter && ammoCounter.parentNode !== parent) parent.insertBefore(ammoCounter, this.hotbarEl.nextSibling);
+    }
+
     renderCraftingPanel() {
+        for (const button of this.categoryButtons) {
+            if (button.hasAttribute('data-campaign-only')) button.hidden = !this.scene.campaign;
+            button.classList.toggle('active', button.getAttribute('data-category') === this.selectedCategory);
+            button.setAttribute('aria-pressed', String(button.getAttribute('data-category') === this.selectedCategory));
+        }
         if (this.scene.campaign) { this.scene.campaign.ui.renderCraftingPanel(); return; }
+        const context = this.document?.getElementById('crafting-context');
+        if (context) context.textContent = 'CHẾ TẠO';
+        const focusId = this.menu?.contains?.(this.document.activeElement) ? this.document.activeElement.id : null;
+        const focusRecipe = this.document.activeElement?.dataset?.recipeId;
         const recipesListEl = this.document?.getElementById('crafting-recipes-list');
         const detailsEl = this.document?.getElementById('recipe-details-panel');
         if (!recipesListEl || !detailsEl) return;
@@ -427,14 +527,14 @@ export class InventoryController {
             const canCraftClass = canCraft ? ' can-craft' : '';
             const selectedClass = recipe.id === this.selectedRecipeId ? ' selected' : '';
             return `
-                <div class="recipe-item-card${canCraftClass}${selectedClass}" data-recipe-id="${recipe.id}">
+                <button type="button" class="recipe-item-card${canCraftClass}${selectedClass}" data-recipe-id="${recipe.id}" aria-pressed="${recipe.id === this.selectedRecipeId}">
                     <div class="recipe-item-icon">${recipe.icon}</div>
                     <div class="recipe-item-info">
                         <div class="recipe-item-name">${recipe.name}</div>
                         <div class="recipe-item-desc">${recipe.description}</div>
                     </div>
                     <div class="recipe-item-status">${canCraft ? '✔️' : '❌'}</div>
-                </div>
+                </button>
             `;
         }).join('') || '<div class="details-placeholder" style="margin-top: 20px;">Không có công thức nào trong nhóm này</div>';
 
@@ -445,6 +545,9 @@ export class InventoryController {
             });
         }
         this._renderRecipeDetails(detailsEl);
+        const replacement = focusRecipe ? recipesListEl.querySelector(`[data-recipe-id="${focusRecipe}"]`)
+            : focusId ? this.document.getElementById(focusId) : null;
+        if (replacement) (replacement.disabled ? this.closeButton : replacement)?.focus({ preventScroll: true });
     }
 
     _renderRecipeDetails(detailsEl) {

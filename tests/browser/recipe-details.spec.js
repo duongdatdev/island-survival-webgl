@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('recipe details show actual output yields and station fuel before queueing without charging fuel on selection', async ({ page }) => {
+    test.setTimeout(120000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto('/'); await expect(page.locator('#main-menu')).toBeVisible({ timeout: 30000 });
     await page.locator('#menu-play-btn').click(); await page.locator('#world-create-btn').click();

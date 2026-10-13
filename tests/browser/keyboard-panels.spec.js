@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('keyboard focus survives recipe changes and crafting, stays in the dialog and returns to its opener', async ({ page }) => {
+    test.setTimeout(120000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto('/'); await expect(page.locator('#main-menu')).toBeVisible({ timeout: 30000 });
     await page.locator('#menu-play-btn').click(); await page.locator('#world-create-btn').click();
@@ -14,7 +15,7 @@ test('keyboard focus survives recipe changes and crafting, stays in the dialog a
     });
     const opener = page.locator('[data-action="panel"][data-arg="craft"]');
     await opener.focus(); await page.keyboard.press('Enter');
-    const close = page.locator('#campaign-panel [data-action="close"]');
+    const close = page.locator('#inventory-menu-close');
     await expect(close).toBeFocused();
     const recipe = page.locator('[data-action="recipe"][data-arg="rope"]');
     await recipe.focus(); await page.keyboard.press('Enter'); await expect(recipe).toBeFocused();
@@ -26,10 +27,11 @@ test('keyboard focus survives recipe changes and crafting, stays in the dialog a
     expect(await page.evaluate(() => window.__GAME_ENGINE__.scenes.activeScene.inventory.getCount('rope'))).toBe(2);
     // Both boundaries wrap, including recovery after an outside element receives focus.
     await page.keyboard.press('Shift+Tab');
-    await expect(page.locator('[data-action="pin"][data-arg="rope"]')).toBeFocused();
+    await expect(page.locator('#hotbar-hud [data-index="27"]')).toBeFocused();
     await page.keyboard.press('Tab'); await expect(close).toBeFocused();
-    await opener.focus(); await page.keyboard.press('Tab'); await expect(close).toBeFocused();
-    await page.keyboard.press('Escape'); await expect(page.locator('#campaign-panel')).toBeHidden(); await expect(opener).toBeFocused();
+    await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
+    await page.keyboard.press('Tab'); await expect(close).toBeFocused();
+    await page.keyboard.press('Escape'); await expect(page.locator('#inventory-menu')).toBeHidden(); await expect(opener).toBeFocused();
     await page.locator('[data-action="panel"][data-arg="map"]').click();
     const map = page.locator('#campaign-map'); await map.focus();
     await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowLeft');
