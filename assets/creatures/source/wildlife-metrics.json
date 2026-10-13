@@ -1,0 +1,71 @@
+[
+  {
+    "name": "deer",
+    "tris": 288,
+    "verts": 192,
+    "dims_m": [
+      0.6153,
+      1.575,
+      1.906
+    ],
+    "budget": 900,
+    "within_budget": true,
+    "materials": [
+      "M_deer.001"
+    ],
+    "blend": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\deer.blend",
+    "fbx": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\deer.fbx",
+    "textures": {
+      "BaseColor": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\tex\\deer_BaseColor.png",
+      "MaskMap": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\tex\\deer_MaskMap.png",
+      "MaterialsJson": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\deer.materials.json"
+    },
+    "extra_objects": []
+  },
+  {
+    "name": "goat",
+    "tris": 252,
+    "verts": 168,
+    "dims_m": [
+      0.5634,
+      1.575,
+      1.4145
+    ],
+    "budget": 700,
+    "within_budget": true,
+    "materials": [
+      "M_goat.001"
+    ],
+    "blend": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\goat.blend",
+    "fbx": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\goat.fbx",
+    "textures": {
+      "BaseColor": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\tex\\goat_BaseColor.png",
+      "MaskMap": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\tex\\goat_MaskMap.png",
+      "MaterialsJson": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\goat.materials.json"
+    },
+    "extra_objects": []
+  },
+  {
+    "name": "monitor",
+    "tris": 420,
+    "verts": 280,
+    "dims_m": [
+      0.7133,
+      2.1791,
+      0.3494
+    ],
+    "budget": 700,
+    "within_budget": true,
+    "materials": [
+      "M_monitor.001"
+    ],
+    "blend": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\monitor.blend",
+    "fbx": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\monitor.fbx",
+    "textures": {
+      "BaseColor": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\tex\\monitor_BaseColor.png",
+      "MaskMap": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\tex\\monitor_MaskMap.png",
+      "MaterialsJson": "D:\\Project\\webgl\\island-survival\\assets\\creatures\\source\\monitor.materials.json"
+    },
+    "extra_objects": []
+  }
+]

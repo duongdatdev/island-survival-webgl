@@ -14,6 +14,7 @@ const resource = (id, name, icon, options = {}) => ({
     color: [0.55, 0.43, 0.24], meshScale: [0.2, 0.2, 0.2], consumable: false, ...options,
 });
 export const CAMPAIGN_RESOURCES = Object.fromEntries([
+    ['raw_game_meat', 'Thịt thú rừng sống', '🥩'],
     ['fiber', 'Sợi thực vật', '🌿'], ['iron_ore', 'Quặng sắt', '⛏️'],
     ['copper_ore', 'Quặng đồng', '⛏️'], ['iron_ingot', 'Thỏi sắt', '▰'],
     ['copper_ingot', 'Thỏi đồng', '▰'], ['charcoal', 'Than củi', '⬛'],
@@ -95,6 +96,7 @@ export const CAMPAIGN_RECIPES = Object.fromEntries([
     recipe('smoke_boar', 'Hun khói thịt lợn', { raw_boar_meat: 1 }, { station: 'smoker', duration: 90, outputId: 'smoked_meal', category: 'food' }),
     recipe('smoke_reef', 'Hun khói cá rạn', { reef_fish: 1 }, { station: 'smoker', duration: 90, outputId: 'smoked_meal', category: 'food' }),
     recipe('smoke_ocean', 'Hun khói cá lớn', { ocean_fish: 1 }, { station: 'smoker', duration: 120, outputId: 'smoked_meal', yield: 2, category: 'food' }),
+    recipe('smoke_game', 'Hun khói thịt thú rừng', { raw_game_meat: 1 }, { station: 'smoker', duration: 90, outputId: 'smoked_meal', category: 'food' }),
     ...Object.values(STRUCTURE_DEFINITIONS).filter(def => !def.structural).map(def =>
         recipe(def.id, def.name, def.ingredients, { tier: def.tier, category: 'structure' })),
 ].map(def => [def.id, def]));

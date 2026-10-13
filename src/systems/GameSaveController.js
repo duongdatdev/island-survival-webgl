@@ -64,7 +64,7 @@ export class GameSaveController {
         const snapshot = (this.storage.captureScene || SaveSystem.captureScene)(scene);
         if (this.storage === SaveSystem || this.storage.captureScene) return snapshot;
         const mode = scene.engine.activeWorld?.mode || 'classic';
-        return { ...snapshot, version: 2, mode, generatorVersion: mode === 'campaign' ? 2 : 1,
+        return { ...snapshot, version: 2, mode, generatorVersion: scene.world?.generatorVersion ?? scene.engine.activeWorld?.generatorVersion ?? (mode === 'campaign' ? 2 : 1),
             playSeconds: scene.campaign?.playSeconds ?? scene.survivalSeconds,
             campaign: scene.campaign?.snapshot() || null };
     }

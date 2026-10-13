@@ -3,17 +3,20 @@ import { Crab } from '../entities/Crab.js';
 import { Boar } from '../entities/Boar.js';
 import { Seagull } from '../entities/Seagull.js';
 import { Shark } from '../entities/Shark.js';
+import { Deer, Goat, Monitor } from '../entities/BiomeWildlife.js';
 import { CreatureState } from '../entities/Creature.js';
 import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
-const SPECIES = { crab: Crab, seagull: Seagull, boar: Boar, shark: Shark };
+const SPECIES = { crab: Crab, seagull: Seagull, boar: Boar, shark: Shark, deer: Deer, goat: Goat, monitor: Monitor };
+export const WILDLIFE_COUNTS = Object.freeze({ crab: 12, seagull: 8, boar: 10, shark: 6, deer: 10, goat: 8, monitor: 8 });
+const MAX_POPULATION = Object.values(WILDLIFE_COUNTS).reduce((sum, count) => sum + count, 0);
 const distance = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
 export function assertWildlifeSnapshot(saved) {
-    const validId = id => typeof id === 'string' && /^(crab|seagull|boar|shark)-\d+$/.test(id)
+    const validId = id => typeof id === 'string' && /^(crab|seagull|boar|shark|deer|goat|monitor)-\d+$/.test(id)
         && id === id.split('-')[0] + '-' + Number(id.split('-')[1])
-        && +id.split('-')[1] < ({ crab: 12, seagull: 8, boar: 10, shark: 6 })[id.split('-')[0]];
-    if (!saved || !Array.isArray(saved.killed) || saved.killed.length > 36 || !Array.isArray(saved.animals) || saved.animals.length > 36
+        && +id.split('-')[1] < WILDLIFE_COUNTS[id.split('-')[0]];
+    if (!saved || !Array.isArray(saved.killed) || saved.killed.length > MAX_POPULATION || !Array.isArray(saved.animals) || saved.animals.length > MAX_POPULATION
         || saved.killed.some(id => !validId(id)) || new Set(saved.killed).size !== saved.killed.length) throw new Error('Bản lưu động vật không hợp lệ.');
     const ids = new Set(saved.killed);
     for (const a of saved.animals) {
@@ -30,7 +33,8 @@ export function assertWildlifeSnapshot(saved) {
 export function campaignAnimalSpawns(world) {
     const random = new PRNG('campaign-wildlife:' + world.seed), generator = world.terrainGenerator;
     const result = [], radius = generator.island.radius;
-    for (const [species, count] of [['crab', 12], ['seagull', 8], ['boar', 10], ['shark', 6]]) {
+    for (const [species, count] of Object.entries(WILDLIFE_COUNTS)) {
+        if (world.generatorVersion < 3 && ['deer', 'goat', 'monitor'].includes(species)) continue;
         for (let index = 0; index < count; index++) {
             for (let attempt = 0; attempt < 2000; attempt++) {
                 let angle = random.nextRange(-Math.PI, Math.PI);
@@ -48,6 +52,13 @@ export function campaignAnimalSpawns(world) {
                 if (species === 'boar' && (generator.getBiome(x, z, height) !== 'Forest' || height < 0.3
                     || distance(position, world.spawnPosition) < 25
                     || world.pois.some(p => distance(p.position, position) < p.radius + 12))) continue;
+                if (['deer', 'goat', 'monitor'].includes(species)) {
+                    const habitats = { deer: ['Grassland', 'Savanna'], goat: ['Highland', 'RockArea'], monitor: ['Jungle', 'Mangrove'] };
+                    if (!habitats[species].includes(generator.getBiome(x, z, height)) || height < .4
+                        || generator.getNormal(x, z)[1] < .8 || generator._reserved(x, z)
+                        || distance(position, world.spawnPosition) < 35
+                        || world.pois.some(p => distance(p.position, position) < p.radius + 12)) continue;
+                }
                 if (result.some(p => p.species === species && distance(p.position, position) < 14)) continue;
                 result.push({ id: `${species}-${index}`, species, position }); break;
             }
@@ -122,7 +133,7 @@ export class CampaignWildlife {
     restore(saved) {
         if (!saved) return;
         assertWildlifeSnapshot(saved);
-        if (!Array.isArray(saved.killed) || saved.killed.length > 36 || !Array.isArray(saved.animals) || saved.animals.length > 36
+        if (!Array.isArray(saved.killed) || saved.killed.length > MAX_POPULATION || !Array.isArray(saved.animals) || saved.animals.length > MAX_POPULATION
             || saved.killed.some(id => !this.species.has(id))) throw new Error('Bản lưu động vật không hợp lệ.');
         const ids = new Set(saved.killed), records = new Map();
         for (const record of saved.animals) {

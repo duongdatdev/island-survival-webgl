@@ -1,0 +1,87 @@
+{
+  "meshes": [
+    {
+      "name": "deer",
+      "mesh": "deer.001",
+      "verts": 192,
+      "edges": 288,
+      "faces": 144,
+      "tris": 288,
+      "smooth_faces_pct": 0.0,
+      "dims_world": [
+        0.6153,
+        1.575,
+        1.906
+      ],
+      "bounds_world": {
+        "min": [
+          -0.3076,
+          -0.9,
+          0.0
+        ],
+        "max": [
+          0.3076,
+          0.675,
+          1.906
+        ]
+      },
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "transforms_applied": true,
+      "negative_scale": false,
+      "loose_parts": 24,
+      "loose_verts": 0,
+      "non_manifold_edges": 0,
+      "boundary_edges": 0,
+      "degenerate_faces": 0,
+      "uv_layers": [
+        "UVMap"
+      ],
+      "has_custom_normals": false,
+      "materials": [
+        "M_deer.001"
+      ],
+      "empty_material_slots": 0,
+      "modifiers": [],
+      "armature": null,
+      "vertex_groups": 0,
+      "parent": null,
+      "collections": [
+        "COL_LowPoly"
+      ]
+    }
+  ],
+  "totals": {
+    "tris": 288
+  },
+  "bounds_world": {
+    "min": [
+      -0.3076,
+      -0.9,
+      0.0
+    ],
+    "max": [
+      0.3076,
+      0.675,
+      1.906
+    ],
+    "dims": [
+      0.6153,
+      1.575,
+      1.906
+    ]
+  }
+}

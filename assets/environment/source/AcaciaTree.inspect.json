@@ -1,0 +1,87 @@
+{
+  "meshes": [
+    {
+      "name": "AcaciaTree",
+      "mesh": "AcaciaTree.001",
+      "verts": 164,
+      "edges": 314,
+      "faces": 168,
+      "tris": 292,
+      "smooth_faces_pct": 0.0,
+      "dims_world": [
+        5.5,
+        5.4952,
+        3.5353
+      ],
+      "bounds_world": {
+        "min": [
+          -2.75,
+          -2.6152,
+          0.0
+        ],
+        "max": [
+          2.75,
+          2.88,
+          3.5353
+        ]
+      },
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "transforms_applied": true,
+      "negative_scale": false,
+      "loose_parts": 9,
+      "loose_verts": 0,
+      "non_manifold_edges": 0,
+      "boundary_edges": 0,
+      "degenerate_faces": 0,
+      "uv_layers": [
+        "UVMap"
+      ],
+      "has_custom_normals": false,
+      "materials": [
+        "M_AcaciaTree.001"
+      ],
+      "empty_material_slots": 0,
+      "modifiers": [],
+      "armature": null,
+      "vertex_groups": 0,
+      "parent": null,
+      "collections": [
+        "COL_LowPoly"
+      ]
+    }
+  ],
+  "totals": {
+    "tris": 292
+  },
+  "bounds_world": {
+    "min": [
+      -2.75,
+      -2.6152,
+      0.0
+    ],
+    "max": [
+      2.75,
+      2.88,
+      3.5353
+    ],
+    "dims": [
+      5.5,
+      5.4952,
+      3.5353
+    ]
+  }
+}

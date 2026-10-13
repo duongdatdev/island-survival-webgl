@@ -13,7 +13,7 @@ export function validateSnapshot(snapshot) {
     if (!snapshot || snapshot.version !== CAMPAIGN_SAVE_VERSION
         || !['classic', 'campaign'].includes(snapshot.mode)
         || typeof snapshot.worldSeed !== 'string' || !snapshot.worldSeed || snapshot.worldSeed.length > 64
-        || snapshot.generatorVersion !== (snapshot.mode === 'classic' ? 1 : 2)
+        || !(snapshot.mode === 'classic' ? [1] : [2, 3]).includes(snapshot.generatorVersion)
         || !vector(snapshot.player?.position) || !Number.isFinite(snapshot.player.yaw)
         || !Number.isFinite(snapshot.survivalSeconds) || snapshot.survivalSeconds < 0
         || !['health', 'hunger', 'thirst', 'stamina'].every(key => Number.isFinite(snapshot.vitals?.[key])

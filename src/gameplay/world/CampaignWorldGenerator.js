@@ -11,6 +11,7 @@ const mixColor = (a, b, t) => a.map((value, index) => value + (b[index] - value)
 const COLORS = {
     Beach: [0.83, 0.73, 0.5], Grassland: [0.29, 0.46, 0.19], Forest: [0.15, 0.33, 0.13],
     RockArea: [0.43, 0.42, 0.37], Highland: [0.38, 0.43, 0.33], Ocean: [0.12, 0.25, 0.29],
+    Jungle: [0.09, 0.29, 0.16], Mangrove: [0.28, 0.34, 0.21], Savanna: [0.61, 0.53, 0.25],
 };
 const POIS = [
     ['wreck_beach', 'Bãi đắm tàu', 0, 0.93, 'beach', 10],
@@ -36,7 +37,7 @@ function segmentPoint(x, z, a, b) {
 
 /** Campaign geometry is versioned separately so Classic seeds never change. */
 export class CampaignWorldGenerator {
-    constructor() { this.width = WIDTH; this.size = WIDTH / STEP; }
+    constructor(generatorVersion = 3) { this.width = WIDTH; this.size = WIDTH / STEP; this.generatorVersion = generatorVersion; }
 
     generate(seed, metadataMap = {}, debug = false, options = {}) {
         const started = performance.now();
@@ -64,7 +65,7 @@ export class CampaignWorldGenerator {
         const placedObjects = options.props === false ? [] : this._placeEnvironment(metadataMap);
         const resourceNodes = this._resources();
         const terrain = options.mesh === false ? { chunks: [] } : this._terrain(debug);
-        return { seed: this.seed, generatorVersion: 2, mode: 'campaign', width: WIDTH,
+        return { seed: this.seed, generatorVersion: this.generatorVersion, mode: 'campaign', width: WIDTH,
             terrain, terrainGenerator: this, biomeGenerator: this, placedObjects, resourceNodes,
             spawnPosition, buildArea: [...start], pois: this.pois, paths: this.paths, shortcutPath: this.shortcutPath,
             landmarks: { waterfall: this.poiById.waterfall.position, treasureChests: [] },
@@ -95,7 +96,24 @@ export class CampaignWorldGenerator {
             + 2.2 * Math.cos(localZ * 0.067 + localX * 0.018);
         const noise = this.waves.reduce((sum, wave) => sum + Math.sin(x * wave.x) * Math.cos(z * wave.z) * wave.amplitude, 0);
         const beach = 0.08 + 0.52 * smooth(0, 20, shore);
-        return beach + smooth(12, 54, shore) * Math.max(0.4, 3 + mountains + foothills + ridges + noise);
+        let height = beach + smooth(12, 54, shore) * Math.max(0.4, 3 + mountains + foothills + ridges + noise);
+        if (this.generatorVersion >= 3) {
+            const { Mangrove, Savanna } = this.biomeWeights(x, z);
+            // Sheltered, dry tidal flats and broad rolling grassland; paths/POI pads
+            // are graded afterwards by getHeight, so story routes stay traversable.
+            height = height * (1 - Mangrove * .88) + (0.65 + noise * .12) * Mangrove * .88;
+            height += Savanna * smooth(25, 60, shore) * (1.6 + Math.sin(localZ * .035) * 1.3);
+        }
+        return height;
+    }
+
+    biomeWeights(x, z) {
+        const lx = x * Math.cos(this.rotation) + z * Math.sin(this.rotation);
+        const lz = -x * Math.sin(this.rotation) + z * Math.cos(this.rotation);
+        const patch = (cx, cz, sx, sz) => 1 - smooth(.55, 1.15,
+            Math.hypot((lx - cx) / sx, (lz - cz) / sz) + .045 * Math.sin(lx * .075) * Math.cos(lz * .06));
+        return { Jungle: patch(-130, 80, 105, 95), Mangrove: patch(183, 139, 64, 57),
+            Savanna: patch(150, -25, 100, 150) };
     }
 
     getHeight(x, z) {
@@ -143,6 +161,13 @@ export class CampaignWorldGenerator {
     getBiome(x, z, height = this.getHeight(x, z)) {
         const shore = this._shoreDistance(x, z);
         if (shore < 0) return 'Ocean';
+        if (this.generatorVersion >= 3) {
+            const weights = this.biomeWeights(x, z);
+            if (weights.Mangrove > .35 && shore > 8 && height < 15) return 'Mangrove';
+            if (height > 32) return 'Highland';
+            if (shore > 28 && weights.Jungle > .35) return 'Jungle';
+            if (shore > 25 && weights.Savanna > .35) return 'Savanna';
+        }
         if (shore < 22 && height < 2.5) return 'Beach';
         if (height > 32) return 'Highland';
         const angle = (Math.atan2(z, x) - this.rotation + Math.PI * 4) % (Math.PI * 2);
@@ -157,6 +182,12 @@ export class CampaignWorldGenerator {
         const variation = Math.sin(x * 0.17 + Math.cos(z * 0.11)) * Math.cos(z * 0.13) * 0.025;
         const grass = mixColor([0.30, 0.44, 0.18], [0.19, 0.32, 0.14], smooth(6, 35, height));
         let color = mixColor([0.83, 0.75, 0.55], grass, smooth(18, 38, shore));
+        if (this.generatorVersion >= 3) {
+            const weights = this.biomeWeights(x, z);
+            for (const biome of ['Savanna', 'Jungle', 'Mangrove']) {
+                color = mixColor(color, COLORS[biome], weights[biome] * smooth(8, 36, shore) * (1 - smooth(28, 42, height)));
+            }
+        }
         const rock = Math.max(smooth(0.13, 0.48, 1 - normal[1]), smooth(39, 66, height) * 0.85);
         color = mixColor(color, [0.49, 0.48, 0.42], rock);
         if (shore < 4) color = mixColor([0.43, 0.43, 0.33], color, smooth(-5, 4, shore));
@@ -188,12 +219,24 @@ export class CampaignWorldGenerator {
             const biome = this.getBiome(x, z, height);
             if (biome === 'Ocean') continue;
             const slope = this.getNormal(x, z)[1];
-            const candidates = available.filter(asset => asset.biome === biome
-                || biome === 'Highland' && asset.biome === 'RockArea')
+            const families = this.generatorVersion < 3 ? [biome, ...(biome === 'Highland' ? ['RockArea'] : [])]
+                : ({ Jungle: ['Jungle', 'Forest', 'Beach'], Mangrove: ['Jungle', 'Beach'],
+                    Savanna: ['Savanna', 'Grassland'], Highland: ['Mountain', 'RockArea'] }[biome] || [biome]);
+            let candidates = available.filter(asset => families.includes(asset.biome) || asset.biome === biome)
                 .filter(asset => slope > 0.88 || asset.biome === 'RockArea');
+            if (this.generatorVersion >= 3 && biome === 'Jungle') {
+                candidates = candidates.filter(asset => asset.biome !== 'Forest' || asset.id.startsWith('normaltree'));
+            }
+            if (this.generatorVersion >= 3 && ['Savanna', 'Mangrove'].includes(biome)) {
+                const trees = candidates.filter(asset => asset.biome === biome);
+                // Open acacia parkland versus dense mangrove stands.
+                if (trees.length && prng.next() < (biome === 'Mangrove' ? .7 : .16)) candidates = trees;
+                else candidates = candidates.filter(asset => asset.biome !== biome);
+            }
             if (!candidates.length) continue;
             const asset = prng.choose(candidates);
-            const scale = prng.nextRange(asset.minScale || 0.8, asset.maxScale || 1.2);
+            const scale = prng.nextRange(asset.minScale || 0.8, asset.maxScale || 1.2)
+                * (biome === 'Jungle' ? 1.25 : biome === 'Mangrove' ? .8 : 1);
             occupied.add(key);
             placed.push({ ...asset, position: [x, height, z], rotation: [0, prng.nextRange(0, Math.PI * 2), 0],
                 scale: [scale, scale, scale], biome, collision: !!asset.collision,

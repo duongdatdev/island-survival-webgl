@@ -52,7 +52,7 @@ test('campaign worlds default to new generator and store two snapshots plus chec
     const store = repository();
     const { world } = await store.createWorld({ name: 'Đảo mới', seed: 'new-world' });
     assert.equal(world.mode, 'campaign');
-    assert.equal(world.generatorVersion, 2);
+    assert.equal(world.generatorVersion, 3);
     assert.equal(await store.saveWorld(world.id, snapshot(world, 10), { checkpoint: true }), true);
     assert.equal(await store.saveWorld(world.id, snapshot(world, 20)), true);
     assert.equal((await store.loadWorld(world.id)).survivalSeconds, 20);

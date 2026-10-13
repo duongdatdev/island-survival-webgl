@@ -1,7 +1,7 @@
 import { getCampaignRecipe, STRUCTURE_DEFINITIONS, CAMPAIGN_BALANCE } from '../gameplay/CampaignDatabase.js';
 import { transactCraft } from './ItemContainer.js';
 
-const RAW_FOOD = new Set(['raw_fish', 'raw_crab_meat', 'raw_seagull_meat', 'raw_boar_meat', 'reef_fish', 'ocean_fish', 'carrot', 'coconut']);
+const RAW_FOOD = new Set(['raw_game_meat', 'raw_fish', 'raw_crab_meat', 'raw_seagull_meat', 'raw_boar_meat', 'reef_fish', 'ocean_fish', 'carrot', 'coconut']);
 const CROPS = {
     carrot: { seed: 'carrot_seed', duration: CAMPAIGN_BALANCE.cropFoodSeconds, output: 'carrot', stages: 4 },
     herb: { seed: 'herb_seed', duration: CAMPAIGN_BALANCE.cropHerbSeconds, output: 'herb', stages: 3 },

@@ -62,6 +62,8 @@
     "assets/environment/OBJ/Rock_2.asset.json",
     "assets/environment/OBJ/Rock_3.asset.json",
     "assets/environment/OBJ/Rock_4.asset.json",
-    "assets/environment/OBJ/Rock_5.asset.json"
+    "assets/environment/OBJ/Rock_5.asset.json",
+    "assets/environment/OBJ/MangroveTree.asset.json",
+    "assets/environment/OBJ/AcaciaTree.asset.json"
   ]
 }

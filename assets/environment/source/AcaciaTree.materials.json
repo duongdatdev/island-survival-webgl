@@ -1,0 +1,44 @@
+{
+  "asset": "AcaciaTree",
+  "material": "M_AcaciaTree.001",
+  "shader": "Universal Render Pipeline/Lit",
+  "palette_size": [
+    32,
+    16
+  ],
+  "textures": {
+    "BaseColor": "AcaciaTree_BaseColor.png",
+    "MaskMap": "AcaciaTree_MaskMap.png"
+  },
+  "maskmap_layout": "R=metallic G=occlusion B=unused A=smoothness",
+  "cells": [
+    {
+      "cell": 0,
+      "name": "wood",
+      "baseColor": "#73512F",
+      "metallic": 0.0,
+      "smoothness": 0.2,
+      "roughness": 0.8,
+      "emission": 0.0,
+      "uv_center": [
+        0.25,
+        0.5
+      ],
+      "faces": 40
+    },
+    {
+      "cell": 1,
+      "name": "leaves",
+      "baseColor": "#387F3D",
+      "metallic": 0.0,
+      "smoothness": 0.2,
+      "roughness": 0.8,
+      "emission": 0.0,
+      "uv_center": [
+        0.75,
+        0.5
+      ],
+      "faces": 128
+    }
+  ]
+}

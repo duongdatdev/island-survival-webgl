@@ -75,6 +75,8 @@ function biomeToSurface(biome) {
         case BiomeType.BEACH: return 'sand';
         case BiomeType.FOREST: return 'grass';
         case BiomeType.ROCK_AREA: return 'rock';
+        case 'Highland': return 'rock';
+        case 'Mangrove': return 'sand';
         case BiomeType.GRASSLAND: return 'grass';
         case BiomeType.OCEAN: return 'water';
         default: return 'grass';
@@ -148,7 +150,8 @@ export class GameScene extends Scene {
 
         this.worldSeed = this.engine.worldSeed || Math.floor(Math.random() * 1000000).toString();
         this.debugBiomeColors = false;
-        this.worldGenerator = this.engine.activeWorld?.mode === 'campaign' ? new CampaignWorldGenerator() : new WorldGenerator(120, 100.0);
+        this.worldGenerator = this.engine.activeWorld?.mode === 'campaign'
+            ? new CampaignWorldGenerator(this._pendingSave?.generatorVersion ?? this.engine.activeWorld.generatorVersion ?? 2) : new WorldGenerator(120, 100.0);
 
         if (this._pendingSave) {
             this.worldSeed = this._pendingSave.worldSeed;
@@ -898,7 +901,7 @@ export class GameScene extends Scene {
                 const dy = Math.abs(creature.position[1] - this.player.position[1]);
                 if (dist <= creature.attackRange && dy <= 2.0 && (!this.wildlife || this.wildlife.canReachPlayer(creature))) {
                     if (creature.canDamagePlayer()) {
-                        this.vitals.applyDamage(creature.attackDamage, creature instanceof Shark ? 'shark' : 'boar');
+                        this.vitals.applyDamage(creature.attackDamage, creature.species || (creature instanceof Shark ? 'shark' : 'boar'));
                         this._showNotification(`💥 Trúng đòn! Mất ${creature.attackDamage} máu!`);
                         this.engine.audio.playPlayerHurt();
                         this.engine.audio.setHealthFraction(this.vitals.health / 100);

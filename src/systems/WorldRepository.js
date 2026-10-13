@@ -133,7 +133,7 @@ export class WorldRepository {
             }
             const now = Date.now();
             const world = { id: makeId(), name, seed: seed || makeId().slice(0, 32), mode, difficulty,
-                generatorVersion: mode === 'classic' ? 1 : 2, status: 'new', createdAt: now,
+                generatorVersion: mode === 'classic' ? 1 : 3, status: 'new', createdAt: now,
                 updatedAt: now, lastPlayedAt: 0, survivalSeconds: 0, playSeconds: 0, completedRoutes: [] };
             await this._writeInitial(world, null);
             return { ok: true, world };
@@ -273,7 +273,7 @@ export class WorldRepository {
                     || typeof world.name !== 'string' || !world.name.trim() || world.name.length > 32
                     || typeof world.seed !== 'string' || !world.seed || world.seed.length > 64
                     || !['classic', 'campaign'].includes(world.mode)
-                    || world.generatorVersion !== (world.mode === 'classic' ? 1 : 2)
+                    || !(world.mode === 'classic' ? [1] : [2, 3]).includes(world.generatorVersion)
                     || !['relaxed', 'standard', 'harsh'].includes(world.difficulty)
                     || !['new', 'playing', 'completed', 'escaped', 'dead'].includes(world.status)
                     || world.completedRoutes != null && (!Array.isArray(world.completedRoutes) || world.completedRoutes.length > 2

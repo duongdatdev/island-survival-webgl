@@ -3,7 +3,11 @@
     {
       "id": "boar",
       "path": "assets/creatures/boar.glb",
-      "targetSize": [0.433, 0.7, 1.247],
+      "targetSize": [
+        0.433,
+        0.7,
+        1.247
+      ],
       "preserveAspect": true,
       "yawOffset": 0,
       "sourceTitle": "Boar",
@@ -12,7 +16,11 @@
     {
       "id": "crab",
       "path": "assets/creatures/crab.glb",
-      "targetSize": [0.531, 0.315, 0.288],
+      "targetSize": [
+        0.531,
+        0.315,
+        0.288
+      ],
       "preserveAspect": true,
       "yawOffset": 0,
       "sourceTitle": "Crab Enemy",
@@ -21,7 +29,11 @@
     {
       "id": "seagull",
       "path": "assets/creatures/seagull.glb",
-      "targetSize": [0.2, 0.154, 0.172],
+      "targetSize": [
+        0.2,
+        0.154,
+        0.172
+      ],
       "preserveAspect": true,
       "yawOffset": 0,
       "sourceTitle": "Pigeon",
@@ -30,11 +42,60 @@
     {
       "id": "shark",
       "path": "assets/creatures/shark.glb",
-      "targetSize": [0.184, 0.164, 0.5],
+      "targetSize": [
+        0.184,
+        0.164,
+        0.5
+      ],
       "preserveAspect": true,
       "yawOffset": 0,
       "sourceTitle": "Shark",
       "author": "Quaternius"
+    },
+    {
+      "id": "deer",
+      "path": "assets/creatures/deer.glb",
+      "targetSize": [
+        0.6153,
+        1.906,
+        1.575
+      ],
+      "preserveAspect": true,
+      "yawOffset": 0,
+      "sourceTitle": "Original Blender LPM wildlife",
+      "author": "Island Survival project",
+      "license": "CC0-1.0",
+      "triangles": 288
+    },
+    {
+      "id": "goat",
+      "path": "assets/creatures/goat.glb",
+      "targetSize": [
+        0.5634,
+        1.4145,
+        1.575
+      ],
+      "preserveAspect": true,
+      "yawOffset": 0,
+      "sourceTitle": "Original Blender LPM wildlife",
+      "author": "Island Survival project",
+      "license": "CC0-1.0",
+      "triangles": 252
+    },
+    {
+      "id": "monitor",
+      "path": "assets/creatures/monitor.glb",
+      "targetSize": [
+        0.7133,
+        0.3494,
+        2.1791
+      ],
+      "preserveAspect": true,
+      "yawOffset": 0,
+      "sourceTitle": "Original Blender LPM wildlife",
+      "author": "Island Survival project",
+      "license": "CC0-1.0",
+      "triangles": 420
     }
   ]
 }

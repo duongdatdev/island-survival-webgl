@@ -113,6 +113,9 @@ test('creature manifest maps canonical ids to renamed GLB files', async () => {
 
     assert.deepEqual(paths, {
         boar: 'assets/creatures/boar.glb',
+        deer: 'assets/creatures/deer.glb',
+        goat: 'assets/creatures/goat.glb',
+        monitor: 'assets/creatures/monitor.glb',
         crab: 'assets/creatures/crab.glb',
         seagull: 'assets/creatures/seagull.glb',
         shark: 'assets/creatures/shark.glb',

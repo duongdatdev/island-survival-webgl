@@ -778,7 +778,9 @@ export class CampaignController {
         for (const cell of this.discovered) {
             const [x, z] = cell.split(':').map(Number);
             const wx = x * 40 - 300, wz = z * 40 - 300;
-            ctx.fillStyle = this.scene.terrain.getHeight(wx, wz) < 0 ? '#396861' : '#7b8750';
+            const generator = this.scene.world.biomeGenerator;
+            const color = generator.getBiomeColor(generator.getBiome(wx, wz));
+            ctx.fillStyle = `rgb(${color.map(channel => Math.round(channel * 255)).join(',')})`;
             ctx.fillRect(x * 37.5, z * 37.5, 38, 38);
         }
         const labelBounds = [];

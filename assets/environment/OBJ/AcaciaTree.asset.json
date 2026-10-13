@@ -1,0 +1,14 @@
+{
+  "id": "acaciatree",
+  "displayName": "AcaciaTree",
+  "category": "Tree",
+  "biome": "Savanna",
+  "collision": true,
+  "navigationBlocker": true,
+  "proceduralPlacement": true,
+  "minScale": 0.8,
+  "maxScale": 1.2,
+  "spawnWeight": 8,
+  "license": "CC0-1.0",
+  "source": "Original Blender LPM recipe"
+}

@@ -498,7 +498,7 @@ export class MainMenuScene extends Scene {
             const world = await this.storage.prepareWorld(selected.id);
             if (!world) throw new Error('Không thể cập nhật map đã chọn.');
             await new Promise(resolve => requestAnimationFrame(resolve));
-            const generator = world.mode === 'campaign' ? new CampaignWorldGenerator() : new WorldGenerator(120, 100.0);
+            const generator = world.mode === 'campaign' ? new CampaignWorldGenerator(world.generatorVersion ?? 2) : new WorldGenerator(120, 100.0);
             if (world.mode === 'campaign' && !this.engine.assets.campaignMetadata) await this.engine.assets.loadCampaignModels();
             const generatedWorld = generator.generate(world.seed, this.engine.assets.environmentMetadata, false);
             this._setLoader(true, 'Đang chuẩn bị môi trường...', 58);

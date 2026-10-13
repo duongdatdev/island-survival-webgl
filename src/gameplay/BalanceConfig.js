@@ -126,6 +126,9 @@ export const EXPOSURE_BALANCE = Object.freeze({
 });
 
 export const CREATURE_BALANCE = Object.freeze({
+    deer: Object.freeze({ maxHealth: 35, baseSpeed: 3.4, detectionRadius: 12, attackDamage: 0, fleeSpeedMultiplier: 1.6 }),
+    goat: Object.freeze({ maxHealth: 30, baseSpeed: 2.4, detectionRadius: 8, attackDamage: 0, fleeSpeedMultiplier: 1.5 }),
+    monitor: Object.freeze({ maxHealth: 40, baseSpeed: 1.9, detectionRadius: 5, attackRange: 1.25, attackDamage: 8, attackCooldown: 2.8 }),
     crab: Object.freeze({
         maxHealth: 10,
         baseSpeed: 1.5,

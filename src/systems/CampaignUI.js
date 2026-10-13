@@ -418,7 +418,7 @@ export class CampaignUI {
         let html = `<p>${escape(def.name)} · ${record.id.replace('structure-', '')}</p>`;
         if (record.type === 'door') html += button('toggle-door', record.open ? 'Đóng cửa' : 'Mở cửa');
         if (def.fire) html += `<p>Nhiên liệu: ${Math.ceil(record.fuelSeconds)} giây</p>${button('fuel', 'Thêm 1 gỗ', 'wood')}${button('fuel', 'Thêm 1 than', 'charcoal')}`;
-        if (record.type === 'campfire') html += `<h3>Nấu thức ăn</h3><div class="campaign-grid">${['raw_fish', 'raw_boar_meat', 'raw_crab_meat', 'raw_seagull_meat', 'reef_fish', 'ocean_fish', 'coconut', 'carrot'].map(id => button('cook', getResourceDef(id).name, id, !this.scene.inventory.hasItem(id))).join('')}</div>`;
+        if (record.type === 'campfire') html += `<h3>Nấu thức ăn</h3><div class="campaign-grid">${['raw_game_meat', 'raw_fish', 'raw_boar_meat', 'raw_crab_meat', 'raw_seagull_meat', 'reef_fish', 'ocean_fish', 'coconut', 'carrot'].map(id => button('cook', getResourceDef(id).name, id, !this.scene.inventory.hasItem(id))).join('')}</div>`;
         if (record.container) {
             if (record.type.includes('chest')) html += button('craft-source', record.allowCrafting ? '✓ Cho phép dùng nguyên liệu trong rương' : 'Cho phép dùng nguyên liệu trong rương');
             html += `<h3>Đồ trong công trình</h3><div class="campaign-grid">${Object.entries(record.container.getAll()).map(([id, count]) => button('collect', 'Lấy ' + countLabel({ id, count }), id)).join('') || '<p>Trống</p>'}</div>`;

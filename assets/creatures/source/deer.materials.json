@@ -1,0 +1,72 @@
+{
+  "asset": "deer",
+  "material": "M_deer.001",
+  "shader": "Universal Render Pipeline/Lit",
+  "palette_size": [
+    112,
+    16
+  ],
+  "textures": {
+    "BaseColor": "deer_BaseColor.png",
+    "MaskMap": "deer_MaskMap.png"
+  },
+  "maskmap_layout": "R=metallic G=occlusion B=unused A=smoothness",
+  "cells": [
+    {
+      "cell": 0,
+      "name": "fur",
+      "baseColor": "#A46C3C",
+      "metallic": 0.0,
+      "smoothness": 0.2,
+      "roughness": 0.8,
+      "emission": 0.0,
+      "uv_center": [
+        0.0714,
+        0.5
+      ],
+      "faces": 54
+    },
+    {
+      "cell": 1,
+      "name": "cream",
+      "baseColor": "#E4D1AA",
+      "metallic": 0.0,
+      "smoothness": 0.2,
+      "roughness": 0.8,
+      "emission": 0.0,
+      "uv_center": [
+        0.2143,
+        0.5
+      ],
+      "faces": 12
+    },
+    {
+      "cell": 2,
+      "name": "dark",
+      "baseColor": "#302B26",
+      "metallic": 0.0,
+      "smoothness": 0.2,
+      "roughness": 0.8,
+      "emission": 0.0,
+      "uv_center": [
+        0.3571,
+        0.5
+      ],
+      "faces": 42
+    },
+    {
+      "cell": 3,
+      "name": "horn",
+      "baseColor": "#776650",
+      "metallic": 0.0,
+      "smoothness": 0.2,
+      "roughness": 0.8,
+      "emission": 0.0,
+      "uv_center": [
+        0.5,
+        0.5
+      ],
+      "faces": 36
+    }
+  ]
+}

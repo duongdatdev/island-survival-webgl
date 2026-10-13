@@ -12,7 +12,8 @@ The **2.0 Campaign is in development**: new worlds default to a 640 m island wit
 - Gather island materials and recover drifting debris from the sea.
 - Craft tools, survival supplies, and the three parts required to build a raft.
 - Manage health, hunger, thirst, and stamina through changing weather and the day-night cycle.
-- Encounter passive and hostile wildlife, including crabs, seagulls, boars, and sharks.
+- Encounter crabs, seagulls, boars and sharks, plus deer, mountain goats and monitor lizards in new Campaign worlds.
+- Explore new Campaign jungle, coastal mangrove and savanna regions with stilt-root mangrove trees and umbrella acacias. See [biome expansion notes](docs/BIOME_EXPANSION.vi.md).
 - Save multiple worlds locally and continue an unfinished survival run.
 - Unlock persistent achievements as you progress.
 

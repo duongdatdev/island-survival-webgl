@@ -1,5 +1,6 @@
 // Static URLs let Vite discover and package every generated icon, including subpath deployments.
 export const ITEM_ICON_URLS = Object.freeze({
+    raw_game_meat: new URL('../../assets/ui/item-icons/raw_boar_meat.png', import.meta.url).href,
     wood: new URL('../../assets/ui/item-icons/wood.png', import.meta.url).href,
     stone: new URL('../../assets/ui/item-icons/stone.png', import.meta.url).href,
     rope: new URL('../../assets/ui/item-icons/rope.png', import.meta.url).href,

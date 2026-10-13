@@ -20,13 +20,19 @@ function scene(seed) {
     return scene;
 }
 
-test('100 seeds retain all four species on valid surfaces with safe boar spawn spacing', () => {
+test('100 seeds retain all seven species on valid habitats with safe hostile spawn spacing', () => {
     for (let seed = 0; seed < 100; seed++) {
         const w = world('wildlife-' + seed), animals = campaignAnimalSpawns(w);
-        assert.equal(animals.length, 36, `seed ${seed}`);
-        assert.equal(new Set(animals.map(a => a.id)).size, 36);
+        assert.equal(animals.length, 62, `seed ${seed}`);
+        assert.equal(new Set(animals.map(a => a.id)).size, 62);
         for (const a of animals) {
             const h = w.terrainGenerator.getHeight(a.position[0], a.position[2]);
+            const habitats = { deer: ['Grassland', 'Savanna'], goat: ['Highland', 'RockArea'], monitor: ['Jungle', 'Mangrove'] };
+            if (habitats[a.species]) {
+                assert.ok(habitats[a.species].includes(w.biomeGenerator.getBiome(a.position[0], a.position[2], h)));
+                assert.ok(w.terrainGenerator.getNormal(a.position[0], a.position[2])[1] >= .8);
+                assert.ok(Math.hypot(a.position[0] - w.spawnPosition[0], a.position[2] - w.spawnPosition[2]) >= 35);
+            }
             if (a.species === 'crab') assert.ok(h >= 0.15 && h <= 0.35);
             if (a.species === 'shark') assert.ok(h < -0.5);
             if (a.species === 'seagull') assert.ok(a.position[1] >= h + 10);
@@ -62,7 +68,7 @@ test('health, positions, orbits and killed animals persist without duplicating d
     animal.takeDamage(1); animal.position[0] += 1; crab.takeDamage(1000); assert.equal(s.drops, 1);
     s.collisionSystem.unregister(crab); crab.delete(); s.creatures.splice(0, 1);
     const saved = s.wildlife.snapshot(), restored = scene('persistence'); restored.wildlife.restore(saved);
-    assert.equal(restored.creatures.length, 35); assert.equal(restored.drops, 0);
+    assert.equal(restored.creatures.length, 61); assert.equal(restored.drops, 0);
     assert.equal(restored.creatures.some(a => a.campaignId === crab.campaignId), false);
     const loadedAnimal = restored.creatures.find(a => a.campaignId === animal.campaignId);
     assert.equal(loadedAnimal.health, animal.health); assert.deepEqual(Array.from(loadedAnimal.position), Array.from(animal.position));
