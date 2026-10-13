@@ -233,6 +233,21 @@ for index,(path,name,height) in enumerate(imports):
     before=set(bpy.data.objects)
     bpy.ops.wm.obj_import(filepath=str(path))
     imported=[o for o in bpy.data.objects if o not in before and o.type=='MESH']
+    if name == 'tent':
+        # The source OBJ's very dark cloth is unreadable in the game renderer.
+        # Use a dedicated palette so shared imported materials stay untouched.
+        tent_colors = {
+            'Green': (0.43, 0.39, 0.18),
+            'LightGreen': (0.62, 0.56, 0.29),
+            'DarkWood': (0.32, 0.19, 0.09),
+            'Black': (0.085, 0.075, 0.055),
+        }
+        for obj in imported:
+            for slot in obj.material_slots:
+                if slot.material:
+                    source_name = slot.material.name.split('.')[0]
+                    if source_name in tent_colors:
+                        slot.material = material('tent_' + source_name, tent_colors[source_name])
     for obj in imported:
         for c in list(obj.users_collection):c.objects.unlink(obj)
         collection.objects.link(obj)
