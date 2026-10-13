@@ -1,5 +1,6 @@
 import { getRecipeDef } from './RecipeDatabase.js';
 import { getResourceDef } from './ResourceDatabase.js';
+import { itemIcon } from './ItemIcons.js';
 
 const REQUIRED_RAFT_STEPS = Object.freeze([
     Object.freeze({ flag: 'framePlaced', recipeId: 'raft_frame' }),
@@ -142,14 +143,14 @@ export class ObjectiveTracker {
 
         const ingredients = objective.ingredients.map(item => `
             <span class="objective-ingredient${item.complete ? ' complete' : ''}">
-                ${item.icon} ${item.name} ${item.current}/${item.required}
+                ${itemIcon(item.resourceId)} ${item.name} ${item.current}/${item.required}
             </span>
         `).join('');
 
         const kicker = objective.source === 'pinned' ? 'CÔNG THỨC GHIM' : 'MỤC TIÊU';
         this.element.innerHTML = `
             <div class="objective-kicker">${kicker}</div>
-            <div class="objective-title"><span>${objective.icon}</span>${objective.title}</div>
+            <div class="objective-title"><span>${objective.recipeId ? itemIcon(objective.recipeId) : objective.icon}</span>${objective.title}</div>
             <div class="objective-description">${objective.description}</div>
             ${ingredients ? `<div class="objective-ingredients">${ingredients}</div>` : ''}
         `;

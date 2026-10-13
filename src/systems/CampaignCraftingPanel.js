@@ -1,6 +1,7 @@
 import { getCampaignRecipes, STRUCTURE_DEFINITIONS } from '../gameplay/CampaignDatabase.js';
 import { CAMPAIGN_CHAPTERS } from '../gameplay/CampaignStory.js';
 import { getResourceDef } from './ResourceDatabase.js';
+import { itemIcon } from './ItemIcons.js';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const stationName = type => Object.values(STRUCTURE_DEFINITIONS).find(def => def.station === type)?.name || type;
@@ -74,7 +75,7 @@ export class CampaignCraftingPanel {
             const locked = this.unlockHint(recipe);
             const status = locked ? (recipe.tier > c.progress.tier ? `Khóa · cấp ${recipe.tier}` : 'Cần bản thiết kế') : check.ok ? 'Sẵn sàng' : recipe.station && check.error === 'Hãy đứng gần trạm phù hợp.' ? stationName(recipe.station) : check.error;
             return `<button type="button" class="recipe-item-card${selected?.id === recipe.id ? ' selected' : ''}${check.ok ? ' can-craft' : ''}${locked ? ' recipe-locked' : ''}" data-action="recipe" data-arg="${recipe.id}" aria-pressed="${selected?.id === recipe.id}">
-                <span class="recipe-item-icon" aria-hidden="true">${recipe.icon}</span><span class="recipe-item-info"><span class="recipe-item-name">${escape(recipe.name)}</span><span class="recipe-item-desc">${escape(status)}</span></span><span class="recipe-item-status" aria-hidden="true">${check.ok ? '✓' : locked ? '–' : '·'}</span></button>`;
+                <span class="recipe-item-icon" aria-hidden="true">${itemIcon(recipe.outputId || recipe.id)}</span><span class="recipe-item-info"><span class="recipe-item-name">${escape(recipe.name)}</span><span class="recipe-item-desc">${escape(status)}</span></span><span class="recipe-item-status" aria-hidden="true">${check.ok ? '✓' : locked ? '–' : '·'}</span></button>`;
         }).join('') || '<p class="details-placeholder">Chưa có công thức trong nhóm này.</p>';
         list.scrollTop = scrollTop;
         if (!selected) { details.innerHTML = ''; return; }
@@ -82,11 +83,11 @@ export class CampaignCraftingPanel {
         const unlock = this.unlockHint(recipe);
         const reason = unlock || (recipe.station && available.error === 'Hãy đứng gần trạm phù hợp.'
             ? `Đứng trong phạm vi 3 m của ${stationName(recipe.station)} để chế tạo.` : available.error || 'Đã đủ nguyên liệu và điều kiện chế tạo.');
-        details.innerHTML = `<div class="details-header"><div class="details-icon" aria-hidden="true">${recipe.icon}</div><div class="details-meta"><div class="details-name">${escape(recipe.name)}</div><div class="details-desc">${recipe.station ? escape(stationName(recipe.station)) : 'Chế tạo bằng tay'}${recipe.duration ? ` · ${recipe.duration} giây` : ''}</div></div></div>
+        details.innerHTML = `<div class="details-header"><div class="details-icon" aria-hidden="true">${itemIcon(recipe.outputId || recipe.id)}</div><div class="details-meta"><div class="details-name">${escape(recipe.name)}</div><div class="details-desc">${recipe.station ? escape(stationName(recipe.station)) : 'Chế tạo bằng tay'}${recipe.duration ? ` · ${recipe.duration} giây` : ''}</div></div></div>
             ${recipe.description ? `<p class="recipe-description">${escape(recipe.description)}</p>` : ''}
             <p class="recipe-output">Thành phẩm: ${escape(getResourceDef(recipe.outputId)?.name || recipe.outputId)} ×${recipe.yield}</p>
             <div class="ingredient-heading">NGUYÊN LIỆU <span>Đang có / cần</span></div>
-            <div class="details-ingredients">${Object.entries(recipe.ingredients).map(([id, required]) => `<div class="ingredient-row ${count(id) >= required ? 'met' : 'missing'}"><span>${escape(getResourceDef(id)?.name || id)}</span><strong>${count(id)} / ${required}</strong></div>`).join('')}</div>
+            <div class="details-ingredients">${Object.entries(recipe.ingredients).map(([id, required]) => `<div class="ingredient-row ${count(id) >= required ? 'met' : 'missing'}"><span class="ingredient-label">${itemIcon(id)}${escape(getResourceDef(id)?.name || id)}</span><strong>${count(id)} / ${required}</strong></div>`).join('')}</div>
             <p class="crafting-source-note">${sources.length > 1 ? `Túi + ${sources.length - 1} rương gần đã cho phép dùng nguyên liệu.` : 'Dùng nguyên liệu trong túi và thanh trang bị.'}</p>
             ${recipe.fuel ? `<p class="recipe-fuel">Cần nhiên liệu tại trạm: tối thiểu ${recipe.fuel.minimumSeconds} giây mỗi lượt, dùng gỗ hoặc than củi. Mưa làm tốn thêm nhiên liệu nếu trạm không có mái.</p>` : ''}
             <div class="details-craft-btn-row"><p class="recipe-availability${available.ok ? ' ready' : ''}">${escape(reason)}</p><button type="button" class="craft-btn" data-action="craft" data-arg="${recipe.id}" ${available.ok ? '' : 'disabled'}>${recipe.duration ? 'Đưa vào hàng đợi' : 'Chế tạo'}</button><button type="button" class="recipe-pin-btn" data-action="pin" data-arg="${recipe.id}" aria-pressed="${c.pinnedRecipe === recipe.id}">${c.pinnedRecipe === recipe.id ? 'Bỏ ghim nguyên liệu' : 'Ghim nguyên liệu'}</button></div>`;

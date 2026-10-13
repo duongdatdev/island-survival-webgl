@@ -2,6 +2,7 @@ import { CraftingSystem } from './CraftingSystem.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { getAllRecipes, getRecipeDef } from './RecipeDatabase.js';
 import { getResourceDef } from './ResourceDatabase.js';
+import { itemIcon } from './ItemIcons.js';
 
 const VITAL_ACTIONS = {
     hunger: { method: 'eat', verb: 'Đã ăn', label: 'Đói' },
@@ -120,7 +121,7 @@ export class InventoryController {
                 const slot = inventory.slots[index];
                 if (slot) {
                     const definition = getResourceDef(slot.id);
-                    const icon = definition ? definition.icon : '📦';
+                    const icon = itemIcon(slot.id);
                     const name = definition ? definition.name : slot.id;
                     const consumableClass = definition?.consumable ? ' consumable' : '';
                     html += `
@@ -149,7 +150,7 @@ export class InventoryController {
                 const activeClass = index === inventory.selectedHotbarIndex ? ' active' : '';
                 if (slot) {
                     const definition = getResourceDef(slot.id);
-                    const icon = definition ? definition.icon : '📦';
+                    const icon = itemIcon(slot.id);
                     const name = definition ? definition.name : slot.id;
                     const consumableClass = definition?.consumable ? ' consumable' : '';
                     html += `
@@ -189,7 +190,7 @@ export class InventoryController {
                 ammoEl.className = 'ammo-counter';
                 hotbarEl.parentNode?.appendChild(ammoEl);
             }
-            ammoEl.innerHTML = `➵ ${inventory.getCount('arrow')}`;
+            ammoEl.innerHTML = `${itemIcon('arrow')} ${inventory.getCount('arrow')}`;
             ammoEl.style.display = '';
         } else if (ammoEl) {
             ammoEl.style.display = 'none';
@@ -528,7 +529,7 @@ export class InventoryController {
             const selectedClass = recipe.id === this.selectedRecipeId ? ' selected' : '';
             return `
                 <button type="button" class="recipe-item-card${canCraftClass}${selectedClass}" data-recipe-id="${recipe.id}" aria-pressed="${recipe.id === this.selectedRecipeId}">
-                    <div class="recipe-item-icon">${recipe.icon}</div>
+                    <div class="recipe-item-icon">${itemIcon(recipe.outputId || recipe.id)}</div>
                     <div class="recipe-item-info">
                         <div class="recipe-item-name">${recipe.name}</div>
                         <div class="recipe-item-desc">${recipe.description}</div>
@@ -572,13 +573,13 @@ export class InventoryController {
             const definition = getResourceDef(id);
             return `
                 <span class="ingredient-badge ${current >= required ? 'met' : 'missing'}">
-                    ${definition?.icon || ''} ${definition?.name || id} ${current}/${required}
+                    ${itemIcon(id)} ${definition?.name || id} ${current}/${required}
                 </span>
             `;
         }).join('');
         detailsEl.innerHTML = `
             <div class="details-header">
-                <div class="details-icon">${recipe.icon}</div>
+                <div class="details-icon">${itemIcon(recipe.outputId || recipe.id)}</div>
                 <div class="details-meta">
                     <div class="details-name">${recipe.name}</div>
                     <div class="details-desc">${recipe.description}</div>
