@@ -1,0 +1,366 @@
+{
+  "recordedAt": "2026-10-17T18:10:26.879Z",
+  "scope": "Fixed-camera screenshots and 2.5-second live samples per preset at the initial spawn. Short smoke/performance samples, not a hardware-wide stress benchmark.",
+  "captures": [
+    {
+      "label": "beach",
+      "eye": [
+        -64.69506844460508,
+        2.3128612939240747,
+        -233.19208416871243
+      ],
+      "target": [
+        -52.17420933157784,
+        1.612861293924075,
+        -217.98589835267944
+      ],
+      "glError": 0,
+      "drawCalls": 417,
+      "triangles": 928590,
+      "shadowDrawCalls": 146,
+      "terrainDraws": 110,
+      "environmentInstances": 135,
+      "cover": 555,
+      "landmarkInstances": 10,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "savanna",
+      "eye": [
+        -137.85717319913942,
+        11.250160928083018,
+        64.19034037565527
+      ],
+      "target": [
+        -125.33631408611218,
+        10.550160928083018,
+        79.39652619168825
+      ],
+      "glError": 0,
+      "drawCalls": 352,
+      "triangles": 189378,
+      "shadowDrawCalls": 129,
+      "terrainDraws": 66,
+      "environmentInstances": 122,
+      "cover": 1096,
+      "landmarkInstances": 0,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "jungle",
+      "eye": [
+        103.88167548084384,
+        23.853441483127323,
+        -111.84184145163493
+      ],
+      "target": [
+        116.40253459387107,
+        23.153441483127324,
+        -96.63565563560195
+      ],
+      "glError": 0,
+      "drawCalls": 356,
+      "triangles": 1031918,
+      "shadowDrawCalls": 157,
+      "terrainDraws": 65,
+      "environmentInstances": 198,
+      "cover": 1198,
+      "landmarkInstances": 0,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "mangrove",
+      "eye": [
+        -213.4990327135309,
+        2.3790499804228227,
+        -85.01860402515825
+      ],
+      "target": [
+        -200.97817360050368,
+        1.6790499804228227,
+        -69.81241820912527
+      ],
+      "glError": 0,
+      "drawCalls": 378,
+      "triangles": 210988,
+      "shadowDrawCalls": 121,
+      "terrainDraws": 105,
+      "environmentInstances": 178,
+      "cover": 552,
+      "landmarkInstances": 4,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "savanna-wide",
+      "eye": [
+        -137.85717319913942,
+        26.550160928083017,
+        64.19034037565527
+      ],
+      "target": [
+        -106.54903703293219,
+        6.550160928083018,
+        83.52426418325902
+      ],
+      "glError": 0,
+      "drawCalls": 359,
+      "triangles": 178010,
+      "shadowDrawCalls": 129,
+      "terrainDraws": 85,
+      "environmentInstances": 75,
+      "cover": 1096,
+      "landmarkInstances": 0,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "beach-dusk",
+      "eye": [
+        -64.69506844460508,
+        2.3128612939240747,
+        -233.19208416871243
+      ],
+      "target": [
+        -52.17420933157784,
+        1.612861293924075,
+        -217.98589835267944
+      ],
+      "glError": 0,
+      "drawCalls": 271,
+      "triangles": 627968,
+      "shadowDrawCalls": 0,
+      "terrainDraws": 110,
+      "environmentInstances": 135,
+      "cover": 555,
+      "landmarkInstances": 10,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "jungle-night",
+      "eye": [
+        103.88167548084384,
+        23.853441483127323,
+        -111.84184145163493
+      ],
+      "target": [
+        116.40253459387107,
+        23.153441483127324,
+        -96.63565563560195
+      ],
+      "glError": 0,
+      "drawCalls": 199,
+      "triangles": 409440,
+      "shadowDrawCalls": 0,
+      "terrainDraws": 65,
+      "environmentInstances": 198,
+      "cover": 1198,
+      "landmarkInstances": 0,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "ocean-shore",
+      "eye": [
+        -63.5531383113893,
+        2.3128612939240747,
+        -229.0760197739796
+      ],
+      "target": [
+        -71.57318811857175,
+        0.8128612939240749,
+        -257.9841293816712
+      ],
+      "glError": 0,
+      "drawCalls": 247,
+      "triangles": 361931,
+      "shadowDrawCalls": 148,
+      "terrainDraws": 8,
+      "environmentInstances": 5,
+      "cover": 584,
+      "landmarkInstances": 0,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "abandoned-camp",
+      "eye": [
+        74.2083785575714,
+        33.64508041023167,
+        -78.20413648683196
+      ],
+      "target": [
+        60.20837855757139,
+        28.645080410231667,
+        -95.20413648683196
+      ],
+      "glError": 0,
+      "drawCalls": 390,
+      "triangles": 1196498,
+      "shadowDrawCalls": 156,
+      "terrainDraws": 58,
+      "environmentInstances": 182,
+      "cover": 962,
+      "landmarkInstances": 13,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "waterfall",
+      "eye": [
+        -80.19978175441209,
+        25.43871524500833,
+        -127.40121219588465
+      ],
+      "target": [
+        -94.19978175441209,
+        20.43871524500833,
+        -144.40121219588465
+      ],
+      "glError": 0,
+      "drawCalls": 347,
+      "triangles": 549335,
+      "shadowDrawCalls": 138,
+      "terrainDraws": 26,
+      "environmentInstances": 104,
+      "cover": 1059,
+      "landmarkInstances": 12,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 0
+    },
+    {
+      "label": "underwater",
+      "eye": [
+        -275.60546134439704,
+        -2.2,
+        -30.22827820924941
+      ],
+      "target": [
+        -275.60546134439704,
+        -3,
+        -37.22827820924941
+      ],
+      "glError": 0,
+      "drawCalls": 241,
+      "triangles": 116658,
+      "shadowDrawCalls": 95,
+      "terrainDraws": 31,
+      "environmentInstances": 38,
+      "cover": 226,
+      "landmarkInstances": 2,
+      "waterFog": 0.006000000052154064,
+      "outputLinear": true,
+      "underwater": 1
+    }
+  ],
+  "performanceSamples": [
+    {
+      "quality": "low",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4050 Laptop GPU (0x000028A1) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1600,
+        900
+      ],
+      "renderSize": [
+        1120,
+        630
+      ],
+      "frames": 300,
+      "fps": 119.99040076793852,
+      "p95ms": 8.400000000001455,
+      "livePlaySeconds": 2.5086000000000035,
+      "drawCalls": 224,
+      "triangles": 186460,
+      "shadowDrawCalls": 0,
+      "glError": 0,
+      "post": false
+    },
+    {
+      "quality": "medium",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4050 Laptop GPU (0x000028A1) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1600,
+        900
+      ],
+      "renderSize": [
+        1360,
+        765
+      ],
+      "frames": 299,
+      "fps": 119.59521619135242,
+      "p95ms": 8.400000000001455,
+      "livePlaySeconds": 2.508400000000011,
+      "drawCalls": 366,
+      "triangles": 411810,
+      "shadowDrawCalls": 114,
+      "glError": 0,
+      "post": true
+    },
+    {
+      "quality": "high",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4050 Laptop GPU (0x000028A1) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1600,
+        900
+      ],
+      "renderSize": [
+        1600,
+        900
+      ],
+      "frames": 298,
+      "fps": 118.81030220875525,
+      "p95ms": 8.400000000001455,
+      "livePlaySeconds": 2.5167000000000304,
+      "drawCalls": 439,
+      "triangles": 742700,
+      "shadowDrawCalls": 149,
+      "glError": 0,
+      "post": true
+    },
+    {
+      "quality": "ultra",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4050 Laptop GPU (0x000028A1) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1600,
+        900
+      ],
+      "renderSize": [
+        1600,
+        900
+      ],
+      "frames": 298,
+      "fps": 119.2,
+      "p95ms": 8.400000000001455,
+      "livePlaySeconds": 2.5083999999999538,
+      "drawCalls": 570,
+      "triangles": 1324446,
+      "shadowDrawCalls": 193,
+      "glError": 0,
+      "post": true
+    }
+  ],
+  "errors": [],
+  "sourceCommit": "7f2eb5a184e6533ef93c3217535515ea7a011d35",
+  "validation": {
+    "nodeTestsPassed": 280,
+    "graphicsFocusedTestsPassed": 13,
+    "browserRegressionPassed": 46,
+    "finalGraphicsSmokePassed": true,
+    "productionBuildPassed": true,
+    "excludedBrowserTest": "chapters one to five connect from a new world through timed smelting, field repairs, equipment crafting and wreck salvage"
+  }
+}

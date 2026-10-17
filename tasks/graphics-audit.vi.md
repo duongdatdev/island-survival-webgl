@@ -2,7 +2,7 @@
 
 Đề xuất giữ phong cách **low-poly nhiệt đới**, ưu tiên sửa pipeline màu và khử răng cưa, bổ sung bóng đổ và chi tiết mặt đất. Các ảnh đã kiểm tra cho thấy ánh sáng, độ gắn kết giữa vật thể với nền và cách phân bố chi tiết đang hạn chế hình ảnh nhiều hơn số lượng model.
 
-Đây là báo cáo kiểm tra; chưa thay đổi mã nguồn game.
+Đây là báo cáo kiểm tra trước khi triển khai. Kết quả nâng cấp, ảnh và kiểm chứng được lưu trong [báo cáo hoàn tất](graphics-completion.vi.md).
 
 ## Phạm vi và bằng chứng
 
