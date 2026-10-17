@@ -6,6 +6,7 @@ import { AudioManager } from './AudioManager.js';
 import { SettingsManager } from '../systems/SettingsManager.js';
 import { AchievementSystem } from '../systems/AchievementSystem.js';
 import { WorldRepository } from '../systems/WorldRepository.js';
+import { RenderStats } from '../renderer/RenderStats.js';
 
 export class Engine {
     constructor(canvasId) {
@@ -34,6 +35,7 @@ export class Engine {
         gl.depthFunc(gl.LEQUAL);
         gl.enable(gl.CULL_FACE);
         gl.cullFace(gl.BACK);
+        this.renderStats = new RenderStats(gl);
 
         this.input = new InputManager(this.canvas);
         this.assets = new AssetManager(gl);
@@ -65,7 +67,7 @@ export class Engine {
         window.addEventListener('resize', this._onWindowResize);
 
         this._unsubscribeSettings = this.settings.onChange((key) => {
-            if (key === 'renderScale' || key === '*') this._resize(true);
+            if (key === 'renderScale' || key === 'pixelRatioLimit' || key === '*') this._resize(true);
             if (['masterVolume', 'sfxVolume', 'ambientVolume', 'musicVolume', 'muted', '*'].includes(key)) {
                 this.audio.applySettings(this.settings);
             }
@@ -95,8 +97,11 @@ export class Engine {
 
     _resize(force = false) {
         const scale = this.settings ? this.settings.get('renderScale') : 1.0;
-        const displayWidth = Math.max(1, Math.floor(window.innerWidth * scale));
-        const displayHeight = Math.max(1, Math.floor(window.innerHeight * scale));
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, this.settings?.get('pixelRatioLimit') || 1);
+        const requestedPixels = window.innerWidth * window.innerHeight * (scale * pixelRatio) ** 2;
+        const budgetScale = Math.min(1, Math.sqrt(4000000 / Math.max(1, requestedPixels)));
+        const displayWidth = Math.max(1, Math.floor(window.innerWidth * scale * pixelRatio * budgetScale));
+        const displayHeight = Math.max(1, Math.floor(window.innerHeight * scale * pixelRatio * budgetScale));
 
         if (force || this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
             this.canvas.width = displayWidth;
@@ -118,6 +123,7 @@ export class Engine {
     }
 
     _render() {
+        this.renderStats.beginFrame();
         this.scenes.render();
     }
 
@@ -137,6 +143,7 @@ export class Engine {
         }
         this.scenes.destroy();
         this.scenes = null;
+        this.renderStats?.delete();
         this.gl = null;
         console.log('Engine destroyed.');
     }
