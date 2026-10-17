@@ -47,7 +47,8 @@ export class ContactShadows {
         gl.bindVertexArray(this.vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.subarray(0, offset));
-        gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        // Multiplicative alpha must never brighten moonlit or unlit ground.
+        gl.enable(gl.BLEND); gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_ALPHA);
         gl.disable(gl.CULL_FACE); gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, offset / 5);
         gl.depthMask(true); gl.enable(gl.CULL_FACE); gl.disable(gl.BLEND);
