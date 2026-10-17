@@ -1,11 +1,23 @@
 import { Entity } from './Entity.js';
 import { Mesh } from '../renderer/Mesh.js';
 
-const DEEP_WATER = 6.0;
-
-const SHORE_BAND_WIDTH = 6.0;
-
 const SHORE_BAND_HEIGHT = 0.8;
+const SHORE_BAND_WIDTH = 1.2;
+
+/** [normalized depth, shore proximity] derived from actual sampled terrain. */
+export function sampleWaterShore(terrain, x, z) {
+    const height = terrain?.getHeight ? terrain.getHeight(x, z) : -SHORE_BAND_WIDTH;
+    const depth = Math.max(0, -height);
+    const shore = height >= 0
+        ? 1 - smoothstep(0, SHORE_BAND_HEIGHT, height)
+        : 1 - smoothstep(0, SHORE_BAND_WIDTH, depth);
+    return [Math.min(1, depth / 2), Math.max(0, Math.min(1, shore))];
+}
+
+function smoothstep(edge0, edge1, value) {
+    const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+    return t * t * (3 - 2 * t);
+}
 
 /** Dense local waves with gradually larger cells toward the distant horizon. */
 export function oceanGridAxis(innerSegments, width, innerWidth, outerSegments) {
@@ -92,26 +104,7 @@ export class Water extends Entity {
     }
 
     _sampleSeabed(terrain, x, z) {
-        if (!terrain) return [1.0, 0.0];
-
-        const height = terrain.getHeight(x, z);
-        const r = Math.sqrt(x * x + z * z);
-        const islandRadius = terrain.generator?.island?.radius || 44.0;
-
-        const d = r - islandRadius;
-
-        const SW = SHORE_BAND_WIDTH;
-        const shore = d > 0 ? Math.max(0.0, 1.0 - d / SW) : 1.0;
-
-        if (height > 0.0) {
-            return [0.0, shore * Math.max(0.0, 1.0 - height / SHORE_BAND_HEIGHT)];
-        }
-
-        const depth = -height;
-        return [
-            Math.min(1.0, depth / 2.0),
-            shore
-        ];
+        return sampleWaterShore(terrain, x, z);
     }
 
     draw(shaderProgram) {

@@ -1,4 +1,5 @@
 import { WAVE_GLSL, BASE_AMPLITUDE, BASE_SPEED } from './WaterWaves.js';
+import { ColorSpaceGLSL } from './ColorSpace.js';
 
 
 export const WaterConstants = { BASE_AMPLITUDE, BASE_SPEED };
@@ -104,8 +105,17 @@ ${WAVE_GLSL}
         uniform vec3 uSunDirection;
         uniform vec3 uSunColor;
         uniform float uSunGlitter;
+        uniform float uWaterQuality;
 
         out vec4 fragColor;
+
+${ColorSpaceGLSL}
+
+        float foamNoise(vec2 p) {
+            float broad = sin(p.x * 0.72 + sin(p.y * 0.39)) * cos(p.y * 0.61 - p.x * 0.23);
+            float fine = sin(p.x * 2.31 + p.y * 1.77) * cos(p.y * 2.07 - p.x * 1.19);
+            return broad * 0.67 + fine * 0.33;
+        }
 
         void main() {
             vec2 slope = vSlope;
@@ -130,52 +140,74 @@ ${WAVE_GLSL}
             vec3 L = normalize(uLightDirection);
             vec3 V = normalize(uViewPosition - vWorldPosition);
 
-            vec3 ambient = uAmbientColor * uAmbientIntensity;
+            vec3 ambient = srgbToLinear(uAmbientColor) * uAmbientIntensity;
 
             float diff = max(dot(N, L), 0.0);
-            vec3 diffuse = diff * uLightColor * uLightIntensity;
+            vec3 diffuse = diff * srgbToLinear(uLightColor) * uLightIntensity;
 
             vec3 H = normalize(L + V);
             float spec = pow(max(dot(N, H), 0.0), 128.0);
-            vec3 specular = spec * uLightColor * uLightIntensity * 0.75;
+            vec3 specular = spec * srgbToLinear(uLightColor) * uLightIntensity * 0.75;
 
             if (uSunGlitter > 0.0) {
                 vec3 SH = normalize(normalize(uSunDirection) + V);
                 float glint = pow(max(dot(N, SH), 0.0), 55.0);
-                specular += glint * uSunColor * uSunGlitter;
+                specular += glint * srgbToLinear(uSunColor) * uSunGlitter;
             }
 
-            vec3 baseColor = mix(uShallowColor, vColor.rgb, vDepth);
+            vec3 baseColor = mix(srgbToLinear(uShallowColor), srgbToLinear(vColor.rgb), vDepth);
 
             float foam = 0.0;
             if (uFoamStrength > 0.0 || uWhitecaps > 0.0) {
                 float crestFoam = smoothstep(0.82, 0.97, vCrest) * uWhitecaps;
 
-                float surge = 0.42 + 0.30 * sin(uTime * 1.15
-                    + vWorldPosition.x * 0.35 + vWorldPosition.z * 0.28);
-                float shoreFoam = smoothstep(surge, surge + 0.20, vShore) * uFoamStrength;
+                vec2 shorePos = vWorldPosition.xz;
+                float noise = foamNoise(shorePos * 0.55 + vec2(uTime * 0.045, -uTime * 0.032));
+                float surge = 0.42 + 0.13 * noise + 0.12 * sin(uTime * 0.72
+                    + shorePos.x * 0.22 + shorePos.y * 0.19);
+                float shoreFoam = smoothstep(surge, surge + 0.16, vShore) * uFoamStrength;
+                shoreFoam *= smoothstep(0.02, 0.24, vShore);
+                shoreFoam *= 0.25 + 0.75 * smoothstep(-0.25, 0.65, noise);
 
                 foam = clamp(crestFoam + shoreFoam, 0.0, 1.0);
-                baseColor = mix(baseColor, vec3(0.86, 0.94, 1.0), foam * 0.7);
+                baseColor = mix(baseColor, srgbToLinear(vec3(0.86, 0.94, 1.0)), foam * 0.7);
             }
 
             vec3 finalColor = (ambient + diffuse) * baseColor + specular;
 
             float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
-            finalColor = mix(finalColor, uHorizonColor, fresnel * 0.18);
+            finalColor = mix(finalColor, srgbToLinear(uHorizonColor), fresnel * 0.18);
+
+            if (uWaterQuality > 0.01) {
+                vec3 reflected = reflect(-V, N);
+                float skyHeight = clamp(reflected.y * 0.5 + 0.5, 0.0, 1.0);
+                vec3 skyLow = srgbToLinear(uHorizonColor);
+                vec3 skyHigh = skyLow * mix(vec3(0.32, 0.58, 0.88), vec3(0.50, 0.76, 1.0), skyHeight);
+                float horizonBand = 1.0 - smoothstep(0.04, 0.62, skyHeight);
+                vec3 sky = mix(skyHigh, skyLow, horizonBand * 0.72);
+                float sunBand = pow(max(dot(reflected, normalize(uSunDirection)), 0.0), 20.0);
+                sky += srgbToLinear(uSunColor) * sunBand * 0.42;
+                finalColor = mix(finalColor, sky, uWaterQuality * mix(0.08, 0.28, fresnel));
+
+                float shallow = (1.0 - vDepth) * vShore;
+                vec2 cp = vWorldPosition.xz * 1.15;
+                float caustic = abs(sin(cp.x + uTime * 0.72) * sin(cp.y - uTime * 0.57));
+                caustic = smoothstep(0.70, 0.96, caustic) * shallow * uWaterQuality;
+                finalColor += srgbToLinear(uShallowColor) * caustic * 0.16;
+            }
 
             finalColor += uLightningFlash * vec3(0.8, 0.9, 1.0) * 0.5;
 
             if (uFogDensity > 0.0) {
                 float d = max(length(vWorldPosition - uViewPosition) - uFogStart, 0.0) * uFogDensity;
-                finalColor = mix(finalColor, uFogColor, clamp(1.0 - exp(-d * d), 0.0, 1.0));
+                finalColor = mix(finalColor, srgbToLinear(uFogColor), clamp(1.0 - exp(-d * d), 0.0, 1.0));
             }
 
             // Deep and grazing-angle water hides seabed/terrain chunk outlines.
             float alpha = mix(mix(0.45, 1.0, vDepth), 1.0, fresnel);
             alpha = max(alpha, foam * 0.95);
 
-            fragColor = vec4(finalColor, alpha);
+            fragColor = vec4(sceneOutput(finalColor), alpha);
         }
     `
 };
