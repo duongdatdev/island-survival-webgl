@@ -59,6 +59,12 @@ import { MenuUI } from '../systems/MenuUI.js';
 import { createStats } from '../systems/AchievementSystem.js';
 import { PostProcessing } from '../renderer/PostProcessing.js';
 import { Frustum } from '../renderer/Frustum.js';
+import { ShadowMap } from '../renderer/ShadowMap.js';
+import { ContactShadows } from '../renderer/ContactShadows.js';
+import { GroundCover } from '../renderer/GroundCover.js';
+import { EnvironmentBatch } from '../renderer/EnvironmentBatch.js';
+import { LandmarkDetails } from '../renderer/LandmarkDetails.js';
+import { TerrainShader } from '../shaders/TerrainShader.js';
 import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
 
 export const DEV_CHEATS_ENABLED = import.meta.env?.DEV === true;
@@ -114,6 +120,7 @@ export class GameScene extends Scene {
         this.engine.input.onPointerLockChange = this._onPointerLockChange;
 
         this.basicShader = new ShaderProgram(gl, BasicShader.vertex, BasicShader.fragment);
+        this.terrainShader = new ShaderProgram(gl, TerrainShader.vertex, TerrainShader.fragment);
         this.waterShader = new ShaderProgram(gl, WaterShader.vertex, WaterShader.fragment);
         this.unlitShader = new ShaderProgram(gl, UnlitShader.vertex, UnlitShader.fragment);
 
@@ -491,6 +498,15 @@ export class GameScene extends Scene {
 
         this.frustum = new Frustum();
         this.postFx = new PostProcessing(gl);
+        this.shadowMap = new ShadowMap(gl);
+        this.contactShadows = new ContactShadows(gl);
+        this.groundCover = new GroundCover(gl, this.world);
+        this.environmentBatch = new EnvironmentBatch(gl, this.environmentEntities);
+        this.landmarkDetails = new LandmarkDetails(gl, this.world);
+        this._coverPosition = [Infinity, Infinity, Infinity];
+        this._extraLightPositions = new Float32Array(9);
+        this._extraLightColors = new Float32Array(9);
+        this._extraLightParams = new Float32Array(9);
         this._drawCalls = 0;
 
         this.menuUI = new MenuUI(this.engine);
@@ -556,6 +572,8 @@ export class GameScene extends Scene {
         if (this.postFx) this.postFx.enabled = s.get('postProcessing') && this.postFx.available;
 
         this._viewDistance = s.get('viewDistance');
+        this.shadowMap?.configure(s.get('shadows') ? s.get('shadowResolution') : 0, s.get('shadows') ? s.get('shadowDistance') : 0);
+        this._coverPosition = [Infinity, Infinity, Infinity];
 
         const fpsEl = this._domCache && this._domCache.fpsCounter;
         if (fpsEl) fpsEl.classList.toggle('hidden', !s.get('showFps'));
@@ -1404,9 +1422,11 @@ export class GameScene extends Scene {
 
         this.frustum.update(this.camera.projectionMatrix, this.camera.viewMatrix);
         this._drawCalls = 0;
+        this._prepareSurfaceLighting();
+        this._renderShadows();
 
         this.postFx.resize(gl.canvas.width, gl.canvas.height);
-        this.postFx.beginScene();
+        this._linearScene = this.postFx.beginScene();
 
         const skyColors = this.dayNight.getSkyColors();
         const cloudCover = this.weather.cloudCover;
@@ -1448,7 +1468,25 @@ export class GameScene extends Scene {
         this.basicShader.setUniform1f('uPointLightRange', campaignLight?.range || this.campfire.lightRange);
         this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
-        this.terrain.draw(this.basicShader);
+        this.terrainShader.use();
+        this._bindSurfaceLighting(this.terrainShader);
+        this.terrain.draw(this.terrainShader, this.frustum);
+        this._renderGroundContacts();
+        const coverDistance = this.engine.settings.get('foliageDistance');
+        if (Math.hypot(this.camera.position[0] - this._coverPosition[0], this.camera.position[2] - this._coverPosition[2]) > 3) {
+            this.groundCover.update(this.camera.position, { density: this.engine.settings.get('foliageDensity'), viewDistance: coverDistance });
+            this._coverPosition = [...this.camera.position];
+        }
+        this.groundCover.draw(this.camera, { applyLighting: shader => {
+            this._bindSurfaceLighting(shader);
+            shader.setUniform1f('uFoliage', 1);
+            shader.setUniform1f('uFadeStart', coverDistance * 0.7);
+            shader.setUniform1f('uFadeEnd', coverDistance);
+        }});
+        this.landmarkDetails.draw(this.camera, { viewDistance: this._viewDistance, frustum: this.frustum,
+            applyLighting: shader => this._bindSurfaceLighting(shader) });
+        this.basicShader.use();
+        this._bindSurfaceLighting(this.basicShader);
         this.campaign?.draw(this.basicShader, drawMode);
 
         const playerRenderPos = [this.player.position[0], this.player.position[1] - this.player.collider.height * 0.5, this.player.position[2]];
@@ -1474,8 +1512,18 @@ export class GameScene extends Scene {
             this.raftAssembly.draw(this.basicShader, drawMode, false);
         }
 
+        this.environmentBatch.draw(this.camera, this.frustum, { viewDistance: this._viewDistance, applyLighting: shader => {
+            this._bindSurfaceLighting(shader);
+            shader.setUniform1f('uFoliage', 1);
+            shader.setUniform1f('uPaletteStrength', 0.8);
+            shader.setUniform1f('uFadeStart', this._viewDistance * 0.8);
+            shader.setUniform1f('uFadeEnd', this._viewDistance);
+        }});
+        this.basicShader.use();
+        this._bindSurfaceLighting(this.basicShader);
         if (this.environmentEntities) {
             for (const entity of this.environmentEntities) {
+                if (entity.treeState !== 'falling') continue;
                 const cullPosition = entity.cullingCenter || entity.position;
                 const radius = entity.cullingRadius
                     || ((entity.collisionRadius || 1.0) * 2.0 + 1.0);
@@ -1529,6 +1577,11 @@ export class GameScene extends Scene {
         this.waterShader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity);
 
         this.waterShader.setUniform1f('uTime', this.time);
+        this.waterShader.setUniform1i('uOutputLinear', this._linearScene ? 1 : 0);
+        this.waterShader.setUniform1f('uWaterQuality', this.engine.settings.get('waterQuality'));
+        this.waterShader.setUniform3fv('uFogColor', this._fogColor);
+        this.waterShader.setUniform1f('uFogStart', this._fogStart);
+        this.waterShader.setUniform1f('uFogDensity', this._fogDensity);
         this.waterShader.setUniform1f('uWaveEnable', animateWater ? 1.0 : 0.0);
         this.waterShader.setUniform1f('uWaveAmplitude', this.weather.getWaveAmplitudeMultiplier());
         this.waterShader.setUniform1f('uWaveSpeed', this.weather.getWaveSpeedMultiplier());
@@ -1563,12 +1616,13 @@ export class GameScene extends Scene {
         gl.enable(gl.CULL_FACE);
         gl.disable(gl.BLEND);
 
-        this.particleSystem.draw(this.camera);
+        this.particleSystem.draw(this.camera, this._linearScene);
 
-        this.rainSystem.draw(this.camera, this.shelter);
+        this.rainSystem.draw(this.camera, this.shelter, this._linearScene);
 
         if (!this.skyShader) {
             this.unlitShader.use();
+            this.unlitShader.setUniform1i('uOutputLinear', this._linearScene ? 1 : 0);
             this.sunSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
             this.moonSprite.draw(this.unlitShader, this.camera.viewMatrix, this.camera.projectionMatrix, this.camera.position, this.tempMatrix);
         }
@@ -1584,10 +1638,139 @@ export class GameScene extends Scene {
         }
 
         if (!this.isEscaping && !this.campaign?.ending.state) {
+            this.basicShader.use();
+            this._bindSurfaceLighting(this.basicShader);
+            this.basicShader.setUniform1f('uShadowEnabled', 0);
+            this.basicShader.setUniform1f('uFogDensity', 0);
+            this.basicShader.setUniform3fv('uExtraLightParams[0]', new Float32Array(9));
             this.firstPersonViewModel.draw(this.basicShader, this.camera.projectionMatrix, drawMode);
         }
 
         this._compositeFrame();
+        this._drawCalls = this.engine.renderStats?.drawCalls ?? this._drawCalls;
+    }
+
+    _prepareSurfaceLighting() {
+        const sky = this.dayNight.getSkyColors();
+        const dim = 1 - this.weather.cloudCover * 0.25;
+        this._fogColor = sky.horizon.map(value => value * dim);
+        this._fogStart = Math.max(22, this._viewDistance * 0.48) * (1 - this.weather.rainIntensity * 0.4);
+        this._fogDensity = 0.006 + this.weather.rainIntensity * 0.011;
+        this.terrain.setView(this.camera.position, this.campaign ? 400 : this._viewDistance + 45);
+        this._primaryLight = this.campaign?.lighting() || {
+            position: this.campfire.getLightPosition(), color: this.campfire.lightColor,
+            intensity: this.campfire.isBuilt ? this.campfire.lightIntensity : 0, range: this.campfire.lightRange,
+        };
+        this._extraLightPositions.fill(0); this._extraLightColors.fill(0); this._extraLightParams.fill(0);
+        const fires = this.campaign?.registry.nearby(this.camera.position, 25)
+            .filter(record => this.campaign.production.isBurning(record))
+            .sort((a,b) => Math.hypot(a.position[0]-this.camera.position[0],a.position[2]-this.camera.position[2])
+                - Math.hypot(b.position[0]-this.camera.position[0],b.position[2]-this.camera.position[2])) || [];
+        let index = 0;
+        for (const fire of fires) {
+            const position = [fire.position[0], fire.position[1]+0.35, fire.position[2]];
+            if (Math.hypot(...position.map((value,axis) => value - this._primaryLight.position[axis])) < 0.5) continue;
+            this._extraLightPositions.set(position, index*3);
+            this._extraLightColors.set([1,0.55,0.2], index*3);
+            this._extraLightParams.set([2.5*this.campaign.production.fireIntensity(fire,this.weather.rainIntensity),10,0], index*3);
+            if (++index === 3) break;
+        }
+    }
+
+    _bindSurfaceLighting(shader) {
+        shader.setUniformMatrix4fv('uViewMatrix', this.camera.viewMatrix);
+        shader.setUniformMatrix4fv('uProjectionMatrix', this.camera.projectionMatrix);
+        shader.setUniform3fv('uViewPosition', this.camera.position);
+        shader.setUniform3fv('uLightDirection', this.dirLight.direction);
+        shader.setUniform3fv('uLightColor', this.dirLight.color);
+        shader.setUniform1f('uLightIntensity', this.dirLight.intensity * 1.12);
+        shader.setUniform3fv('uAmbientColor', this.ambientLight.color);
+        // Preserve navigation detail during twilight while leaving the night visibly dark.
+        shader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity * 1.3 + 0.06);
+        shader.setUniform3fv('uPointLightPosition', this._primaryLight.position);
+        shader.setUniform3fv('uPointLightColor', this._primaryLight.color);
+        shader.setUniform1f('uPointLightIntensity', this._primaryLight.intensity);
+        shader.setUniform1f('uPointLightRange', this._primaryLight.range);
+        shader.setUniform3fv('uExtraLightPositions[0]', this._extraLightPositions);
+        shader.setUniform3fv('uExtraLightColors[0]', this._extraLightColors);
+        shader.setUniform3fv('uExtraLightParams[0]', this._extraLightParams);
+        shader.setUniform3fv('uFogColor', this._fogColor);
+        shader.setUniform1f('uFogStart', this._fogStart);
+        shader.setUniform1f('uFogDensity', this._fogDensity);
+        shader.setUniform1f('uFadeEnd', 0);
+        shader.setUniform1f('uPaletteStrength', 0);
+        shader.setUniform1f('uRoughness', 0.85);
+        shader.setUniform1f('uMetallic', 0);
+        shader.setUniform3fv('uEmissive', [0,0,0]);
+        shader.setUniform1f('uMaterialAO', 1);
+        shader.setUniform1f('uNormalScale', 1);
+        shader.setUniform1f('uAOStrength', 1);
+        shader.setUniform1i('uVertexColorLinear', 0);
+        shader.setUniform1i('uUseBaseColorTexture', 0);
+        for (const name of ['Normal','AO','Emissive','MetallicRoughness']) shader.setUniform1i(`uUse${name}Texture`,0);
+        shader.setUniform1f('uFirstPersonHeadCutoff', 1000000);
+        shader.setUniform1i('uOutputLinear', this._linearScene ? 1 : 0);
+        shader.setUniform1f('uCreatureMotion', 0);
+        shader.setUniform1f('uFoliage', 0);
+        shader.setUniform1f('uTime', this.time);
+        const reduce = this.firstPersonViewModel?.reducedMotion;
+        shader.setUniform1f('uWindStrength', reduce ? 0 : Math.min(3, this.weather.windSpeed));
+        shader.setUniform2f('uWindDirection', this.weather.windDirection[0],this.weather.windDirection[2] ?? this.weather.windDirection[1]);
+        this.shadowMap.bind(shader,this._shadowActive);
+    }
+
+    _renderShadows() {
+        this._shadowActive = this.dayNight.getSunDirection()[1] > 0.04
+            && this.shadowMap.begin(this.camera.position, this.dirLight.direction);
+        if (!this._shadowActive) return;
+        const shader = this.shadowMap.shader;
+        const before = this.engine.renderStats?.drawCalls || 0;
+        this._shadowPass = true;
+        try {
+            shader.setUniform1f('uTime',this.time);
+            shader.setUniform1f('uWindStrength',this.firstPersonViewModel?.reducedMotion ? 0 : Math.min(3,this.weather.windSpeed));
+            shader.setUniform2f('uWindDirection',this.weather.windDirection[0],this.weather.windDirection[2] ?? this.weather.windDirection[1]);
+            shader.setUniform1f('uFoliage',0);
+            this.terrain.draw(shader,this.shadowMap.frustum);
+            this.campaign?.draw(shader,this.gl.TRIANGLES);
+            this.environmentBatch.draw({ position: this.camera.position, viewMatrix: this.shadowMap.view, projectionMatrix: this.shadowMap.projection },
+                this.shadowMap.frustum, { depthOnly: true, viewDistance: this.shadowMap.distance + 20, applyLighting: depthShader => {
+                    depthShader.setUniform1f('uTime',this.time);
+                    depthShader.setUniform1f('uWindStrength',this.firstPersonViewModel?.reducedMotion ? 0 : Math.min(3,this.weather.windSpeed));
+                    depthShader.setUniform2f('uWindDirection',this.weather.windDirection[0],this.weather.windDirection[2] ?? this.weather.windDirection[1]);
+                    depthShader.setUniform1f('uFoliage',1);
+                    depthShader.setUniform1f('uCreatureMotion',0);
+                }});
+            shader.use();
+            shader.setUniform1f('uFoliage',1);
+            for (const entity of this.environmentEntities) {
+                if (entity.treeState !== 'falling') continue;
+                const center=entity.cullingCenter || entity.position;
+                if (this.shadowMap.frustum.containsSphere(...center,entity.cullingRadius || 4)) entity.draw(shader,this.gl.TRIANGLES);
+            }
+            shader.setUniform1f('uFoliage',0);
+            for (const resource of this.resourceManager.worldResources) if (this._isVisible(resource.position,1)) resource.draw(shader);
+            for (const creature of this.creatures) if (this._isVisible(creature.position,3)) creature.draw(shader);
+            this.shelter.draw(shader); this.campfire.draw(shader); this.waterCollector.draw(shader);
+            this.waterfall?.drawSolid(shader,this.gl.TRIANGLES);
+        } finally {
+            this._shadowPass = false;
+            this.shadowMap.end();
+            if (this.engine.renderStats) this.engine.renderStats.shadowDrawCalls = this.engine.renderStats.drawCalls - before;
+        }
+    }
+
+    _renderGroundContacts() {
+        const contacts = [];
+        const add = (position,radius) => {
+            const distance = Math.hypot(position[0]-this.camera.position[0],position[2]-this.camera.position[2]);
+            if (distance < 35 && this.frustum.containsSphere(...position,Math.max(1,radius))) contacts.push({position,radius,distance});
+        };
+        for (const entity of this.environmentEntities) if (entity.treeState !== 'falling') add(entity.position,Math.min(1.8,Math.max(0.3,entity.collisionRadius || 0.4)));
+        for (const resource of this.resourceManager.worldResources) add(resource.position,0.28);
+        for (const creature of this.creatures) if (creature.state !== CreatureState.DEAD) add(creature.position,Math.max(0.3,creature.collider?.radius || 0.5));
+        contacts.sort((a,b) => a.distance-b.distance);
+        this.contactShadows.draw(this.camera,this.terrain,contacts,this._linearScene);
     }
 
     _compositeFrame() {
@@ -1617,10 +1800,20 @@ export class GameScene extends Scene {
             exposure,
             tint,
             iterations: 2,
+            fxaa: settings.get('antialiasing'),
+            ambientOcclusion: settings.get('ambientOcclusion'),
+            aoStrength: 0.22,
+            aoRadius: 3,
+            underwater: this.camera.position[1] < -0.12 && this.terrain.getHeight(this.camera.position[0], this.camera.position[2]) < -0.25,
+            underwaterColor: [0.012, 0.09, 0.12],
+            underwaterDensity: 0.12,
+            cameraNear: this.camera.config.near,
+            cameraFar: this.camera.config.far,
         });
     }
 
     _isVisible(position, radius) {
+        if (this._shadowPass) return Math.hypot(position[0] - this.camera.position[0], position[2] - this.camera.position[2]) < this.shadowMap.distance + radius + 20;
         return this.frustum.isVisible(position, radius, this.camera.position, this._viewDistance);
     }
 
@@ -2340,6 +2533,12 @@ export class GameScene extends Scene {
 
 
         if (this.basicShader) this.basicShader.delete();
+        this.terrainShader?.delete();
+        this.shadowMap?.delete();
+        this.contactShadows?.delete();
+        this.groundCover?.delete();
+        this.environmentBatch?.delete();
+        this.landmarkDetails?.delete();
         if (this.waterShader) this.waterShader.delete();
         if (this.unlitShader) this.unlitShader.delete();
 
@@ -2480,6 +2679,11 @@ export class GameScene extends Scene {
         );
         
         this.terrain.rebuild(this.world.terrain, this.world.terrainGenerator);
+        this.groundCover?.delete();
+        this.groundCover = new GroundCover(gl, this.world);
+        this.landmarkDetails?.delete();
+        this.landmarkDetails = new LandmarkDetails(gl, this.world);
+        this._coverPosition = [Infinity, Infinity, Infinity];
         
         if (this.environmentEntities) {
             for (const entity of this.environmentEntities) {
@@ -2507,6 +2711,7 @@ export class GameScene extends Scene {
             }
         }
         
+        this.environmentBatch?.setEntities(this.environmentEntities);
         if (this.resourceManager) {
             this.resourceManager.delete();
             this.resourceManager.worldResources = [];
@@ -2611,6 +2816,7 @@ export class GameScene extends Scene {
         gl.bindVertexArray(this.skyVao);
 
         this.skyShader.use();
+        this.skyShader.setUniform1i('uOutputLinear', this._linearScene ? 1 : 0);
         this.skyShader.setUniformMatrix4fv('uInvViewProj', this._invViewProj);
         this.skyShader.setUniform3fv('uCameraPos', this.camera.position);
         this.skyShader.setUniform3fv('uSunDirection', sunDir);
