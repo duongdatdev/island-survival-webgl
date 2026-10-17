@@ -2,6 +2,7 @@ import { Creature, CreatureState } from './Creature.js';
 import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
 
 const SHAPES = { deer: [.6153, 1.906, 1.575], goat: [.5634, 1.4145, 1.575], monitor: [.7133, .3494, 2.1791] };
+const MOTION_SPECIES = { deer: 0, goat: 1, monitor: 2 };
 
 class BiomeAnimal extends Creature {
     constructor(gl, position, modelAsset, species) {
@@ -20,10 +21,20 @@ class BiomeAnimal extends Creature {
     update(deltaTime, playerPosition, terrain, ...rest) {
         super.update(deltaTime, playerPosition, terrain, ...rest);
         if (this.state === CreatureState.DEAD) return;
-        // Small whole-body gait reads at a distance without requiring a skinned renderer.
-        const moving = this.state !== CreatureState.IDLE && this.state !== CreatureState.ATTACK;
-        this.rotation[2] = moving ? Math.sin(this.animTime * (this.species === 'monitor' ? 7 : 9)) * .025 : 0;
-        this.updateModelMatrix();
+        this.rotation[2] = 0;
+    }
+
+    draw(shaderProgram, drawMode) {
+        const alive = this.state !== CreatureState.DEAD;
+        const gait = !alive || this.state === CreatureState.IDLE || this.state === CreatureState.ATTACK
+            ? 0 : this.state === CreatureState.PATROL ? 0.46 : 1;
+        shaderProgram.setUniform1f('uCreatureMotion', alive && this.modelAsset ? 1 : 0);
+        shaderProgram.setUniform1f('uMotionTime', this.animTime);
+        shaderProgram.setUniform1f('uMotionPhase', this.animTime * 0.17 + this.position[0] * 0.13 + this.position[2] * 0.19);
+        shaderProgram.setUniform1f('uMotionGait', gait);
+        shaderProgram.setUniform1f('uMotionSpecies', MOTION_SPECIES[this.species]);
+        super.draw(shaderProgram, drawMode);
+        shaderProgram.setUniform1f('uCreatureMotion', 0);
     }
 }
 
