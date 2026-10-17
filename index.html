@@ -485,6 +485,11 @@
                         <span id="val-render-scale" class="setting-value">100%</span>
                     </div>
                     <div class="setting-row">
+                        <label for="set-pixel-ratio-limit">Mật độ điểm ảnh tối đa</label>
+                        <input type="range" id="set-pixel-ratio-limit" min="100" max="200" step="5">
+                        <span id="val-pixel-ratio-limit" class="setting-value">125%</span>
+                    </div>
+                    <div class="setting-row">
                         <label for="set-view-distance">Tầm nhìn xa</label>
                         <input type="range" id="set-view-distance" min="40" max="250" step="10">
                         <span id="val-view-distance" class="setting-value">130m</span>
@@ -508,6 +513,32 @@
                         <label for="set-vignette">Tối viền (Vignette)</label>
                         <label class="switch"><input type="checkbox" id="set-vignette"><span class="slider"></span></label>
                         <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-antialiasing">Khử răng cưa</label>
+                        <label class="switch"><input type="checkbox" id="set-antialiasing"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-ambient-occlusion">Bóng tiếp xúc</label>
+                        <label class="switch"><input type="checkbox" id="set-ambient-occlusion"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <p id="graphics-post-hint" class="settings-save-note" role="status" aria-live="polite" hidden></p>
+                    <div class="setting-row">
+                        <label for="set-shadows">Bóng đổ</label>
+                        <label class="switch"><input type="checkbox" id="set-shadows"><span class="slider"></span></label>
+                        <span class="setting-value"></span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-foliage-density">Mật độ cây cỏ</label>
+                        <input type="range" id="set-foliage-density" min="0" max="150" step="5">
+                        <span id="val-foliage-density" class="setting-value">100%</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="set-water-quality">Chi tiết mặt nước</label>
+                        <input type="range" id="set-water-quality" min="0" max="100" step="5">
+                        <span id="val-water-quality" class="setting-value">70%</span>
                     </div>
                     <div class="setting-row">
                         <label for="set-particles">Mật độ hạt</label>

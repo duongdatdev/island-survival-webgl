@@ -81,6 +81,9 @@ export class MenuUI {
             ['set-view-distance', 'viewDistance', 1, v => `${Math.round(v)}m`],
             ['set-bloom-intensity', 'bloomIntensity', 0.01, v => v.toFixed(2)],
             ['set-particles', 'particleDensity', 0.01, v => `${Math.round(v * 100)}%`],
+            ['set-foliage-density', 'foliageDensity', 0.01, v => `${Math.round(v * 100)}%`],
+            ['set-water-quality', 'waterQuality', 0.01, v => `${Math.round(v * 100)}%`],
+            ['set-pixel-ratio-limit', 'pixelRatioLimit', 0.01, v => `${Math.round(v * 100)}%`],
         ];
 
         for (const [id, key, scale, format] of sliders) {
@@ -101,6 +104,9 @@ export class MenuUI {
             ['set-post', 'postProcessing'],
             ['set-bloom', 'bloom'],
             ['set-vignette', 'vignette'],
+            ['set-antialiasing', 'antialiasing'],
+            ['set-shadows', 'shadows'],
+            ['set-ambient-occlusion', 'ambientOcclusion'],
             ['set-culling', 'frustumCulling'],
             ['set-show-fps', 'showFps'],
         ];
@@ -115,6 +121,7 @@ export class MenuUI {
                     this.engine.audio._ensureContext();
                     this.engine.audio.setMuted(el.checked);
                 }
+                if (key === 'postProcessing') this._syncPostDependencies();
                 this._syncQualityButtons();
             });
         }
@@ -270,6 +277,9 @@ export class MenuUI {
         this._setSlider('set-view-distance', s.get('viewDistance'), 'val-view-distance', `${Math.round(s.get('viewDistance'))}m`);
         this._setSlider('set-bloom-intensity', s.get('bloomIntensity') * 100, 'val-bloom-intensity', s.get('bloomIntensity').toFixed(2));
         this._setSlider('set-particles', s.get('particleDensity') * 100, 'val-particles', `${Math.round(s.get('particleDensity') * 100)}%`);
+        this._setSlider('set-foliage-density', s.get('foliageDensity') * 100, 'val-foliage-density', `${Math.round(s.get('foliageDensity') * 100)}%`);
+        this._setSlider('set-water-quality', s.get('waterQuality') * 100, 'val-water-quality', `${Math.round(s.get('waterQuality') * 100)}%`);
+        this._setSlider('set-pixel-ratio-limit', s.get('pixelRatioLimit') * 100, 'val-pixel-ratio-limit', `${Math.round(s.get('pixelRatioLimit') * 100)}%`);
 
         this._setToggle('set-muted', this.engine.audio.isMuted);
         this._setToggle('set-invert-y', s.get('invertY'));
@@ -277,8 +287,12 @@ export class MenuUI {
         this._setToggle('set-post', s.get('postProcessing'));
         this._setToggle('set-bloom', s.get('bloom'));
         this._setToggle('set-vignette', s.get('vignette'));
+        this._setToggle('set-antialiasing', s.get('antialiasing'));
+        this._setToggle('set-shadows', s.get('shadows'));
+        this._setToggle('set-ambient-occlusion', s.get('ambientOcclusion'));
         this._setToggle('set-culling', s.get('frustumCulling'));
         this._setToggle('set-show-fps', s.get('showFps'));
+        this._syncPostDependencies();
 
         const keybindButtons = document.querySelectorAll('.keybind-btn');
         keybindButtons.forEach(btn => {
@@ -305,6 +319,29 @@ export class MenuUI {
         if (label) {
             const preset = QualityPresets[active];
             label.textContent = preset ? preset.label : 'Tùy chỉnh';
+        }
+    }
+
+    _syncPostDependencies() {
+        const enabled = !!this.settings.get('postProcessing');
+        const dependentIds = ['set-bloom', 'set-bloom-intensity', 'set-vignette', 'set-antialiasing', 'set-ambient-occlusion'];
+        const hint = document.getElementById('graphics-post-hint');
+        for (const id of dependentIds) {
+            const control = document.getElementById(id);
+            if (!control) continue;
+            control.disabled = !enabled;
+            const row = control.closest('.setting-row');
+            if (row) {
+                row.classList.toggle('setting-disabled', !enabled);
+                row.style.opacity = enabled ? '' : '0.55';
+                row.style.transition = 'opacity 120ms ease';
+            }
+            if (enabled) control.removeAttribute('aria-describedby');
+            else control.setAttribute('aria-describedby', 'graphics-post-hint');
+        }
+        if (hint) {
+            hint.hidden = enabled;
+            hint.textContent = 'Bật hậu kỳ để dùng Bloom, khử răng cưa, tối viền và bóng tiếp xúc.';
         }
     }
 

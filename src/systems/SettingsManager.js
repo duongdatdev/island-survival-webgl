@@ -11,6 +11,8 @@ export const QualityPresets = {
         bloom: false,
         particleDensity: 0.4,
         viewDistance: 60,
+        antialiasing: false, shadows: false, shadowResolution: 512, shadowDistance: 28,
+        ambientOcclusion: false, foliageDensity: 0.3, foliageDistance: 38, waterQuality: 0.15, pixelRatioLimit: 1,
     },
     medium: {
         label: 'Trung Bình',
@@ -19,6 +21,8 @@ export const QualityPresets = {
         bloom: false,
         particleDensity: 0.7,
         viewDistance: 90,
+        antialiasing: true, shadows: true, shadowResolution: 1024, shadowDistance: 38,
+        ambientOcclusion: false, foliageDensity: 0.6, foliageDistance: 58, waterQuality: 0.4, pixelRatioLimit: 1,
     },
     high: {
         label: 'Cao',
@@ -27,6 +31,8 @@ export const QualityPresets = {
         bloom: true,
         particleDensity: 1.0,
         viewDistance: 130,
+        antialiasing: true, shadows: true, shadowResolution: 1536, shadowDistance: 62,
+        ambientOcclusion: true, foliageDensity: 1, foliageDistance: 85, waterQuality: 0.7, pixelRatioLimit: 1.25,
     },
     ultra: {
         label: 'Siêu Cao',
@@ -35,6 +41,8 @@ export const QualityPresets = {
         bloom: true,
         particleDensity: 1.4,
         viewDistance: 200,
+        antialiasing: true, shadows: true, shadowResolution: 2048, shadowDistance: 90,
+        ambientOcclusion: true, foliageDensity: 1.35, foliageDistance: 115, waterQuality: 1, pixelRatioLimit: 1.5,
     },
 };
 
@@ -60,6 +68,15 @@ const DEFAULTS = {
     viewDistance: 130,
     fov: 70,
     frustumCulling: true,
+    antialiasing: true,
+    shadows: true,
+    shadowResolution: 1536,
+    shadowDistance: 62,
+    ambientOcclusion: true,
+    foliageDensity: 1,
+    foliageDistance: 85,
+    waterQuality: 0.7,
+    pixelRatioLimit: 1.25,
 
     showFps: false,
 };
@@ -74,6 +91,12 @@ const CLAMPS = {
     particleDensity: [0.1, 2.0],
     viewDistance: [40, 250],
     fov: [40, 90],
+    shadowResolution: [256, 2048],
+    shadowDistance: [20, 100],
+    foliageDensity: [0, 1.5],
+    foliageDistance: [24, 140],
+    waterQuality: [0, 1],
+    pixelRatioLimit: [1, 2],
 };
 
 export class SettingsManager {
@@ -152,11 +175,9 @@ export class SettingsManager {
         if (!preset) return;
 
         this.values.quality = name;
-        this.set('renderScale', preset.renderScale, true);
-        this.set('postProcessing', preset.postProcessing, true);
-        this.set('bloom', preset.bloom, true);
-        this.set('particleDensity', preset.particleDensity, true);
-        this.set('viewDistance', preset.viewDistance, true);
+        for (const [key, value] of Object.entries(preset)) {
+            if (key !== 'label') this.set(key, value, true);
+        }
         this.values.quality = name;
 
         this.save();
@@ -209,4 +230,6 @@ export class SettingsManager {
 const GRAPHICS_KEYS = [
     'renderScale', 'postProcessing', 'bloom', 'bloomIntensity',
     'vignette', 'particleDensity', 'viewDistance', 'frustumCulling',
+    'antialiasing', 'shadows', 'shadowResolution', 'shadowDistance', 'ambientOcclusion',
+    'foliageDensity', 'foliageDistance', 'waterQuality', 'pixelRatioLimit',
 ];
