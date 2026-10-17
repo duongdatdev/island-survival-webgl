@@ -22,4 +22,5 @@ test('shore sampling does not substitute a radial island boundary', () => {
     assert.ok(depth > 0);
     assert.ok(shore > 0.9);
     assert.equal(sampleWaterShore({ getHeight: () => -1.3 }, 40, 0)[1], 0);
+    assert.deepEqual(sampleWaterShore(null, 40, 0), [1, 0]);
 });

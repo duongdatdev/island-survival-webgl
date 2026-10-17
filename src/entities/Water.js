@@ -6,7 +6,8 @@ const SHORE_BAND_WIDTH = 1.2;
 
 /** [normalized depth, shore proximity] derived from actual sampled terrain. */
 export function sampleWaterShore(terrain, x, z) {
-    const height = terrain?.getHeight ? terrain.getHeight(x, z) : -SHORE_BAND_WIDTH;
+    if (typeof terrain?.getHeight !== 'function') return [1, 0];
+    const height = terrain.getHeight(x, z);
     const depth = Math.max(0, -height);
     const shore = height >= 0
         ? 1 - smoothstep(0, SHORE_BAND_HEIGHT, height)
