@@ -2,6 +2,7 @@ import { Entity } from './Entity.js';
 import { Mesh } from '../renderer/Mesh.js';
 import { Vec3 } from '../math/Vec3.js';
 import { Mat4 } from '../math/Mat4.js';
+import { createResourceGeometry } from '../renderer/ResourceGeometry.js';
 
 export class WorldResource extends Entity {
     constructor(gl, resourceDef, worldPos, modelMesh = null) {
@@ -33,8 +34,7 @@ export class WorldResource extends Entity {
         if (this.useModel) {
             this.mesh = modelMesh;
         } else {
-            const [r, g, b] = resourceDef.color;
-            this.mesh = new Mesh(gl, this._createCubeData(r, g, b));
+            this.mesh = new Mesh(gl, createResourceGeometry(resourceDef));
         }
 
         this.isCollected = false;
