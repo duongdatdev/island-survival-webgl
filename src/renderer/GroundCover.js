@@ -289,10 +289,13 @@ export class GroundCover {
         else if (typeof bindings.applyCommonUniforms === 'function') bindings.applyCommonUniforms(program);
         program.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
         program.setUniform1i('uUseBaseColorTexture', 0);
+        const culling = gl.isEnabled(gl.CULL_FACE);
+        gl.disable(gl.CULL_FACE);
         this._drawGeometry(this.grassGeometry);
         this._drawGeometry(this.shrubGeometry);
         this._drawGeometry(this.leafGeometry);
         this._drawGeometry(this.pebbleGeometry);
+        if (culling) gl.enable(gl.CULL_FACE);
     }
 
     _drawGeometry(geometry) {

@@ -1447,27 +1447,6 @@ export class GameScene extends Scene {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         }
 
-        this.basicShader.use();
-        
-        this.basicShader.setUniformMatrix4fv('uViewMatrix', this.camera.viewMatrix);
-        this.basicShader.setUniformMatrix4fv('uProjectionMatrix', this.camera.projectionMatrix);
-        this.basicShader.setUniform3fv('uViewPosition', this.camera.position);
-
-        this.basicShader.setUniform3fv('uLightDirection', this.dirLight.direction);
-        this.basicShader.setUniform3fv('uLightColor', this.dirLight.color);
-        this.basicShader.setUniform1f('uLightIntensity', this.dirLight.intensity);
-        this.basicShader.setUniform3fv('uAmbientColor', this.ambientLight.color);
-        this.basicShader.setUniform1f('uAmbientIntensity', this.ambientLight.intensity);
-        const campaignLight = this.campaign?.lighting();
-        this.basicShader.setUniform3fv('uPointLightPosition', campaignLight?.position || this.campfire.getLightPosition());
-        this.basicShader.setUniform3fv('uPointLightColor', campaignLight?.color || this.campfire.lightColor);
-        this.basicShader.setUniform1f(
-            'uPointLightIntensity',
-            campaignLight?.intensity ?? (this.campfire.isBuilt ? this.campfire.lightIntensity : 0.0)
-        );
-        this.basicShader.setUniform1f('uPointLightRange', campaignLight?.range || this.campfire.lightRange);
-        this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
-
         this.terrainShader.use();
         this._bindSurfaceLighting(this.terrainShader);
         this.terrain.draw(this.terrainShader, this.frustum);
@@ -1512,7 +1491,7 @@ export class GameScene extends Scene {
             this.raftAssembly.draw(this.basicShader, drawMode, false);
         }
 
-        this.environmentBatch.draw(this.camera, this.frustum, { viewDistance: this._viewDistance, applyLighting: shader => {
+        this.environmentBatch.draw(this.camera, this.frustum, { viewDistance: this._viewDistance, drawMode, applyLighting: shader => {
             this._bindSurfaceLighting(shader);
             shader.setUniform1f('uFoliage', 1);
             shader.setUniform1f('uPaletteStrength', 0.8);

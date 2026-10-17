@@ -12,6 +12,7 @@ function createMockGL() {
         VERTEX_SHADER: 1, FRAGMENT_SHADER: 2, COMPILE_STATUS: 3, LINK_STATUS: 4,
         ARRAY_BUFFER: 5, ELEMENT_ARRAY_BUFFER: 10, STATIC_DRAW: 6, DYNAMIC_DRAW: 7, FLOAT: 8, TRIANGLES: 9,
         UNSIGNED_SHORT: 11,
+        CULL_FACE: 12, isEnabled: () => true, disable() {}, enable() {},
         createShader: () => ({ id: ++nextId }), shaderSource() {}, compileShader() {},
         getShaderParameter: () => true, getShaderInfoLog: () => '', deleteShader() {},
         createProgram: () => ({ id: ++nextId }), attachShader() {}, linkProgram() {},

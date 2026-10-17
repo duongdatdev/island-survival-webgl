@@ -148,9 +148,9 @@ export class EnvironmentBatch {
 
             gl.bindVertexArray(group.vao);
             if (group.mesh.hasIndices) {
-                gl.drawElementsInstanced(gl.TRIANGLES, group.mesh.indexCount, group.mesh.indexType, 0, group.instanceCount);
+                gl.drawElementsInstanced(options.drawMode ?? gl.TRIANGLES, group.mesh.indexCount, group.mesh.indexType, 0, group.instanceCount);
             } else {
-                gl.drawArraysInstanced(gl.TRIANGLES, 0, group.mesh.vertexCount, group.instanceCount);
+                gl.drawArraysInstanced(options.drawMode ?? gl.TRIANGLES, 0, group.mesh.vertexCount, group.instanceCount);
             }
             gl.bindVertexArray(null);
             this.lastDrawnInstances += group.instanceCount;
