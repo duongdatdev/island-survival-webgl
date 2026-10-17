@@ -229,7 +229,7 @@ export class ParticleSystem {
         }
     }
 
-    draw(camera) {
+    draw(camera, outputLinear = false) {
         const count = this.particles.length;
         if (count === 0) return;
 
@@ -261,6 +261,7 @@ export class ParticleSystem {
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._sizeData.subarray(0, count));
 
         this.shader.use();
+        this.shader.setUniform1i('uOutputLinear', outputLinear ? 1 : 0);
         this.shader.setUniformMatrix4fv('uViewMatrix', camera.viewMatrix);
         this.shader.setUniformMatrix4fv('uProjectionMatrix', camera.projectionMatrix);
         this.shader.setUniform1f('uViewportHeight', gl.canvas.height);

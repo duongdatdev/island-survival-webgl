@@ -1,3 +1,5 @@
+import { ColorSpaceGLSL } from './ColorSpace.js';
+
 export const ParticleShader = {
     vertex: `#version 300 es
         precision highp float;
@@ -30,13 +32,15 @@ export const ParticleShader = {
         in vec4 vColor;
         out vec4 fragColor;
 
+        ${ColorSpaceGLSL}
+
         void main() {
             vec2 coord = gl_PointCoord - vec2(0.5);
             float dist = length(coord);
             if (dist > 0.5) discard;
 
             float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
-            fragColor = vec4(vColor.rgb, vColor.a * alpha);
+            fragColor = vec4(sceneOutput(srgbToLinear(vColor.rgb)), vColor.a * alpha);
         }
     `
 };

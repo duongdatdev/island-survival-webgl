@@ -1,3 +1,5 @@
+import { ColorSpaceGLSL } from './ColorSpace.js';
+
 export const UnlitShader = {
     vertex: `#version 300 es
         layout(location = 0) in vec3 aPosition;
@@ -28,8 +30,10 @@ export const UnlitShader = {
 
         out vec4 fragColor;
 
+        ${ColorSpaceGLSL}
+
         void main() {
-            fragColor = vColor;
+            fragColor = vec4(sceneOutput(srgbToLinear(vColor.rgb)), vColor.a);
         }
     `
 };

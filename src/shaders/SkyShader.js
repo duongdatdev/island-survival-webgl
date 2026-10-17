@@ -1,4 +1,6 @@
 
+import { ColorSpaceGLSL } from './ColorSpace.js';
+
 const PALETTE = {
     horizon: [0.62, 0.35, 0.13],
     mid: [0.11, 0.13, 0.25],
@@ -40,6 +42,8 @@ const FRAGMENT = `#version 300 es
     uniform float uSunsetAmount;
 
     uniform float uTime;
+
+    ${ColorSpaceGLSL}
 
     float hash21(vec2 p) {
         p = fract(p * vec2(123.34, 456.21));
@@ -109,16 +113,18 @@ const FRAGMENT = `#version 300 es
         vec3 moonDir = normalize(uMoonDirection);
         float sd = max(dot(dir, sunDir), 0.0);
         float md = max(dot(dir, moonDir), 0.0);
+        vec3 sunColor = srgbToLinear(uSunColor);
+        vec3 moonColor = srgbToLinear(uMoonColor);
 
-        vec3 col = mix(uSkyHorizon, uSkyMid, smoothstep(-0.04, 0.25, h));
-        col = mix(col, uSkyZenith, smoothstep(0.20, 0.85, h));
+        vec3 col = mix(srgbToLinear(uSkyHorizon), srgbToLinear(uSkyMid), smoothstep(-0.04, 0.25, h));
+        col = mix(col, srgbToLinear(uSkyZenith), smoothstep(0.20, 0.85, h));
 
         float horizonGlow = exp(-abs(h) * 6.0) * uSunsetAmount;
-        vec3 sunsetTint = uSunColor * 0.6;
+        vec3 sunsetTint = sunColor * 0.6;
         col += sunsetTint * horizonGlow * 0.5;
 
         float sunHorizonGlow = pow(sd, 3.0) * exp(-abs(h) * 4.0) * uSunsetAmount;
-        col += uSunColor * sunHorizonGlow * 0.4;
+        col += sunColor * sunHorizonGlow * 0.4;
 
         float skyLum = dot(col, vec3(0.299, 0.587, 0.114));
         float starMask = smoothstep(0.08, 0.40, h) * (1.0 - smoothstep(0.03, 0.18, skyLum));
@@ -138,6 +144,7 @@ const FRAGMENT = `#version 300 es
                     vec3(1.0, 0.90, 0.75),
                     hash21(gi + 99.9)
                 );
+                starColor = srgbToLinear(starColor);
                 col += starColor * star * twinkle * starMask * 1.0;
             }
         }
@@ -146,26 +153,26 @@ const FRAGMENT = `#version 300 es
             float sunVisibility = smoothstep(-0.15, 0.0, sunDir.y);
 
             float outerGlow = pow(sd, 48.0) * 0.35 * sunVisibility;
-            col = mix(col, uSunColor, outerGlow);
+            col = mix(col, sunColor, outerGlow);
 
             float corona = pow(sd, 256.0) * 0.6 * sunVisibility;
-            col = mix(col, min(uSunColor * 1.2, vec3(1.0)), corona);
+            col = mix(col, min(sunColor * 1.2, vec3(1.0)), corona);
 
             float disc = smoothstep(0.9994, 0.9998, sd) * sunVisibility;
 
             float edgeFade = 1.0 - smoothstep(0.9994, 0.9998, sd);
-            vec3 sunDiscColor = mix(vec3(1.0, 1.0, 0.98), uSunColor, edgeFade * 0.4);
+            vec3 sunDiscColor = mix(vec3(1.0, 1.0, 0.98), sunColor, edgeFade * 0.4);
 
             col = mix(col, sunDiscColor, disc);
         }
 
         if (moonDir.y > -0.10) {
-            float moonColorBrightness = max(uMoonColor.r, max(uMoonColor.g, uMoonColor.b));
+            float moonColorBrightness = max(moonColor.r, max(moonColor.g, moonColor.b));
             float moonColorVisibility = smoothstep(0.02, 0.15, moonColorBrightness);
             float moonVisibility = smoothstep(-0.10, 0.05, moonDir.y) * moonColorVisibility;
 
-            col += uMoonColor * 0.15 * (pow(md, 12.0) * moonVisibility);
-            col += uMoonColor * 0.06 * (pow(md, 4.0) * moonVisibility);
+            col += moonColor * 0.15 * (pow(md, 12.0) * moonVisibility);
+            col += moonColor * 0.06 * (pow(md, 4.0) * moonVisibility);
 
             float moonDiscAngle = acos(clamp(md, -1.0, 1.0));
             float moonRadius = 0.012;
@@ -180,7 +187,7 @@ const FRAGMENT = `#version 300 es
                 ) / moonRadius * 1.2;
 
                 float crater = moonCraters(moonUV);
-                vec3 moonSurface = uMoonColor * (0.85 + crater * 0.3);
+                vec3 moonSurface = moonColor * (0.85 + crater * 0.3);
 
                 float moonLighting = max(dot(moonDir, sunDir), 0.0) * 0.4 + 0.6;
                 float phase = dot(normalize(dir - moonDir * dot(dir, moonDir)), sunDir);
@@ -201,18 +208,18 @@ const FRAGMENT = `#version 300 es
             cuv = cuv * vec2(0.20, 0.46) + vec2(uTime * 0.008, uTime * 0.003);
             float cover = smoothstep(0.48, 0.84, fbm(cuv));
 
-            vec3 cloudBase = uSkyMid * 0.5;
-            vec3 cloudLit = mix(uSkyHorizon, uSunColor * 0.7, 0.3 + pow(sd, 4.0) * 0.6);
+            vec3 cloudBase = srgbToLinear(uSkyMid) * 0.5;
+            vec3 cloudLit = mix(srgbToLinear(uSkyHorizon), sunColor * 0.7, 0.3 + pow(sd, 4.0) * 0.6);
             vec3 cloudCol = mix(cloudBase, cloudLit, 0.15 + pow(sd, 3.0) * 0.75);
 
-            cloudCol = mix(cloudCol, uSunColor * 0.65, uSunsetAmount * 0.3 * pow(sd, 2.0));
+            cloudCol = mix(cloudCol, sunColor * 0.65, uSunsetAmount * 0.3 * pow(sd, 2.0));
 
             col = mix(col, cloudCol, cover * cloudMask * 0.75);
         }
 
         col += (hash21(gl_FragCoord.xy) - 0.5) / 255.0;
 
-        fragColor = vec4(col, 1.0);
+        fragColor = vec4(sceneOutput(col), 1.0);
     }
 `;
 

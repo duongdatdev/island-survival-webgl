@@ -78,6 +78,15 @@ export class PostProcessing {
             exposure = 1.0,
             tint = [1.0, 1.0, 1.0],
             iterations = 2,
+            fxaa = true,
+            underwater = false,
+            underwaterColor = [0.02, 0.18, 0.24],
+            underwaterDensity = 0.08,
+            cameraNear = 0.1,
+            cameraFar = 1000.0,
+            ambientOcclusion = false,
+            aoStrength = 0.35,
+            aoRadius = 2.0,
         } = options;
 
         gl.disable(gl.DEPTH_TEST);
@@ -109,16 +118,34 @@ export class PostProcessing {
         gl.bindTexture(gl.TEXTURE_2D, bloomTexture);
         this._compositeProgram.setUniform1i('uBloom', 1);
 
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, this._sceneDepth);
+        this._compositeProgram.setUniform1i('uDepth', 2);
+
         this._compositeProgram.setUniform1f('uBloomIntensity', bloom ? bloomIntensity : 0.0);
         this._compositeProgram.setUniform1f('uVignette', vignette);
         this._compositeProgram.setUniform1f('uExposure', exposure);
         this._compositeProgram.setUniform3fv('uTint', tint);
+        this._compositeProgram.setUniform2f('uInvResolution', 1 / this.width, 1 / this.height);
+        this._compositeProgram.setUniform1f('uFXAA', fxaa ? 1 : 0);
+        this._compositeProgram.setUniform1f('uUnderwater', underwater ? 1 : 0);
+        this._compositeProgram.setUniform1f('uUnderwaterDensity', Math.max(0, underwaterDensity));
+        this._compositeProgram.setUniform3fv('uUnderwaterColor', underwaterColor);
+        this._compositeProgram.setUniform1f('uCameraNear', Math.max(0.001, cameraNear));
+        this._compositeProgram.setUniform1f('uCameraFar', Math.max(cameraNear + 0.01, cameraFar));
+        this._compositeProgram.setUniform1f('uAOIntensity', ambientOcclusion ? Math.max(0, Math.min(1, aoStrength)) : 0);
+        this._compositeProgram.setUniform1f('uAORadius', Math.max(0.5, Math.min(8, aoRadius)));
 
         gl.drawArrays(gl.TRIANGLES, 0, 3);
 
         gl.bindVertexArray(null);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE0);
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.CULL_FACE);
     }
@@ -187,15 +214,19 @@ export class PostProcessing {
         const filter = (!this._useFloat || this._linearFloatExt) ? gl.LINEAR : gl.NEAREST;
 
         this._sceneColor = this._createTexture(this.width, this.height, colorFormat, colorType, filter);
-        this._sceneDepth = gl.createRenderbuffer();
-        gl.bindRenderbuffer(gl.RENDERBUFFER, this._sceneDepth);
-        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, this.width, this.height);
-        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+        this._sceneDepth = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this._sceneDepth);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, this.width, this.height);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.bindTexture(gl.TEXTURE_2D, null);
 
         this._sceneFbo = gl.createFramebuffer();
         gl.bindFramebuffer(gl.FRAMEBUFFER, this._sceneFbo);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._sceneColor, 0);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this._sceneDepth);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this._sceneDepth, 0);
 
         if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
             if (this._useFloat) {
@@ -219,6 +250,20 @@ export class PostProcessing {
             this._bloomFbo[i] = gl.createFramebuffer();
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._bloomFbo[i]);
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._bloomTex[i], 0);
+            if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                this._releaseTargets();
+                if (this._useFloat) {
+                    console.warn('PostProcessing: float bloom target incomplete, retrying with RGBA8.');
+                    this._useFloat = false;
+                    this._createTargets();
+                } else {
+                    console.error('PostProcessing: bloom framebuffer incomplete, disabling effects.');
+                    this.available = false;
+                    this.enabled = false;
+                }
+                return;
+            }
         }
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -241,7 +286,7 @@ export class PostProcessing {
         const gl = this.gl;
         if (this._sceneFbo) { gl.deleteFramebuffer(this._sceneFbo); this._sceneFbo = null; }
         if (this._sceneColor) { gl.deleteTexture(this._sceneColor); this._sceneColor = null; }
-        if (this._sceneDepth) { gl.deleteRenderbuffer(this._sceneDepth); this._sceneDepth = null; }
+        if (this._sceneDepth) { gl.deleteTexture(this._sceneDepth); this._sceneDepth = null; }
 
         for (let i = 0; i < 2; i++) {
             if (this._bloomFbo[i]) { gl.deleteFramebuffer(this._bloomFbo[i]); this._bloomFbo[i] = null; }

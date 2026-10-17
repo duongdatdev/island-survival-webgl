@@ -212,7 +212,8 @@ export class FirstPersonViewModel {
         shader.setUniform1f('uAmbientIntensity', 0.78);
         shader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
 
-        gl.clear(gl.DEPTH_BUFFER_BIT);
+        // Reserve near depth for held hands without erasing world depth used by AO/diving.
+        gl.depthRange?.(0, 0.002);
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
 
@@ -231,6 +232,7 @@ export class FirstPersonViewModel {
         this._drawArm(shader, drawMode, bobX, bobY, support, true);
 
         this._drawEquippedWeapon(shader, drawMode, bobX, bobY, pose);
+        gl.depthRange?.(0, 1);
     }
 
     _getWeaponPose() {
