@@ -11,6 +11,7 @@ export class Terrain extends Entity {
         this.viewPosition = [0, 0, 0];
         this.viewDistance = 180;
         this.chunkMeshes = [];
+        this.frustum = null;
 
         if (!generatedData || !generator) {
             throw new Error('Terrain: generatedData and generator are required (WorldGenerator must produce them).');
@@ -45,16 +46,31 @@ export class Terrain extends Entity {
         return this.generator.getHeight(x, z);
     }
 
-    draw(shaderProgram) {
+    draw(shaderProgram, frustum = this.frustum) {
         shaderProgram.setUniformMatrix4fv('uModelMatrix', this.modelMatrix);
         this.mesh?.draw();
         this.lastChunkDraws = 0;
         for (const chunk of this.chunkMeshes) {
             const distance = Math.hypot(chunk.center[0] - this.viewPosition[0], chunk.center[2] - this.viewPosition[2]);
             if (distance > this.viewDistance + chunk.radius) continue;
-            chunk.meshes[distance < 80 ? 0 : distance < 160 ? 1 : 2].draw();
+            if (frustum && !frustum.containsSphere(chunk.center[0], chunk.center[1], chunk.center[2], chunk.radius)) continue;
+            const lod = this._selectChunkLod(chunk, distance);
+            chunk.meshes[lod].draw();
             this.lastChunkDraws++;
         }
+    }
+
+    _selectChunkLod(chunk, distance) {
+        // Keep the existing 80/160 m quality bands, with an 8 m dead zone to
+        // prevent visible LOD flutter when the camera rests near a boundary.
+        const previous = chunk.lod;
+        let lod = previous ?? (distance < 80 ? 0 : distance < 160 ? 1 : 2);
+        if (lod === 0 && distance > 88) lod = 1;
+        else if (lod === 1 && distance < 72) lod = 0;
+        else if (lod === 1 && distance > 168) lod = 2;
+        else if (lod === 2 && distance < 152) lod = 1;
+        chunk.lod = lod;
+        return lod;
     }
 
     delete() {
