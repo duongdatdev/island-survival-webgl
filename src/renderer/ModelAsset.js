@@ -57,20 +57,40 @@ export class ModelAsset {
                 const rendererMesh = new Mesh(gl, meshData);
                 compiledMeshes.push(rendererMesh);
 
-                let texture = null;
-                if (material && material.getBaseColorTexture()) {
-                    const sourceTexture = material.getBaseColorTexture();
-                    const textureInfo = material.getBaseColorTextureInfo();
-                    const cacheKey = sourceTexture;
-                    if (!textureCache.has(cacheKey)) {
-                        textureCache.set(cacheKey, await ModelAsset._createTexture(gl, sourceTexture, textureInfo));
+                const baseInfo = ModelAsset._materialValue(material, 'getBaseColorTextureInfo', null);
+                const baseUV = ModelAsset._textureCoord(baseInfo);
+                const bindTexture = async (slot, colorSpace) => {
+                    const source = ModelAsset._materialValue(material, `get${slot}Texture`, null);
+                    if (!source) return null;
+                    const info = ModelAsset._materialValue(material, `get${slot}TextureInfo`, null);
+                    if (info && ModelAsset._textureCoord(info) !== baseUV) {
+                        unsupportedTextureCoordinates.push(slot.replace('Texture', '').toLowerCase());
+                        return null;
                     }
-                    texture = textureCache.get(cacheKey);
-                }
+                    let variants = textureCache.get(source);
+                    if (!variants) { variants = new Map(); textureCache.set(source, variants); }
+                    if (!variants.has(colorSpace)) {
+                        variants.set(colorSpace, await ModelAsset._createTexture(gl, source, info, colorSpace));
+                    }
+                    return variants.get(colorSpace);
+                };
+                const unsupportedTextureCoordinates = [];
+                const texture = await bindTexture('BaseColor', 'srgb');
+                const normalTexture = await bindTexture('Normal', 'linear');
+                const aoTexture = await bindTexture('Occlusion', 'linear');
+                const emissiveTexture = await bindTexture('Emissive', 'srgb');
+                const metallicRoughnessTexture = await bindTexture('MetallicRoughness', 'linear');
+                const materialParameters = ModelAsset._extractMaterialParameters(material);
+                const localBounds = rendererMesh.bounds;
 
                 const localMatrix = Mat4.create();
                 Mat4.multiply(localMatrix, normalization, entry.nodeMatrix);
-                drawables.push({ mesh: rendererMesh, texture, localMatrix });
+                drawables.push({
+                    mesh: rendererMesh, texture, normalTexture, aoTexture, emissiveTexture,
+                    metallicRoughnessTexture, localMatrix, ...materialParameters,
+                    unsupportedTextureCoordinates,
+                    motionBoundsMin: localBounds.min.slice(), motionBoundsMax: localBounds.max.slice()
+                });
                 if (options.retainGeometry) {
                     const indices = meshData.indices || Array.from({ length: meshData.positions.length / 3 }, (_, index) => index);
                     for (const index of indices) {
@@ -83,9 +103,7 @@ export class ModelAsset {
             }
         } catch (error) {
             for (const mesh of compiledMeshes) mesh.delete();
-            for (const texture of textureCache.values()) {
-                if (texture) texture.delete();
-            }
+            for (const variants of textureCache.values()) for (const texture of variants.values()) if (texture) texture.delete();
             throw error;
         }
 
@@ -96,7 +114,7 @@ export class ModelAsset {
         return new ModelAsset(
             gl,
             drawables,
-            Array.from(textureCache.values()).filter(Boolean),
+            Array.from(textureCache.values()).flatMap(variants => Array.from(variants.values())).filter(Boolean),
             { animationNames, collisionGeometry: options.retainGeometry ? new Float32Array(collisionGeometry) : null, targetSize: options.nativeScale
                 ? bounds.max.map((value, axis) => value - bounds.min[axis]) : targetSize, bounds }
         );
@@ -107,19 +125,50 @@ export class ModelAsset {
             Mat4.multiply(this._worldMatrix, entityModelMatrix, drawable.localMatrix);
             shaderProgram.setUniformMatrix4fv('uModelMatrix', this._worldMatrix);
 
-            if (drawable.texture) {
-                drawable.texture.bind(0);
-                shaderProgram.setUniform1i('uBaseColorTexture', 0);
-                shaderProgram.setUniform1i('uUseBaseColorTexture', 1);
-            } else {
-                shaderProgram.setUniform1i('uUseBaseColorTexture', 0);
-            }
+            this._bindTexture(shaderProgram, drawable.texture, 0, 'uBaseColorTexture', 'uUseBaseColorTexture');
+            this._bindTexture(shaderProgram, drawable.normalTexture, 3, 'uNormalTexture', 'uUseNormalTexture');
+            this._bindTexture(shaderProgram, drawable.aoTexture, 4, 'uAOTexture', 'uUseAOTexture');
+            this._bindTexture(shaderProgram, drawable.emissiveTexture, 5, 'uEmissiveTexture', 'uUseEmissiveTexture');
+            this._bindTexture(shaderProgram, drawable.metallicRoughnessTexture, 6,
+                'uMetallicRoughnessTexture', 'uUseMetallicRoughnessTexture');
+            shaderProgram.setUniform1i('uVertexColorLinear', 1);
+            shaderProgram.setUniform1f('uRoughness', drawable.roughness);
+            shaderProgram.setUniform1f('uMetallic', drawable.metallic);
+            shaderProgram.setUniform3fv('uEmissive', drawable.emissive);
+            shaderProgram.setUniform1f('uMaterialAO', drawable.materialAO);
+            shaderProgram.setUniform1f('uNormalScale', drawable.normalScale);
+            shaderProgram.setUniform1f('uAOStrength', drawable.aoStrength);
+            shaderProgram.setUniform3fv('uMotionBoundsMin', drawable.motionBoundsMin);
+            shaderProgram.setUniform3fv('uMotionBoundsMax', drawable.motionBoundsMax);
 
             drawable.mesh.draw(drawMode);
         }
 
         shaderProgram.setUniform1i('uUseBaseColorTexture', 0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        shaderProgram.setUniform1i('uUseNormalTexture', 0);
+        shaderProgram.setUniform1i('uUseAOTexture', 0);
+        shaderProgram.setUniform1i('uUseEmissiveTexture', 0);
+        shaderProgram.setUniform1i('uUseMetallicRoughnessTexture', 0);
+        shaderProgram.setUniform1i('uVertexColorLinear', 0);
+        shaderProgram.setUniform1f('uRoughness', 0.85);
+        shaderProgram.setUniform1f('uMetallic', 0);
+        shaderProgram.setUniform3fv('uEmissive', [0, 0, 0]);
+        shaderProgram.setUniform1f('uMaterialAO', 1);
+        shaderProgram.setUniform1f('uNormalScale', 1);
+        shaderProgram.setUniform1f('uAOStrength', 1);
+        shaderProgram.setUniform3fv('uMotionBoundsMin', [0, 0, 0]);
+        shaderProgram.setUniform3fv('uMotionBoundsMax', [0, 0, 0]);
+        for (const unit of [0, 3, 4, 5, 6]) {
+            this.gl.activeTexture(this.gl.TEXTURE0 + unit);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        }
+        this.gl.activeTexture(this.gl.TEXTURE0);
+    }
+
+    _bindTexture(shaderProgram, texture, unit, samplerUniform, enabledUniform) {
+        if (texture) texture.bind(unit);
+        shaderProgram.setUniform1i(samplerUniform, unit);
+        shaderProgram.setUniform1i(enabledUniform, texture ? 1 : 0);
     }
 
     delete() {
@@ -205,10 +254,10 @@ export class ModelAsset {
         const positionAccessor = primitive.getAttribute('POSITION');
         const normalAccessor = primitive.getAttribute('NORMAL');
         const colorAccessor = primitive.getAttribute('COLOR_0');
-        const textureInfo = material ? material.getBaseColorTextureInfo() : null;
-        const uvSet = textureInfo ? textureInfo.getTexCoord() : 0;
+        const textureInfo = ModelAsset._materialValue(material, 'getBaseColorTextureInfo', null);
+        const uvSet = ModelAsset._textureCoord(textureInfo);
         const texCoordAccessor = primitive.getAttribute(`TEXCOORD_${uvSet}`);
-        const factor = material ? material.getBaseColorFactor() : [1, 1, 1, 1];
+        const factor = ModelAsset._readMaterialVector(material, 'getBaseColorFactor', [1, 1, 1, 1], 4);
         const vertexCount = positionAccessor.getCount();
 
         const positions = ModelAsset._readFloatAccessor(positionAccessor, 3);
@@ -237,6 +286,46 @@ export class ModelAsset {
         return { positions, normals, colors, texCoords, indices };
     }
 
+    static _materialValue(material, methodName, fallback) {
+        if (!material || typeof material[methodName] !== 'function') return fallback;
+        try {
+            const value = material[methodName]();
+            return value === undefined || value === null ? fallback : value;
+        } catch {
+            return fallback;
+        }
+    }
+
+    static _textureCoord(textureInfo) {
+        const value = ModelAsset._materialValue(textureInfo, 'getTexCoord', 0);
+        return Number.isInteger(value) && value >= 0 ? value : 0;
+    }
+
+    static _readMaterialVector(material, methodName, fallback, length) {
+        const value = ModelAsset._materialValue(material, methodName, fallback);
+        if (!value || value.length < length) return fallback.slice();
+        const result = Array.from(value).slice(0, length).map(Number);
+        return result.every(Number.isFinite) ? result : fallback.slice();
+    }
+
+    static _readMaterialFactor(material, methodName, fallback, min = 0, max = 1) {
+        const value = Number(ModelAsset._materialValue(material, methodName, fallback));
+        return Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+    }
+
+    static _extractMaterialParameters(material) {
+        return {
+            roughness: ModelAsset._readMaterialFactor(material, 'getRoughnessFactor', 0.85),
+            metallic: ModelAsset._readMaterialFactor(material, 'getMetallicFactor', 0),
+            emissive: ModelAsset._readMaterialVector(material, 'getEmissiveFactor', [0, 0, 0], 3),
+            normalScale: ModelAsset._readMaterialFactor(material, 'getNormalScale', 1, 0, 8),
+            // glTF occlusionStrength only scales an AO texture sample; without
+            // a texture there is no standalone AO factor to darken the surface.
+            materialAO: 1,
+            aoStrength: ModelAsset._readMaterialFactor(material, 'getOcclusionStrength', 1),
+        };
+    }
+
     static _readFloatAccessor(accessor, expectedSize) {
         const output = new Float32Array(accessor.getCount() * expectedSize);
         const value = [];
@@ -249,7 +338,7 @@ export class ModelAsset {
         return output;
     }
 
-    static async _createTexture(gl, sourceTexture, textureInfo) {
+    static async _createTexture(gl, sourceTexture, textureInfo, colorSpace = 'srgb') {
         const encodedImage = sourceTexture.getImage();
         if (!encodedImage) return null;
 
@@ -258,6 +347,7 @@ export class ModelAsset {
             { type: sourceTexture.getMimeType() || 'image/png' }
         ));
         const texture = new Texture(gl, {
+            colorSpace,
             wrapS: textureInfo ? textureInfo.getWrapS() : gl.REPEAT,
             wrapT: textureInfo ? textureInfo.getWrapT() : gl.REPEAT,
             minFilter: textureInfo && textureInfo.getMinFilter()
