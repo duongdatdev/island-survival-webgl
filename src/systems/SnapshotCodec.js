@@ -1,5 +1,5 @@
 import { assertWorldEventsSnapshot } from './CampaignWorldEvents.js';
-import { assertWildlifeSnapshot } from './CampaignWildlife.js';
+import { assertWildlifeSnapshot } from './WildlifeSnapshot.js';
 import { FishingSystem } from './FishingSystem.js';
 import { assertSceneSnapshot, assertCampaignSnapshot } from './CampaignSnapshotSchema.js';
 

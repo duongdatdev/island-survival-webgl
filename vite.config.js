@@ -136,11 +136,13 @@ export default defineConfig({
     assetsDir: '_vite',
   },
   server: {
+    host: '0.0.0.0',
     open: shouldOpenBrowser,
     // Browser traces and isolated QA builds are generated continuously during verification.
-    watch: { ignored: ['**/.cache/**'] },
+    watch: { ignored: ['**/.cache/**', '**/dist-server/**', '**/server-data/**'] },
   },
   preview: {
+    host: '0.0.0.0',
     open: shouldOpenBrowser,
   },
 });

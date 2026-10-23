@@ -1,0 +1,16 @@
+services:
+  island:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      MAX_PLAYERS: "8"
+      MAX_ROOMS: "16"
+      SERVER_PASSWORD: "${SERVER_PASSWORD:-}"
+    volumes:
+      - island-worlds:/app/server-data
+    restart: unless-stopped
+    init: true
+
+volumes:
+  island-worlds:

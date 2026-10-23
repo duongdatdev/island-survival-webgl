@@ -8,3 +8,6 @@ _autostart.html
 playwright-report/
 test-results/
 *.blend1
+server-data/
+dist-server/
+.env

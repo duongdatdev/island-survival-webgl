@@ -5,30 +5,11 @@ import { Seagull } from '../entities/Seagull.js';
 import { Shark } from '../entities/Shark.js';
 import { Deer, Goat, Monitor } from '../entities/BiomeWildlife.js';
 import { CreatureState } from '../entities/Creature.js';
-import { CREATURE_BALANCE } from '../gameplay/BalanceConfig.js';
+import { WILDLIFE_COUNTS, MAX_WILDLIFE_POPULATION as MAX_POPULATION, assertWildlifeSnapshot } from './WildlifeSnapshot.js';
+export { WILDLIFE_COUNTS, assertWildlifeSnapshot } from './WildlifeSnapshot.js';
 
 const SPECIES = { crab: Crab, seagull: Seagull, boar: Boar, shark: Shark, deer: Deer, goat: Goat, monitor: Monitor };
-export const WILDLIFE_COUNTS = Object.freeze({ crab: 12, seagull: 8, boar: 10, shark: 6, deer: 10, goat: 8, monitor: 8 });
-const MAX_POPULATION = Object.values(WILDLIFE_COUNTS).reduce((sum, count) => sum + count, 0);
 const distance = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-
-export function assertWildlifeSnapshot(saved) {
-    const validId = id => typeof id === 'string' && /^(crab|seagull|boar|shark|deer|goat|monitor)-\d+$/.test(id)
-        && id === id.split('-')[0] + '-' + Number(id.split('-')[1])
-        && +id.split('-')[1] < WILDLIFE_COUNTS[id.split('-')[0]];
-    if (!saved || !Array.isArray(saved.killed) || saved.killed.length > MAX_POPULATION || !Array.isArray(saved.animals) || saved.animals.length > MAX_POPULATION
-        || saved.killed.some(id => !validId(id)) || new Set(saved.killed).size !== saved.killed.length) throw new Error('Bản lưu động vật không hợp lệ.');
-    const ids = new Set(saved.killed);
-    for (const a of saved.animals) {
-        if (!validId(a?.id) || ids.has(a.id) || !Array.isArray(a.position) || a.position.length !== 3
-            || !a.position.every(v => Number.isFinite(v) && Math.abs(v) < 400)
-            || !Number.isFinite(a.health) || a.health <= 0 || a.health > CREATURE_BALANCE[a.id.split('-')[0]].maxHealth
-            || !Number.isFinite(a.yaw)
-            || a.orbit != null && (!a.id.startsWith('seagull-') || !Array.isArray(a.orbit) || a.orbit.length !== 5
-                || !a.orbit.every(Number.isFinite) || a.orbit[2] < 3 || a.orbit[2] > 15)) throw new Error('Bản lưu động vật không hợp lệ.');
-        ids.add(a.id);
-    }
-}
 
 export function campaignAnimalSpawns(world) {
     const random = new PRNG('campaign-wildlife:' + world.seed), generator = world.terrainGenerator;
