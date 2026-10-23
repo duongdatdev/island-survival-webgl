@@ -1,4 +1,5 @@
 import { Mat4 } from '../math/Mat4.js';
+import { CharacterRenderer } from '../characters/CharacterRenderer.js';
 import { getResourceDef } from '../systems/ResourceDatabase.js';
 import { CreatureState } from '../entities/Creature.js';
 import { Crab } from '../entities/Crab.js';
@@ -36,6 +37,9 @@ export class MultiplayerSession {
         this.hud.setAttribute('aria-atomic', 'true');
         document.body.append(this.hud);
         this.matrix = Mat4.create();
+        // Campaign hides the local body by replacing its draw method. Peers need
+        // their own renderer, while sharing the already loaded character mesh.
+        this.remoteRenderer = new CharacterRenderer(scene.characterRenderer.characterDef);
         this.labels = new Map();
         if (!this.ready) {
             const snapshot = this.capture();
@@ -320,6 +324,7 @@ export class MultiplayerSession {
     }
 
     draw(shader, mode) {
+        this.remoteRenderer.mesh = this.scene.characterRenderer.mesh;
         for (const [id, label] of this.labels) if (!this.client.peers.has(id)) { label.remove(); this.labels.delete(id); }
         const viewport = this.scene.gl.canvas.getBoundingClientRect();
         for (const peer of this.client.peers.values()) {
@@ -336,7 +341,7 @@ export class MultiplayerSession {
             Mat4.identity(this.matrix);
             Mat4.translate(this.matrix, this.matrix, [peer.display[0], peer.display[1] - this.scene.player.collider.height / 2, peer.display[2]]);
             Mat4.rotateY(this.matrix, this.matrix, pose.yaw);
-            this.scene.characterRenderer.draw(shader, this.matrix, mode);
+            this.remoteRenderer.draw(shader, this.matrix, mode);
             const point = projectWorldPoint(this.scene.camera, peer.display, viewport, this.scene.player.collider.height * 0.75);
             if (point && Math.hypot(...peer.display.map((v, i) => v - this.scene.player.position[i])) < 60) {
                 label.textContent = peer.name + (pose.paused ? ' · Đang mở menu' : '');
@@ -415,6 +420,7 @@ export class MultiplayerSession {
     }
 
     dispose() {
+        this.remoteRenderer.delete();
         window.removeEventListener('pagehide', this.onPageHide);
         for (const waiter of this.saveWaiters || []) { clearTimeout(waiter.timeout); waiter.resolve(false); }
         this.client.close(); this.hud.remove(); this.disconnectUI?.remove();

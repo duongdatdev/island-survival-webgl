@@ -1,5 +1,6 @@
 
 import { WOOD_LOG_MODEL_ID } from './ResourceDatabase.js';
+import { SURVIVAL_DEBRIS } from './SurvivalDebrisCatalog.js';
 
 export const DebrisType = {
     WOOD:     'wood',
@@ -82,6 +83,14 @@ export const DebrisDatabase = {
         spawnWeight: 2,
     },
 };
+
+for (const item of SURVIVAL_DEBRIS) {
+    const id = 'survival:' + item.id;
+    DebrisDatabase[id] = {
+        ...item, id, color: [0.6, 0.6, 0.6],
+        meshScale: [item.modelScale, item.modelScale, item.modelScale], modelId: id,
+    };
+}
 
 export function getAllDebris() {
     return Object.values(DebrisDatabase);

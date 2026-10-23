@@ -9,6 +9,7 @@ import { PROTOCOL_VERSION, sharedFromSnapshot, personalFromSnapshot, snapshotFro
     applyChanges, safeRecordKey } from '../src/network/WorldSync.js';
 import { socketURL } from '../src/network/NetworkClient.js';
 import { ServerBookmarks } from '../src/network/ServerBookmarks.js';
+import { getDebrisDef } from '../src/systems/DebrisDatabase.js';
 
 function fixture(seed = 'network-test') {
     const snapshot = worldSnapshot({ mode: 'classic', seed, generatorVersion: 1 });
@@ -200,4 +201,32 @@ test('joining an empty server by address creates its default island and status p
     const second = await env.client({ action: 'join' });
     assert.equal((await second.next('welcome')).room, welcome.room);
     assert.equal([...env.app.rooms.values()][0].members.size, 2);
+});
+
+test('headless server accepts every Survival Pack drift type without loading browser assets', async t => {
+    const manifest = JSON.parse(await readFile(new URL('../assets/survival-pack/survival-items.json', import.meta.url), 'utf8'));
+    const env = await setup(t);
+    const host = await env.client({ action: 'create', world: { mode: 'classic', seed: 'network-test' } });
+    const welcome = await host.next('welcome');
+    host.send({ type: 'initialize', snapshot: fixture() });
+    await host.next('initialized');
+    const changes = manifest.items.filter(item => item.registerAsDebris !== false).map(item => {
+        const type = 'survival:' + item.id, def = getDebrisDef(type);
+        for (const field of ['name', 'nameEn', 'icon', 'modelScale', 'pickupRadius', 'gives', 'lifetime', 'driftSpeed', 'spawnWeight']) {
+            assert.deepEqual(def?.[field], item[field], type + ':' + field);
+        }
+        return { key: 'debris:' + item.id, before: null, value: { netId: item.id, type,
+            position: [1, 0, 2], direction: [1, 0, 0], speed: 1, age: 0, lifetime: 60,
+            yaw: 0, onShore: false, hooked: false, owner: null } };
+    });
+    const personal = personalFromSnapshot(fixture());
+    host.send({ type: 'commit', seq: 1, changes, personal });
+    assert.equal((await host.next('accepted')).changes.length, changes.length);
+    const unknown = { ...changes[0], key: 'debris:unknown', value: { ...changes[0].value, netId: 'unknown', type: 'survival:unknown' } };
+    host.send({ type: 'commit', seq: 2, changes: [unknown], personal });
+    await host.next('rejected');
+    await env.restart();
+    const resumed = await env.client({ action: 'join', room: welcome.room, token: welcome.token });
+    const rejoined = await resumed.next('welcome');
+    assert.equal(Object.keys(rejoined.shared).filter(key => key.startsWith('debris:')).length, changes.length);
 });

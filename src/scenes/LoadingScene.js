@@ -3,7 +3,6 @@ import { CharacterRegistry } from '../characters/CharacterRegistry.js';
 import { parseMtl } from '../characters/CharacterLoader.js';
 import { ObjParser } from '../core/ObjParser.js';
 import { Mesh } from '../renderer/Mesh.js';
-import { DebrisDatabase } from '../systems/DebrisDatabase.js';
 import { setLoadingProgress } from '../systems/LoadingUI.js';
 
 export class LoadingScene extends Scene {
@@ -194,22 +193,6 @@ export class LoadingScene extends Scene {
                 const key = 'survival:' + item.id;
                 this.engine.assets.models[key] = mesh;
 
-                if (item.registerAsDebris === false) continue;
-
-                DebrisDatabase[key] = {
-                    id: key,
-                    name: item.name,
-                    nameEn: item.nameEn,
-                    icon: item.icon,
-                    color: [0.6, 0.6, 0.6],
-                    meshScale: [item.modelScale, item.modelScale, item.modelScale],
-                    pickupRadius: item.pickupRadius,
-                    gives: item.gives,
-                    lifetime: item.lifetime,
-                    driftSpeed: item.driftSpeed,
-                    spawnWeight: item.spawnWeight,
-                    modelId: key
-                };
             }
 
             console.log(`LoadingScene: Loaded ${items.length} Survival Pack models.`);

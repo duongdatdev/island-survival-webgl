@@ -318,3 +318,78 @@ test('Minecraft-style server list saves, edits, removes, refreshes and joins by 
     expect(await page.evaluate(() => window.__GAME_ENGINE__.networkClient.room)).toMatch(/^[A-Z2-9]{6}$/);
     await expect(page.locator('#network-hud')).toBeVisible();
 });
+
+for (const mode of ['campaign', 'classic']) test(`${mode}: remote avatar changes framebuffer and Survival Pack debris reaches the peer`, async ({ browser }) => {
+    test.setTimeout(150000);
+    const contextA = await browser.newContext(), contextB = await browser.newContext();
+    const a = await contextA.newPage(), b = await contextB.newPage();
+    const errors = [];
+    for (const page of [a, b]) page.on('pageerror', error => errors.push(error.message));
+    try {
+        await menu(a, 'Avatar A');
+        await a.locator('#network-mode').selectOption(mode);
+        await a.locator('#network-seed').fill('3391788290');
+        await a.locator('#network-submit').click();
+        await ready(a);
+        const room = await a.evaluate(() => window.__GAME_ENGINE__.networkClient.room);
+        await menu(b, 'Avatar B');
+        await b.locator('#network-join-tab').click();
+        await b.locator('#network-room').fill(room);
+        await b.locator('#network-submit').click();
+        await ready(b);
+        await settled(a); await settled(b);
+        const origin = await a.evaluate(() => Array.from(window.__GAME_ENGINE__.scenes.activeScene.player.position));
+        await b.evaluate(origin => {
+            const s = window.__GAME_ENGINE__.scenes.activeScene;
+            s.player.position.set([origin[0], s.terrain.getHeight(origin[0], origin[2] + 5) + s.player.collider.height / 2, origin[2] + 5]);
+            s.isPaused = true;
+        }, origin);
+        await a.waitForFunction(origin => {
+            const peer = [...window.__GAME_ENGINE__.networkClient.peers.values()][0];
+            return peer?.pose?.paused && Math.abs(peer.pose.position[2] - origin[2] - 5) < 0.1;
+        }, origin);
+        await a.waitForFunction(() => !!window.__GAME_ENGINE__.scenes.activeScene.characterRenderer.mesh);
+        const changedPixels = await a.evaluate(origin => {
+            const s = window.__GAME_ENGINE__.scenes.activeScene, gl = s.gl, m = s.multiplayer;
+            s.isPaused = true;
+            s.camera.setCutsceneView([origin[0], origin[1] + 0.7, origin[2]],
+                [origin[0], s.terrain.getHeight(origin[0], origin[2] + 5) + 1, origin[2] + 5]);
+            for (const peer of m.client.peers.values()) peer.display = [...peer.pose.position];
+            const readFrame = () => {
+                s.render();
+                const pixels = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4);
+                gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+                return pixels;
+            };
+            const draw = m.draw;
+            let without, withAvatar;
+            try {
+                m.draw = () => {};
+                without = readFrame();
+                m.draw = draw;
+                withAvatar = readFrame();
+            } finally { m.draw = draw; }
+            let changed = 0;
+            for (let i = 0; i < without.length; i += 4) {
+                if (Math.abs(without[i] - withAvatar[i]) + Math.abs(without[i + 1] - withAvatar[i + 1])
+                    + Math.abs(without[i + 2] - withAvatar[i + 2]) > 20) changed++;
+            }
+            return changed;
+        }, origin);
+        expect(changedPixels, 'remote player must draw a body, beyond its DOM nameplate').toBeGreaterThan(200);
+        await a.screenshot({ path: `.cache/multiplayer-avatar-${mode}.png` });
+        await settled(a);
+        await a.evaluate(async () => {
+            const s = window.__GAME_ENGINE__.scenes.activeScene;
+            const { DriftingDebris } = await import('/src/entities/DriftingDebris.js');
+            const { getDebrisDef } = await import('/src/systems/DebrisDatabase.js');
+            const def = getDebrisDef('survival:axe_small');
+            const d = new DriftingDebris(s.gl, def, [0, 0, 0], s.engine.assets.models[def.modelId], def.meshScale[1]);
+            d.netId = 'avatar-regression-axe';
+            s.debrisManager.debris.push(d);
+            s.multiplayer.flush();
+        });
+        await b.waitForFunction(() => window.__GAME_ENGINE__.scenes.activeScene.multiplayer.shared['debris:avatar-regression-axe']?.type === 'survival:axe_small');
+        expect(errors).toEqual([]);
+    } finally { await contextA.close(); await contextB.close(); }
+});
