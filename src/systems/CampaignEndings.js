@@ -77,7 +77,8 @@ export class CampaignEndings {
         let reservedInventory = null, departureSaved = false;
         try {
             const checkpoint = this.scene.saveController.capture();
-            const ok = await this.scene.engine.worldRepository.saveWorld(this.scene.activeWorldId, checkpoint, { checkpoint: true });
+            const ok = this.scene.multiplayer ? await this.scene.multiplayer.saveCheckpoint()
+                : await this.scene.engine.worldRepository.saveWorld(this.scene.activeWorldId, checkpoint, { checkpoint: true });
             if (!ok) throw new Error('Không thể lưu checkpoint. Tiến trình chuẩn bị được giữ nguyên; hãy thử lưu lại.');
             reservedInventory = this.scene.inventory.snapshot();
             if (!transactCraft([this.scene.inventory], ENDING_SUPPLIES[route], [])) { reservedInventory = null; throw new Error('Vật tư đã thay đổi. Chuẩn bị lại trước khi đi.'); }
@@ -156,7 +157,8 @@ export class CampaignEndings {
         const attempt = this.challenge.snapshot(), c = this.controller, scene = this.scene;
         c.ui.report('Đang khôi phục căn cứ trước lúc đi…');
         try {
-            const checkpoint = await scene.engine.worldRepository.loadWorld(scene.activeWorldId, 'checkpoint');
+            const checkpoint = scene.multiplayer ? await scene.multiplayer.loadCheckpoint()
+                : await scene.engine.worldRepository.loadWorld(scene.activeWorldId, 'checkpoint');
             if (!checkpoint) throw new Error('Không đọc được checkpoint. Giữ nguyên phiên này để xuất bản sao hoặc thử lại.');
             const played = c.playSeconds, survival = scene.survivalSeconds;
             const completed = ['raft', 'rescue'].filter(route => c.progress.facts['endingCompleted:' + route]);

@@ -38,6 +38,14 @@ export class GameSaveController {
 
     save(silent = true) {
         const scene = this.scene;
+        if (scene.multiplayer) {
+            const route = scene.campaign?.ending?.pendingRoute;
+            return scene.multiplayer.save().then(ok => {
+                if (ok && route) scene.campaign.ending.onCommitted(route);
+                if (ok) this.lastSavedAt = Date.now();
+                return ok;
+            });
+        }
         if (scene._isGameOver || scene.isEscaping) {
             if (!silent) this.setStatus('Không thể lưu khi ván chơi đã kết thúc.', true);
             return false;
@@ -194,6 +202,7 @@ export class GameSaveController {
                 [entry.position[0], entry.position[1], entry.position[2]]
             );
             if (entry.rewardType) resource.rewardType = entry.rewardType;
+            if (entry.netId) resource.netId = entry.netId;
             if (entry.worldNodeId) { resource.worldNodeId = entry.worldNodeId; resource.amount = entry.amount || 1; }
             scene.resourceManager.worldResources.push(resource);
         }

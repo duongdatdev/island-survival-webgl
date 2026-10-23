@@ -77,7 +77,8 @@ export class DebrisManager {
     ) {
         if (gl) this._gl = gl;
 
-        if (!this._initialSpawnDone && this._gl) {
+        const simulateDrift = !this.networkSession || this.networkSession.isLeader;
+        if (!this._initialSpawnDone && this._gl && simulateDrift) {
             this._initialSpawn(this._gl);
         }
 
@@ -93,7 +94,7 @@ export class DebrisManager {
                 continue;
             }
 
-            if (!d.isHooked) d.update(deltaTime, terrain, environmentEffects);
+            if (!d.isHooked && simulateDrift) d.update(deltaTime, terrain, environmentEffects);
 
             if (d.canPickup(playerPosition)) {
                 const dist = d.distanceTo(playerPosition);
@@ -114,7 +115,7 @@ export class DebrisManager {
             }
         }
 
-        if (this.debris.length < this.maxDebris && this._gl) {
+        if (this.debris.length < this.maxDebris && this._gl && simulateDrift) {
             this._spawnTimer -= deltaTime;
             if (this._spawnTimer <= 0) {
                 this._spawnDebris(this._gl);

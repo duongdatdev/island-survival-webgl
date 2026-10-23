@@ -221,8 +221,10 @@ export class CampaignController {
     beforeUpdate(seconds, weather) {
         this.playSeconds += seconds;
         this.respawnProtection = Math.max(0, this.respawnProtection - seconds);
-        this.production.update(seconds, weather);
-        this.islandEvents.update(seconds, { ...weather, isStorm: this.scene.weather.currentWeather === 'storm' });
+        if (!this.scene.multiplayer || this.scene.multiplayer.isLeader) {
+            this.production.update(seconds, weather);
+            this.islandEvents.update(seconds, { ...weather, isStorm: this.scene.weather.currentWeather === 'storm' });
+        }
         this.resourceIndexTimer -= seconds;
         this.scene.debrisManager.update(seconds, this.scene.player.position, this.scene.inventory, null,
             this.scene.terrain, this.scene.gl, true, weather);

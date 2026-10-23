@@ -6,6 +6,7 @@ export function getSleepPlan(scene) {
     const dawn = scene.dayNight.dawnTime;
     const night = time >= scene.dayNight.duskTime || time < dawn;
     let reason = '';
+    if (scene.multiplayer) return { allowed: false, reason: 'Phòng online dùng thời gian chung. Hãy nghỉ tại trại.', seconds: 0, hungerCost: 0, thirstCost: 0 };
     if (!scene.shelter?.covers(scene.player.position)) reason = 'Hãy vào dưới mái trú ẩn.';
     else if (!night) reason = 'Chỉ ngủ được vào ban đêm.';
     else if (scene._isGameOver || scene.isEscaping || scene.isFishing) reason = 'Không thể ngủ lúc này.';

@@ -66,6 +66,7 @@ import { EnvironmentBatch } from '../renderer/EnvironmentBatch.js';
 import { LandmarkDetails } from '../renderer/LandmarkDetails.js';
 import { TerrainShader } from '../shaders/TerrainShader.js';
 import { PLAYER_BALANCE } from '../gameplay/BalanceConfig.js';
+import { MultiplayerSession } from '../network/MultiplayerSession.js';
 
 export const DEV_CHEATS_ENABLED = import.meta.env?.DEV === true;
 
@@ -481,6 +482,7 @@ export class GameScene extends Scene {
             this.engine.pendingRecoveryWarning = null;
         }
 
+        if (this.engine.networkClient) this.multiplayer = new MultiplayerSession(this, this.engine.networkClient);
         this._syncPointerLockHint();
     }
 
@@ -605,6 +607,7 @@ export class GameScene extends Scene {
     }
 
     update(deltaTime) {
+        if (this.multiplayer && !this.multiplayer.update(deltaTime)) return;
         this.achievements.update(deltaTime);
         this._updateFpsCounter();
         this.saveController.updateStatus(deltaTime);
@@ -787,8 +790,10 @@ export class GameScene extends Scene {
         const input = this.engine.input;
         const inventoryOpen = this.inventoryMenu && !this.inventoryMenu.classList.contains('hidden');
         const rotateLight = this._domCache.lightRot ? this._domCache.lightRot.checked : true;
-        if (rotateLight) this.dayNight.update(deltaTime);
-        this.weather.update(deltaTime);
+        if (!this.multiplayer || this.multiplayer.isLeader) {
+            if (rotateLight) this.dayNight.update(deltaTime);
+            this.weather.update(deltaTime);
+        }
         const weatherEffects = this.weather.getGameplayEffects();
         this.campaign?.beforeUpdate(deltaTime, weatherEffects);
         const isNight = this.dayNight.timeOfDay >= this.dayNight.duskTime
@@ -894,22 +899,29 @@ export class GameScene extends Scene {
         const playerTerrainHeight = this.terrain.getHeight(this.player.position[0], this.player.position[2]);
         for (let i = this.creatures.length - 1; i >= 0; i--) {
             const creature = this.creatures[i];
-            if (this.wildlife && !this.wildlife.active(creature)) continue;
+            const networkTarget = this.multiplayer?.targetFor(creature);
+            if (this.wildlife && !this.wildlife.active(creature)
+                && (!networkTarget || Math.hypot(networkTarget[0] - creature.position[0], networkTarget[2] - creature.position[2]) >= 100)) continue;
             const previous = this.wildlife ? Array.from(creature.position) : null;
 
-            creature.update(
+            if (!this.multiplayer || this.multiplayer.isLeader) {
+              creature.update(
                 deltaTime,
-                this.player.position,
+                networkTarget || this.player.position,
                 this.terrain,
-                playerTerrainHeight,
+                networkTarget ? this.terrain.getHeight(networkTarget[0], networkTarget[2]) : playerTerrainHeight,
                 weatherEffects
-            );
+              );
 
-            if (this.collisionSystem) {
+              if (this.collisionSystem) {
                 this.collisionSystem.resolvePlayerCollisions(creature, this.terrain);
                 creature.constrainToNavigationSurface(this.terrain);
+              }
+              this.wildlife?.resolve(creature, previous, deltaTime);
+            } else {
+                creature._attackTimer = Math.max(0, creature._attackTimer - deltaTime);
+                if (creature.state === CreatureState.DEAD) creature.deadTimer += deltaTime;
             }
-            this.wildlife?.resolve(creature, previous, deltaTime);
 
             if (creature.attackDamage > 0 &&
                 (creature.state === CreatureState.CHASE || creature.state === CreatureState.ATTACK)) {
@@ -1060,7 +1072,7 @@ export class GameScene extends Scene {
 
         this.campfire.update(deltaTime, this.shelter.covers(this.campfire.position)
             ? { ...weatherEffects, campfireIntensityMultiplier: 1 } : weatherEffects);
-        this.waterCollector.update(deltaTime, weatherEffects.rainFactor);
+        if (!this.multiplayer || this.multiplayer.isLeader) this.waterCollector.update(deltaTime, weatherEffects.rainFactor);
 
         this.particleSystem.update(deltaTime);
 
@@ -1478,6 +1490,7 @@ export class GameScene extends Scene {
         Mat4.rotateY(this.tempMatrix, this.tempMatrix, this.player.rotation[1]);
         this.characterRenderer.draw(this.basicShader, this.tempMatrix, drawMode);
         this.basicShader.setUniform1f('uFirstPersonHeadCutoff', 1000000.0);
+        this.multiplayer?.draw(this.basicShader, drawMode);
 
         for (const resource of this.resourceManager.worldResources) {
             if (!this._isVisible(resource.position, 1.5)) continue;
@@ -1925,6 +1938,7 @@ export class GameScene extends Scene {
     }
 
     async _restartWorld() {
+        if (this.multiplayer) { await this.multiplayer.respawn(); return; }
         if (!this.activeWorldId) return;
         await this.saveController.reset();
         this.engine.pendingLoad = null;
@@ -2363,6 +2377,7 @@ export class GameScene extends Scene {
         }
         if (chopResult.felled && closestTree.worldObjectId != null) {
             this.removedEnvironmentObjectIds.add(closestTree.worldObjectId);
+            if (this.multiplayer) closestTree.networkFellOwner = this.multiplayer.client.id;
         }
         return { ...chopResult, tree: closestTree };
     }
@@ -2479,6 +2494,8 @@ export class GameScene extends Scene {
 
 
     destroy() {
+        this.multiplayer?.dispose();
+        this.multiplayer = null;
         this.campaign?.dispose();
         this.campaign = null;
         console.log('GameScene: Destroying meshes and shader programs...');
