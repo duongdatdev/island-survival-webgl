@@ -1,0 +1,610 @@
+/* ==========================================================================
+   ISLAND SURVIVAL: ESCAPE — Multiplayer / LAN Network UI
+   Shares the ocean palette, Barlow Condensed type, and RPG HUD design system.
+   ========================================================================== */
+
+#network-menu {
+    --network-surface: #101f27;
+    --network-card: #172b35;
+    --network-card-hover: #1e3540;
+    --network-card-active: #203640;
+    --network-border: #3b515b;
+    --network-border-subtle: #243640;
+    --network-border-light: #526b77;
+    --network-border-hover: #81959c;
+    --network-text: #fff6e9;
+    --network-muted: #b9c8cd;
+    --network-accent: #f47748;
+    --network-accent-hover: #ffa379;
+    --network-heading: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --network-body: 'Segoe UI', Arial, sans-serif;
+    --network-mono: var(--font-mono, 'JetBrains Mono', monospace);
+
+    position: absolute;
+    inset: 0;
+    z-index: 280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(3, 13, 20, 0.72);
+    color: var(--network-text);
+    font-family: var(--network-body);
+}
+
+.network-panel {
+    box-sizing: border-box;
+    width: min(580px, calc(100vw - 32px));
+    max-height: calc(100dvh - 36px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 28px 32px;
+    background: var(--network-surface);
+    border: 1px solid var(--network-border);
+    border-top: 3px solid var(--network-accent);
+    border-radius: 4px;
+    color: var(--network-text);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.65);
+    font-family: var(--network-body);
+    animation: menuSlideIn 0.28s ease both;
+}
+
+.network-panel:has(#network-servers-view:not([hidden])) {
+    width: min(740px, calc(100vw - 32px));
+}
+
+.network-panel header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--network-border-subtle);
+}
+
+.network-kicker {
+    color: var(--network-muted);
+    font: 600 12px/1.5 var(--network-heading);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0 0 4px;
+}
+
+.network-panel h2 {
+    margin: 0;
+    color: var(--network-text);
+    font: 600 34px/1.15 var(--network-heading);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-shadow: none;
+}
+
+.network-panel .panel-close {
+    display: grid;
+    place-items: center;
+    position: static;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: 1px solid var(--network-border);
+    border-radius: 3px;
+    color: var(--network-muted);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.network-panel .panel-close .ui-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.network-panel .panel-close:hover {
+    background: #263b45;
+    color: var(--network-text);
+    border-color: #8098a2;
+}
+
+.network-panel p {
+    color: var(--network-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 0 12px;
+}
+
+/* Server list */
+#network-server-list {
+    display: grid;
+    gap: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 2px;
+    margin: 12px 0 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #647d88 var(--network-surface);
+}
+
+#network-server-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#network-server-list::-webkit-scrollbar-track {
+    background: var(--network-surface);
+}
+
+#network-server-list::-webkit-scrollbar-thumb {
+    background: #647d88;
+    border-radius: 3px;
+}
+
+#network-server-list p.network-help,
+.network-server-empty {
+    border: 1px dashed var(--network-border-light);
+    border-radius: 3px;
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--network-muted);
+    font-size: 14px;
+    line-height: 1.7;
+    background: rgba(23, 43, 53, 0.4);
+    margin: 0;
+}
+
+.network-server-entry {
+    display: grid;
+    gap: 5px;
+    text-align: left;
+    background: var(--network-card);
+    border: 1px solid var(--network-border);
+    border-radius: 3px;
+    color: var(--network-text);
+    padding: 14px 18px;
+    cursor: pointer;
+    font: 14px/1.45 var(--network-body);
+    overflow-wrap: anywhere;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.network-server-entry:hover {
+    background: var(--network-card-hover);
+    border-color: var(--network-border-hover);
+}
+
+.network-server-entry[aria-pressed=true] {
+    background: var(--network-card-active);
+    border-color: var(--network-accent);
+    box-shadow: inset 3px 0 var(--network-accent);
+    padding: 14px 18px;
+}
+
+.network-server-entry strong {
+    font: 600 20px/1.25 var(--network-heading);
+    letter-spacing: 0.5px;
+    color: var(--network-text);
+}
+
+.network-server-entry > span:nth-child(2) {
+    font-family: var(--network-mono);
+    font-size: 12px;
+    color: #8fa6af;
+    letter-spacing: 0.3px;
+}
+
+.network-server-status {
+    font: 600 12px/1.5 var(--network-body);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--network-muted);
+    margin-top: 2px;
+}
+
+.network-server-status::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.network-server-status[data-state=online] {
+    color: #4ade80;
+}
+
+.network-server-status[data-state=offline] {
+    color: #f87171;
+}
+
+.network-server-status[data-state=unknown] {
+    color: #94a3b8;
+}
+
+#network-list-status {
+    min-height: 22px;
+    font-size: 13px;
+    color: var(--network-muted);
+    margin: 6px 0 10px;
+    font-style: italic;
+}
+
+/* Primary CTA */
+#network-join-selected,
+#network-submit {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 3px;
+    border: 1px solid var(--network-accent);
+    background: var(--network-accent);
+    color: #101f27;
+    font: 700 17px/1.3 var(--network-heading);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: none;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, filter 0.16s ease;
+}
+
+#network-join-selected:hover:not(:disabled),
+#network-submit:hover:not(:disabled) {
+    background: var(--network-accent-hover);
+    border-color: var(--network-accent-hover);
+}
+
+#network-join-selected:active,
+#network-submit:active {
+    filter: brightness(0.9);
+}
+
+#network-join-selected:disabled,
+#network-submit:disabled {
+    opacity: 0.4;
+    filter: grayscale(0.6);
+    background: #2a3a42;
+    border-color: #465b65;
+    color: #72848c;
+    cursor: not-allowed;
+}
+
+/* Actions grid */
+.network-server-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0 0;
+}
+
+.network-server-actions button,
+.network-back,
+#network-save-server {
+    min-height: 44px;
+    padding: 10px 14px;
+    background: transparent;
+    border: 1px solid var(--network-border-light);
+    border-radius: 3px;
+    color: var(--network-text);
+    font: 600 15px/1.3 var(--network-heading);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.network-server-actions button:hover:not(:disabled),
+.network-back:hover:not(:disabled),
+#network-save-server:hover:not(:disabled) {
+    background: #263b45;
+    border-color: #a3bbc5;
+    color: #fff;
+}
+
+.network-server-actions button:active,
+.network-back:active,
+#network-save-server:active {
+    background: #172b35;
+}
+
+.network-server-actions button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: #2e414b;
+    color: #617580;
+}
+
+#network-remove-server:not(:disabled):hover {
+    background: #58332d;
+    border-color: #eb927d;
+    color: #ffb9a7;
+}
+
+.network-back {
+    margin: 0 0 16px;
+    padding: 8px 16px;
+    color: var(--network-muted);
+    font-size: 14px;
+}
+
+/* Tabs */
+.network-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 18px 0 14px;
+}
+
+.network-tabs button {
+    flex: 1;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--network-border-light);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--network-muted);
+    font: 600 16px/1.3 var(--network-heading);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.16s ease;
+}
+
+.network-tabs button:hover:not([aria-pressed=true]) {
+    background: #172b35;
+    color: var(--network-text);
+    border-color: #81959c;
+}
+
+.network-tabs button[aria-pressed=true] {
+    background: var(--network-accent);
+    color: #101f27;
+    border-color: var(--network-accent);
+    font-weight: 700;
+}
+
+/* Form inputs */
+.network-panel label {
+    display: block;
+    margin: 14px 0 6px;
+    font: 600 12px/1.4 var(--network-heading);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--network-muted);
+}
+
+.network-panel input,
+.network-panel select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    background: #0b1820;
+    color: var(--network-text);
+    border: 1px solid #647d88;
+    border-radius: 3px;
+    padding: 10px 14px;
+    font: 400 14px/1.5 var(--network-body);
+    user-select: text;
+    transition: border-color 0.16s ease;
+}
+
+.network-panel input::placeholder {
+    color: #738b96;
+    font-size: 13px;
+}
+
+.network-panel select option {
+    background: #0b1820;
+    color: var(--network-text);
+}
+
+.network-panel :focus-visible {
+    outline: 2px solid #ffc09f;
+    outline-offset: 2px;
+    border-color: #ffc09f;
+}
+
+.network-panel summary {
+    box-sizing: border-box;
+    cursor: pointer;
+    min-height: 38px;
+    padding: 10px 0 4px;
+    color: #ffb28c;
+    font: 600 13px/1.5 var(--network-heading);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    transition: color 0.16s ease;
+}
+
+.network-panel summary:hover {
+    color: var(--network-accent-hover);
+}
+
+.network-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.network-panel [hidden] {
+    display: none !important;
+}
+
+.network-help {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--network-muted);
+    margin: 18px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--network-border-subtle);
+}
+
+.network-help code {
+    font-family: var(--network-mono);
+    color: #ffd699;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.network-panel #network-error {
+    color: #ffb9a7;
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 0;
+    margin: 12px 0 0;
+}
+
+.network-panel #network-status {
+    color: #a7f3d0;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 8px 0;
+}
+
+#network-save-server {
+    width: 100%;
+    margin-top: 10px;
+}
+
+#network-submit {
+    margin-top: 12px;
+}
+
+/* In-game HUD & Disconnect Overlay */
+.network-hud {
+    position: fixed;
+    top: 76px;
+    right: 16px;
+    left: auto;
+    z-index: 40;
+    max-width: min(340px, calc(100vw - 32px));
+    padding: 8px 14px;
+    border-radius: 3px;
+    background: rgba(16, 31, 39, 0.92);
+    border: 1px solid var(--network-border);
+    border-left: 3px solid var(--network-accent);
+    color: #fff6e9;
+    font: 500 13px/1.5 var(--network-body);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+}
+
+.network-hud strong {
+    color: var(--network-accent);
+    letter-spacing: 0.08em;
+}
+
+.network-disconnect {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: grid;
+    place-items: center;
+    background: rgba(3, 13, 20, 0.88);
+    padding: 20px;
+}
+
+.network-disconnect section {
+    width: min(460px, 90vw);
+    background: var(--network-surface);
+    padding: 28px 32px;
+    border: 1px solid var(--network-border);
+    border-top: 3px solid #e74c3c;
+    border-radius: 4px;
+    color: var(--network-text);
+    font: 15px/1.6 var(--network-body);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.7);
+}
+
+.network-disconnect button {
+    margin-top: 16px;
+    min-height: 44px;
+    padding: 10px 22px;
+    background: var(--network-accent);
+    color: #101f27;
+    border: 0;
+    border-radius: 3px;
+    font: 700 15px var(--network-heading);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.network-disconnect button:hover {
+    background: var(--network-accent-hover);
+}
+
+.network-player-label {
+    position: fixed;
+    z-index: 35;
+    transform: translate(-50%, -100%);
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(16, 31, 39, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff6e9;
+    font: 600 12px/1.4 var(--network-heading);
+    letter-spacing: 0.5px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.network-player-label[hidden] {
+    display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 540px) {
+    .network-panel {
+        padding: 20px 18px;
+    }
+    .network-panel h2 {
+        font-size: 28px;
+    }
+    .network-server-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .network-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .network-server-entry {
+        padding: 12px 14px;
+    }
+    .network-server-entry[aria-pressed=true] {
+        padding: 12px 14px;
+    }
+    #network-server-list {
+        max-height: 220px;
+    }
+}
+
+@media (max-height: 480px) {
+    .network-panel {
+        max-height: calc(100dvh - 16px);
+        padding: 16px 20px;
+    }
+    .network-panel h2 {
+        font-size: 24px;
+    }
+    .network-hud {
+        top: 60px;
+        font-size: 12px;
+    }
+    #network-server-list {
+        max-height: 160px;
+    }
+}

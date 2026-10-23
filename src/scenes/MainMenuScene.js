@@ -11,6 +11,7 @@ import { WorldGenerator } from '../gameplay/world/WorldGenerator.js';
 import { CampaignWorldGenerator } from '../gameplay/world/CampaignWorldGenerator.js';
 import { MenuUI } from '../systems/MenuUI.js';
 import { setLoadingProgress } from '../systems/LoadingUI.js';
+import { NetworkMenu } from '../network/NetworkMenu.js';
 
 const SUN_DIRECTION = Vec3.create(0.50, 0.049, 1.0);
 const KEY_LIGHT_DIRECTION = [0.50, 0.55, 1.0];
@@ -62,6 +63,7 @@ export class MainMenuScene extends Scene {
         this._cacheDom();
         this._showMenu();
         this.menuUI = new MenuUI(this.engine, { onGuidePlay: () => this._startWithTutorial() });
+        this.networkMenu = new NetworkMenu(this);
         this._bindEvents();
         this._updateSoundButton(this.engine.audio.isMuted);
         this._refreshAchievementsButton();
@@ -73,6 +75,7 @@ export class MainMenuScene extends Scene {
     _cacheDom() {
         this._mainMenu = document.getElementById('main-menu');
         this._playMenuBtn = document.getElementById('menu-play-btn');
+        this._multiplayerBtn = document.getElementById('menu-multiplayer-btn');
         this._tutorialBtn = document.getElementById('menu-tutorial-btn');
         this._soundBtn = document.getElementById('menu-sound-btn');
         this._settingsBtn = document.getElementById('menu-settings-btn');
@@ -107,6 +110,7 @@ export class MainMenuScene extends Scene {
 
     _bindEvents() {
         this._onPlayMenu = () => this._openWorldMenu();
+        this._onMultiplayer = () => this.networkMenu.open();
         this._onTutorial = () => {
             this.engine.audio._ensureContext();
             this.engine.audio.playClick();
@@ -145,6 +149,7 @@ export class MainMenuScene extends Scene {
         this._onWorldDeleteConfirm = () => this._confirmDeleteWorld();
 
         this._playMenuBtn?.addEventListener('click', this._onPlayMenu);
+        this._multiplayerBtn?.addEventListener('click', this._onMultiplayer);
         this._tutorialBtn?.addEventListener('click', this._onTutorial);
         this._soundBtn?.addEventListener('click', this._onSound);
         this._settingsBtn?.addEventListener('click', this._onSettings);
@@ -506,6 +511,8 @@ export class MainMenuScene extends Scene {
             await this.engine.assets.compileUniqueModels(paths);
             this._setLoader(true, 'Sẵn sàng lên đảo...', 100);
             this.engine.activeWorldId = world.id;
+            this.engine.networkClient?.close();
+            this.engine.networkClient = null;
             this.engine.activeWorld = world;
             this.engine.worldSeed = world.seed;
             this.engine.generatedWorld = generatedWorld;
@@ -545,6 +552,35 @@ export class MainMenuScene extends Scene {
         this._openWorldMenu();
     }
 
+    async _launchNetworkWorld(client) {
+        if (this.isLaunching) throw new Error('Đang mở một thế giới khác.');
+        this.isLaunching = true;
+        this._setLoader(true, 'Đang tải đảo từ server…', 18);
+        try {
+            const { world, snapshot } = client.welcome;
+            const generator = world.mode === 'campaign' ? new CampaignWorldGenerator(world.generatorVersion) : new WorldGenerator(120, 100);
+            if (world.mode === 'classic') generator.mode = 'classic';
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            const generated = generator.generate(world.seed, this.engine.assets.environmentMetadata, false);
+            this._setLoader(true, 'Đang chuẩn bị môi trường…', 58);
+            await this.engine.assets.compileUniqueModels([...new Set(generated.placedObjects.map(object => object.objPath))]);
+            if (client.closed || this.networkMenu.cancelled) throw new Error('Đã hủy kết nối.');
+            this.engine.activeWorldId = null;
+            this.engine.activeWorld = world;
+            this.engine.worldSeed = world.seed;
+            this.engine.generatedWorld = generated;
+            this.engine.pendingLoad = snapshot;
+            this.engine.networkClient = client;
+            if (this._tutorialRequested) {
+                try { localStorage.removeItem('island_survival_tutorial_done'); } catch { /* Optional tutorial preference. */ }
+            }
+            this.networkMenu.element.classList.add('hidden');
+            this._setLoader(false); this._hideMenu(); this._enterGame();
+        } catch (error) {
+            this.isLaunching = false; this._setLoader(false); throw error;
+        }
+    }
+
     _setWorldError(message) {
         if (this._worldError) this._worldError.textContent = message;
     }
@@ -576,6 +612,8 @@ export class MainMenuScene extends Scene {
     }
 
     destroy() {
+        this.networkMenu?.dispose();
+        this._multiplayerBtn?.removeEventListener('click', this._onMultiplayer);
         this._playMenuBtn?.removeEventListener('click', this._onPlayMenu);
         this._tutorialBtn?.removeEventListener('click', this._onTutorial);
         this._soundBtn?.removeEventListener('click', this._onSound);
