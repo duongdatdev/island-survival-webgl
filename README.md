@@ -14,7 +14,7 @@ The **2.0 Campaign is in development**: new worlds default to a 640 m island wit
 - Manage health, hunger, thirst, and stamina through changing weather and the day-night cycle.
 - Encounter crabs, seagulls, boars and sharks, plus deer, mountain goats and monitor lizards in new Campaign worlds.
 - Explore new Campaign jungle, coastal mangrove and savanna regions with stilt-root mangrove trees and umbrella acacias. See [biome expansion notes](docs/BIOME_EXPANSION.vi.md).
-- Save multiple worlds locally and continue an unfinished survival run.
+- Create private online rooms and keep worlds and individual characters on your own LAN/self-hosted server.
 - Unlock persistent achievements as you progress.
 
 ![Crafting and inventory interface](docs/images/crafting-and-inventory.png)
@@ -33,25 +33,37 @@ That three-part route describes **Classic**. In **Campaign**, follow the chapter
 
 ## Getting Started
 
-Install dependencies and start the development server:
+The main menu offers **CHƠI ĐƠN** (offline, local saves) and **NHIỀU NGƯỜI CHƠI** (LAN/self-hosted servers). For offline play, install and run the local web app:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Vite will print a local URL. Open it in a browser to play the game. Source changes reload automatically during development.
+Offline play does not connect to a multiplayer server. Existing local worlds and saves remain available. `npm start` also runs only the game client. To build and preview the production game:
+
+```bash
+npm ci
+npm run build
+npm run preview
+```
+
+Multiplayer uses a **separate Dedicated Server**, run by whoever wants to host. In the full checkout, start it in another terminal with `npm run server`; no client build is required. Export the standalone distributable with `npm run build:server`, then share `dist-server/island-survival-dedicated-server-1.0.0.tgz`. After extraction, the host runs `npm ci --omit=dev` and `npm start` inside its `package` folder, or uses `start-server.cmd` on Windows. The package contains no game assets or frontend build.
+
+Players open the game client (`http://localhost:5173` during development, or your separately hosted game website), choose **NHIỀU NGƯỜI CHƠI**, and enter the dedicated server address, e.g. `192.168.1.10:3000`. There is no assumed server at the game website's address. A room code is optional. Multiplayer saves live on the host in `server-data/`; rejoin from the same browser and server address to recover your character. No third-party multiplayer service is required.
+
+Full Vietnamese instructions for LAN, passwords, Docker, Internet hosting and current co-op limitations: [MULTIPLAYER.vi.md](docs/MULTIPLAYER.vi.md). For development, run `npm run server:dev` and `npm run dev` in separate terminals.
 
 ## Production Build
 
-Create and preview an optimized build:
+Create and preview an optimized client build:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-The production output is written to `dist/`. The build copies only models and manifests referenced at runtime; source textures, Blender/FBX files, and unused character variants are not shipped.
+The production client output is written to `dist/` and can be deployed on static hosting independently of the Dedicated Server. The multiplayer server listens on TCP 3000 for WebSocket `/ws` and health checks; it does not serve the game website. The client build copies only models and manifests referenced at runtime; source textures, Blender/FBX files, and unused character variants are not shipped.
 
 ## Controls
 
